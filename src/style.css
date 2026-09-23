@@ -1,0 +1,9 @@
+:root { font-family: monospace; color: #eef5ff; background: #050812; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 20px; }
+main { max-width: 800px; margin: 0 auto; }
+h1 { color: #70f6ff; font-size: clamp(24px, 5vw, 36px); letter-spacing: 4px; }
+.hud { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 18px; }
+canvas { display: block; width: 100%; height: auto; border: 2px solid #526886; }
+#status { color: #ffe275; min-height: 2.5em; font-size: 16px; }
+.controls { color: #b2bfd3; line-height: 1.6; }
