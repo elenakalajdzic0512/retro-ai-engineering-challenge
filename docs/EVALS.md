@@ -12,7 +12,7 @@ Baseline results must be preserved so that the same scenarios can be repeated af
 |---|---|---|---|---|---|---|
 | E1 | Elena | Start the application, verify the initial game state, then press Space | Paddle, ball, brick grid, score and 3 lives are visible; score starts at 0; Space launches the ball and gameplay begins | PASS — initial state rendered correctly and Space successfully launched gameplay during manual browser verification | Not run yet | PASS |
 | E2 | Elena | Use both Left/Right Arrow and A/D controls, then hold movement toward both playfield edges | Paddle responds to both control pairs and never leaves the visible playfield on either side | PASS — Arrow and A/D controls worked and the paddle remained inside both playfield boundaries during manual browser verification | Not run yet | PASS |
-| E3 | Elena | Call `createGame()` with `lives: "3"`, `brickRows: 5`, `brickColumns: 8` | Runtime validation rejects the configuration with a `TypeError`; no game state is returned and the string `"3"` is not coerced to a number | Not run yet — the runtime contract has not yet been implemented | Not run yet | PENDING |
+| E3 | Elena | Call `createGame()` with `lives: "3"`, `brickRows: 5`, `brickColumns: 8` | Runtime validation rejects the configuration with a `TypeError`; no game state is returned and the string `"3"` is not coerced to a number | PASS — against runtime-contract commit `17c0df0`, returned `TypeError: Invalid GameConfig: lives must be the integer 3.` | Not run yet | PASS — baseline |
 | E4 | Elena | Simulate paddle movement for the same elapsed time at approximately 60 FPS and 120 FPS | Paddle should travel approximately the same distance for the same elapsed time regardless of frame rate | Formal baseline eval not run yet. Earlier implementation verification observed approximately 115 px at 60 FPS and 230 px at 120 FPS. | Not run yet | PENDING |
 
 ---
@@ -164,11 +164,50 @@ TypeError: Invalid GameConfig: lives must be the integer 3.
 
 ### Baseline Result
 
-Not run yet.
+**PASS**
 
-The original baseline commit `936e047` does not contain the structured runtime contract, so this E3 scenario cannot be executed against that commit.
+Runtime-contract reference:
 
-The runtime-contract reference commit will be recorded after the contract is implemented and before E3 is formally executed.
+```text
+17c0df0
+```
+
+The predefined invalid configuration was executed formally against the runtime-contract implementation.
+
+Command:
+
+```bash
+node --input-type=module -e "
+import { createGame } from './src/game.js';
+
+try {
+  createGame({
+    lives: '3',
+    brickRows: 5,
+    brickColumns: 8
+  });
+
+  console.log('UNEXPECTED: invalid config was accepted');
+  process.exitCode = 1;
+} catch (error) {
+  console.log(error.name + ': ' + error.message);
+}
+"
+```
+
+Actual result:
+
+```text
+TypeError: Invalid GameConfig: lives must be the integer 3.
+```
+
+The malformed configuration was rejected at runtime.
+
+No game state was returned and the string `"3"` was not coerced to the number `3`.
+
+The actual result matched the expected result defined before implementation.
+
+The original game baseline commit `936e047` does not contain the structured runtime contract, so this formal E3 result is intentionally referenced to runtime-contract commit `17c0df0`.
 
 ### After Change
 
@@ -176,7 +215,7 @@ Not run yet.
 
 ### Status
 
-**PENDING**
+**PASS — baseline**
 
 ---
 
