@@ -1,12 +1,74 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, launch, update, WIDTH } from '../src/game.js';
+import { createGame, launch, update, WIDTH, DEFAULT_GAME_CONFIG, validateGameConfig } from '../src/game.js';
+
+test('explicit valid GameConfig is accepted', () => {
+  const config = { lives: 3, brickRows: 5, brickColumns: 8 };
+  assert.deepEqual(DEFAULT_GAME_CONFIG, config);
+  assert.ok(Object.isFrozen(DEFAULT_GAME_CONFIG));
+  assert.deepEqual(validateGameConfig(config), config);
+  const game = createGame(config);
+  assert.equal(game.lives, 3);
+  assert.equal(game.bricks.length, 40);
+});
+
+test('default and explicit valid GameConfig produce equivalent initial states', () => {
+  assert.deepEqual(createGame(), createGame({ lives: 3, brickRows: 5, brickColumns: 8 }));
+});
+
+test('E3 rejects string lives with the exact TypeError without coercion', () => {
+  assert.throws(() => createGame({ lives: '3', brickRows: 5, brickColumns: 8 }), {
+    name: 'TypeError',
+    message: 'Invalid GameConfig: lives must be the integer 3.',
+  });
+});
+
+test('GameConfig rejects a missing required property', () => {
+  assert.throws(() => createGame({ lives: 3, brickRows: 5 }), TypeError);
+});
+
+test('GameConfig rejects an extra property', () => {
+  assert.throws(() => createGame({ lives: 3, brickRows: 5, brickColumns: 8, extra: true }), TypeError);
+});
+
+test('GameConfig rejects null and non-object input', () => {
+  for (const input of [null, 3, '3', true, []]) {
+    assert.throws(() => validateGameConfig(input), TypeError);
+    assert.throws(() => createGame(input), TypeError);
+  }
+  assert.throws(() => validateGameConfig(undefined), TypeError);
+});
 
 function playing() {
   const game = createGame();
   launch(game);
   return game;
 }
+
+test('ready paddle movement is equal at 60 and 120 FPS before and at the boundary', () => {
+  for (const [seconds, expectedDistance] of [[0.5, 230], [1, 345]]) {
+    const distances = [60, 120].map((fps) => {
+      const game = createGame();
+      const start = game.paddle.x;
+      for (let frame = 0; frame < fps * seconds; frame++) update(game, 1, 1 / fps);
+      assert.equal(game.status, 'ready');
+      assert.equal(game.ball.x, game.paddle.x + game.paddle.width / 2);
+      return game.paddle.x - start;
+    });
+    assert.ok(Math.abs(distances[0] - distances[1]) < 1e-9);
+    for (const distance of distances) assert.ok(Math.abs(distance - expectedDistance) < 1e-9);
+  }
+});
+
+test('playing update stops after a miss without moving the reset paddle', () => {
+  const game = playing();
+  Object.assign(game.ball, { x: 20, y: 580, vy: 280 });
+  update(game, 1, 0.1);
+  assert.equal(game.status, 'ready');
+  assert.equal(game.lives, 2);
+  assert.deepEqual(game.paddle, createGame().paddle);
+  assert.deepEqual(game.ball, createGame().ball);
+});
 
 test('initial state has approved grid, score, lives and waits for launch', () => {
   const game = createGame();
