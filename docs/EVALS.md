@@ -12,8 +12,8 @@ Baseline results must be preserved so that the same scenarios can be repeated af
 |---|---|---|---|---|---|---|
 | E1 | Elena | Start the application, verify the initial game state, then press Space | Paddle, ball, brick grid, score and 3 lives are visible; score starts at 0; Space launches the ball and gameplay begins | PASS — initial state rendered correctly and Space successfully launched gameplay during manual browser verification | Not run yet | PASS |
 | E2 | Elena | Use both Left/Right Arrow and A/D controls, then hold movement toward both playfield edges | Paddle responds to both control pairs and never leaves the visible playfield on either side | PASS — Arrow and A/D controls worked and the paddle remained inside both playfield boundaries during manual browser verification | Not run yet | PASS |
-| E3 | Colleague | Provide an incomplete or invalid structured game configuration | Invalid input is rejected or handled through the explicitly defined safe fallback; malformed data must not silently become valid game state | Not run yet — the structured runtime contract does not exist in baseline commit `936e047` | Not run yet | PENDING |
-| E4 | Colleague | Simulate paddle movement for the same elapsed time at approximately 60 FPS and 120 FPS | Paddle should travel approximately the same distance for the same elapsed time regardless of frame rate | Formal baseline eval not run yet. Earlier implementation verification observed approximately 115 px at 60 FPS and 230 px at 120 FPS. | Not run yet | PENDING |
+| E3 | Elena | Call `createGame()` with `lives: "3"`, `brickRows: 5`, `brickColumns: 8` | Runtime validation rejects the configuration with a `TypeError`; no game state is returned and the string `"3"` is not coerced to a number | Not run yet — the runtime contract has not yet been implemented | Not run yet | PENDING |
+| E4 | Elena | Simulate paddle movement for the same elapsed time at approximately 60 FPS and 120 FPS | Paddle should travel approximately the same distance for the same elapsed time regardless of frame rate | Formal baseline eval not run yet. Earlier implementation verification observed approximately 115 px at 60 FPS and 230 px at 120 FPS. | Not run yet | PENDING |
 
 ---
 
@@ -119,32 +119,56 @@ Not run yet.
 
 ### Owner
 
-Colleague
+Elena
 
 ### Scenario
 
-Provide an incomplete or invalid structured game configuration after the structured runtime contract has been defined.
+Provide the following invalid `GameConfig` to `createGame()`:
 
-The exact invalid input must be written down before executing this evaluation.
+```js
+{
+  lives: "3",
+  brickRows: 5,
+  brickColumns: 8
+}
+```
+
+Exact invocation:
+
+```js
+createGame({
+  lives: "3",
+  brickRows: 5,
+  brickColumns: 8
+});
+```
+
+The invalid value is intentional: `lives` is a string instead of the required integer value.
 
 ### Expected Result
 
-The application must not silently accept malformed or unsupported configuration data.
+The configuration must be rejected at runtime.
 
-The invalid input must either:
+Expected behavior:
 
-- be explicitly rejected; or
-- produce the safe fallback defined by the runtime-validation contract.
+- `createGame()` throws a `TypeError`;
+- no game state is returned;
+- the string `"3"` is not silently converted to the number `3`;
+- the error clearly identifies `lives` as invalid.
 
-The exact expected behavior must be determined by the structured runtime contract before this evaluation is executed.
+Expected error:
+
+```text
+TypeError: Invalid GameConfig: lives must be the integer 3.
+```
 
 ### Baseline Result
 
 Not run yet.
 
-E3 cannot be executed against baseline commit `936e047` because the structured runtime contract has not yet been introduced.
+The original baseline commit `936e047` does not contain the structured runtime contract, so this E3 scenario cannot be executed against that commit.
 
-The exact baseline reference for E3 must be recorded after that contract is added and before any controlled improvement to its behavior.
+The runtime-contract reference commit will be recorded after the contract is implemented and before E3 is formally executed.
 
 ### After Change
 
@@ -160,7 +184,7 @@ Not run yet.
 
 ### Owner
 
-Colleague
+Elena
 
 ### Scenario
 
@@ -240,7 +264,7 @@ Baseline reference:
 936e047
 ```
 
-This observation is the selected candidate regression scenario for E4.
+This observation is the selected regression scenario for E4.
 
 Before any fix is made, E4 must be formally reproduced and its actual baseline result recorded.
 
@@ -262,8 +286,8 @@ The evaluations test different properties:
 
 - E1 verifies normal initialization and game launch.
 - E2 verifies controls and playfield boundaries.
-- E3 will verify structured runtime validation.
-- E4 will specifically evaluate whether paddle movement is independent of frame rate.
+- E3 verifies structured runtime validation.
+- E4 specifically evaluates whether paddle movement is independent of frame rate.
 
 A passing visual scenario therefore does not imply that every relevant behavioral property is correct.
 
@@ -274,13 +298,14 @@ A passing visual scenario therefore does not imply that every relevant behaviora
 For the controlled-change experiment:
 
 1. Preserve baseline commit `936e047`.
-2. Formally execute E4 and record the actual baseline measurement.
-3. State the hypothesis before changing the implementation.
-4. Define the smallest proposed change.
-5. Change only the relevant implementation layer.
-6. Repeat the same E4 scenario after the change.
-7. Compare the baseline and after-change results.
-8. Record any remaining limitation.
-9. Do not overwrite the original baseline result.
-
-E1 and E2 may also be repeated after the controlled change as regression checks.
+2. Preserve the predefined E1–E4 expectations before executing new evaluations.
+3. Implement the structured runtime contract without fixing the FPS issue.
+4. Record the runtime-contract reference commit before formally executing E3.
+5. Formally execute E3 and record the actual result.
+6. Formally execute E4 and record the actual baseline measurement before any FPS fix.
+7. State the controlled-change claim, signal, hypothesis, minimum change, verification method, result, and limitation before changing the implementation.
+8. Change only the implementation layer relevant to the FPS issue.
+9. Repeat the same E1–E4 evaluation set after the controlled change.
+10. Compare baseline and after-change results directly.
+11. Record any remaining limitation.
+12. Do not overwrite or delete the original baseline results.
