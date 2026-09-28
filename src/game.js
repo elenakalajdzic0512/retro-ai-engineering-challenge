@@ -104,11 +104,12 @@ function step(game, direction, dt) {
 // Bound elapsed time and subdivide movement to avoid large jumps after slow frames.
 export function update(game, direction, elapsed) {
   if (game.status === 'won' || game.status === 'lost') return;
+  const initialStatus = game.status;
   let remaining = Math.max(0, Math.min(elapsed, 0.1));
   while (remaining > 0) {
     const dt = Math.min(remaining, STEP);
     step(game, Math.max(-1, Math.min(1, direction)), dt);
     remaining -= dt;
-    if (game.status !== 'playing') break;
+    if (game.status !== initialStatus) break;
   }
 }

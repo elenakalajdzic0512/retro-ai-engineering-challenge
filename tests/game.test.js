@@ -45,6 +45,31 @@ function playing() {
   return game;
 }
 
+test('ready paddle movement is equal at 60 and 120 FPS before and at the boundary', () => {
+  for (const [seconds, expectedDistance] of [[0.5, 230], [1, 345]]) {
+    const distances = [60, 120].map((fps) => {
+      const game = createGame();
+      const start = game.paddle.x;
+      for (let frame = 0; frame < fps * seconds; frame++) update(game, 1, 1 / fps);
+      assert.equal(game.status, 'ready');
+      assert.equal(game.ball.x, game.paddle.x + game.paddle.width / 2);
+      return game.paddle.x - start;
+    });
+    assert.ok(Math.abs(distances[0] - distances[1]) < 1e-9);
+    for (const distance of distances) assert.ok(Math.abs(distance - expectedDistance) < 1e-9);
+  }
+});
+
+test('playing update stops after a miss without moving the reset paddle', () => {
+  const game = playing();
+  Object.assign(game.ball, { x: 20, y: 580, vy: 280 });
+  update(game, 1, 0.1);
+  assert.equal(game.status, 'ready');
+  assert.equal(game.lives, 2);
+  assert.deepEqual(game.paddle, createGame().paddle);
+  assert.deepEqual(game.ball, createGame().ball);
+});
+
 test('initial state has approved grid, score, lives and waits for launch', () => {
   const game = createGame();
   assert.equal(game.bricks.length, 40);
