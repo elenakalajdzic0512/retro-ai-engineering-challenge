@@ -1,19 +1,23 @@
 # Week 3 Evaluation Set
 
-Baseline reference: commit `936e047`
+Original game baseline reference: commit `936e047`
 
-The expected result for each evaluation is defined before execution.
+Runtime-contract reference: commit `17c0df0`
 
-Baseline results must be preserved so that the same scenarios can be repeated after the controlled change.
+Controlled-change reference: commit `ec2fb7b`
+
+The expected result for each evaluation was defined before execution.
+
+Baseline results are preserved so that the same scenarios can be compared directly with the after-change results.
 
 ## Evaluation Matrix
 
 | ID | Owner | Input or Scenario | Expected Result | Baseline Result | After Change | Status |
 |---|---|---|---|---|---|---|
-| E1 | Elena | Start the application, verify the initial game state, then press Space | Paddle, ball, brick grid, score and 3 lives are visible; score starts at 0; Space launches the ball and gameplay begins | PASS — initial state rendered correctly and Space successfully launched gameplay during manual browser verification | Not run yet | PASS |
-| E2 | Elena | Use both Left/Right Arrow and A/D controls, then hold movement toward both playfield edges | Paddle responds to both control pairs and never leaves the visible playfield on either side | PASS — Arrow and A/D controls worked and the paddle remained inside both playfield boundaries during manual browser verification | Not run yet | PASS |
-| E3 | Elena | Call `createGame()` with `lives: "3"`, `brickRows: 5`, `brickColumns: 8` | Runtime validation rejects the configuration with a `TypeError`; no game state is returned and the string `"3"` is not coerced to a number | PASS — against runtime-contract commit `17c0df0`, returned `TypeError: Invalid GameConfig: lives must be the integer 3.` | Not run yet | PASS — baseline |
-| E4 | Elena | Simulate paddle movement for the same elapsed time at approximately 60 FPS and 120 FPS | Paddle should travel approximately the same distance for the same elapsed time regardless of frame rate | FAIL — formal baseline measured 115.000 px at 60 FPS and 230.000 px at 120 FPS; difference 115.000 px | Not run yet | FAIL — baseline |
+| E1 | Elena | Start the application, verify the initial game state, then press Space | Paddle, ball, brick grid, score and 3 lives are visible; score starts at 0; Space launches the ball and gameplay begins | PASS — initial state rendered correctly and Space successfully launched gameplay during manual browser verification | PASS — repeated manually against `ec2fb7b`; initialization and Space launch still worked | PASS — before and after |
+| E2 | Elena | Use both Left/Right Arrow and A/D controls, then hold movement toward both playfield edges | Paddle responds to both control pairs and never leaves the visible playfield on either side | PASS — Arrow and A/D controls worked and the paddle remained inside both playfield boundaries during manual browser verification | PASS — repeated manually against `ec2fb7b`; both control pairs and both boundaries still worked | PASS — before and after |
+| E3 | Elena | Call `createGame()` with `lives: "3"`, `brickRows: 5`, `brickColumns: 8` | Runtime validation rejects the configuration with a `TypeError`; no game state is returned and the string `"3"` is not coerced to a number | PASS — against runtime-contract commit `17c0df0`, returned `TypeError: Invalid GameConfig: lives must be the integer 3.` | PASS — same invalid configuration against `ec2fb7b` returned the same expected `TypeError` | PASS — before and after |
+| E4 | Elena | Simulate paddle movement for the same elapsed time at approximately 60 FPS and 120 FPS | Paddle should travel approximately the same distance for the same elapsed time regardless of frame rate | FAIL — formal baseline measured 115.000 px at 60 FPS and 230.000 px at 120 FPS; difference 115.000 px | PASS — against `ec2fb7b`, formal 1 s scenario measured 345.000 px at both frame rates; supporting 0.5 s scenario measured 230.000 px at both frame rates; difference 0.000 px | PASS — after controlled change |
 
 ---
 
@@ -60,11 +64,22 @@ No additional visible issue was discovered while executing this scenario.
 
 ### After Change
 
-Not run yet.
+**PASS**
+
+Manual browser verification against controlled-change commit `ec2fb7b` confirmed that:
+
+- the initial game elements were visible;
+- the score started at `0`;
+- three lives were displayed;
+- the ball waited for launch;
+- pressing `Space` launched the ball;
+- gameplay began successfully.
+
+The controlled FPS change did not regress the normal-start scenario.
 
 ### Status
 
-**PASS**
+**PASS — before and after**
 
 ---
 
@@ -107,11 +122,20 @@ No obvious boundary problem was visible during normal manual gameplay.
 
 ### After Change
 
-Not run yet.
+**PASS**
+
+Manual browser verification against controlled-change commit `ec2fb7b` confirmed that:
+
+- Left/Right Arrow controls worked;
+- `A`/`D` controls worked;
+- the paddle remained inside the left playfield boundary;
+- the paddle remained inside the right playfield boundary.
+
+The controlled FPS change did not regress paddle controls or boundary clamping.
 
 ### Status
 
-**PASS**
+**PASS — before and after**
 
 ---
 
@@ -211,11 +235,23 @@ The original game baseline commit `936e047` does not contain the structured runt
 
 ### After Change
 
-Not run yet.
+**PASS**
+
+The same predefined invalid configuration was executed against controlled-change commit `ec2fb7b`.
+
+Actual result:
+
+```text
+TypeError: Invalid GameConfig: lives must be the integer 3.
+```
+
+The malformed input was still rejected at runtime, no game state was returned, and no coercion occurred.
+
+The controlled FPS change did not regress the structured runtime contract.
 
 ### Status
 
-**PASS — baseline**
+**PASS — before and after**
 
 ---
 
@@ -286,96 +322,173 @@ difference -> 115.000 px
 
 The 120 FPS simulation moved the paddle exactly twice as far as the 60 FPS simulation for the same elapsed time.
 
-This does not satisfy the predefined expectation:
+This did not satisfy the predefined expectation:
 
 ```text
 distance at 60 FPS ≈ distance at 120 FPS
 ```
 
-The formal baseline therefore confirms frame-rate-dependent paddle movement.
+The formal baseline therefore confirmed frame-rate-dependent paddle movement.
 
 No FPS-related code was changed before or during this measurement.
 
+### Controlled Change
+
+Controlled-change reference:
+
+```text
+ec2fb7b
+```
+
+The controlled change was intentionally limited to the update-loop stop condition.
+
+The implementation captured the status at entry to `update()` and stopped internal stepping only when the game status changed from that entry status.
+
+The change did not modify:
+
+- `PADDLE_SPEED`;
+- `STEP`;
+- `GameConfig`;
+- rendering;
+- collision rules;
+- dependencies;
+- Week 4 functionality.
+
 ### After Change
 
-Not run yet.
+**PASS**
 
-### Status
+The same predefined E4 scenario was repeated against controlled-change commit `ec2fb7b`.
 
-**FAIL — baseline**
-
----
-
-## Known Baseline Observations
-
-### 1. Frame-rate-dependent paddle movement
-
-During the initial implementation verification, an additional check reported:
+Formal one-second result:
 
 ```text
-approximately 60 FPS  -> approximately 115 px in one simulated second
-approximately 120 FPS -> approximately 230 px in one simulated second
+E4 AFTER CHANGE — 1 second(s)
+
+60 FPS  -> start=345.000, end=690.000, distance=345.000, status=ready
+120 FPS -> start=345.000, end=690.000, distance=345.000, status=ready
+difference -> 0.000 px
 ```
 
-The existing automated tests did not detect this behavior.
-
-This issue was intentionally **not fixed** before the baseline was preserved.
-
-Baseline reference:
+The one-second scenario reaches the right playfield boundary in both runs. Therefore, a supporting half-second measurement was also executed before the boundary was reached:
 
 ```text
-936e047
+E4 AFTER CHANGE — 0.5 second(s)
+
+60 FPS  -> start=345.000, end=575.000, distance=230.000, status=ready
+120 FPS -> start=345.000, end=575.000, distance=230.000, status=ready
+difference -> 0.000 px
 ```
 
-This observation was selected as the regression scenario for E4.
+The supporting measurement confirms that equal movement is not only a result of boundary clamping.
 
-The formal E4 baseline has now reproduced the problem with the following measured result:
+### Before / After Comparison
 
 ```text
+Formal baseline:
 60 FPS  -> 115.000 px
 120 FPS -> 230.000 px
 difference -> 115.000 px
+result -> FAIL
+
+After controlled change:
+60 FPS  -> 345.000 px
+120 FPS -> 345.000 px
+difference -> 0.000 px
+result -> PASS
+
+Supporting non-boundary check after controlled change:
+60 FPS  -> 230.000 px
+120 FPS -> 230.000 px
+difference -> 0.000 px
 ```
 
-The FPS-related implementation remains unchanged at this point.
+The predefined frame-rate-independence expectation is now satisfied.
 
-### 2. Viewport limitation
+### Status
 
-During implementation verification, the complete playfield and instructions did not fit vertically inside a `1280 × 720` viewport.
-
-This remains a known baseline limitation.
-
-It is currently recorded as an observation rather than a formal evaluation case because the controlled-change experiment will focus on one clearly measurable problem.
-
-### 3. Manual visual verification
-
-During E1 and E2, no additional gameplay problems were obvious through normal visual inspection.
-
-This does **not** invalidate the frame-rate-dependent paddle movement result.
-
-The evaluations test different properties:
-
-- E1 verifies normal initialization and game launch.
-- E2 verifies controls and playfield boundaries.
-- E3 verifies structured runtime validation.
-- E4 specifically evaluates whether paddle movement is independent of frame rate.
-
-A passing visual scenario therefore does not imply that every relevant behavioral property is correct.
+**PASS — after controlled change**
 
 ---
 
-## Evaluation Rules
+## Automated Verification After Controlled Change
 
-For the controlled-change experiment:
+Before the controlled-change commit was created, Elena independently reran the project checks after reviewing the implementation diff.
 
-1. Preserve baseline commit `936e047`.
-2. Preserve the predefined E1–E4 expectations before executing new evaluations.
-3. Preserve runtime-contract reference commit `17c0df0` for E3.
-4. Preserve the formal E3 baseline result.
-5. Preserve the formal E4 baseline measurement: 115.000 px at 60 FPS and 230.000 px at 120 FPS.
-6. State the controlled-change claim, signal, hypothesis, minimum change, verification method, expected result, and limitation before changing the FPS-related implementation.
+Automated tests:
+
+```text
+tests 16
+pass 16
+fail 0
+```
+
+This included:
+
+- all original eight gameplay tests;
+- the six `GameConfig` runtime-contract tests;
+- two focused FPS regression tests.
+
+Production build:
+
+```text
+vite v7.3.6
+5 modules transformed
+build completed successfully
+```
+
+`git diff --check` completed with no reported whitespace errors.
+
+The controlled change was then committed as:
+
+```text
+ec2fb7b
+```
+
+---
+
+## Known Limitations
+
+### 1. Viewport limitation
+
+During implementation verification, the complete playfield and instructions did not fit vertically inside a `1280 × 720` viewport.
+
+This remains a known limitation.
+
+It is outside the controlled FPS experiment and was intentionally not addressed in this change.
+
+### 2. One-second E4 boundary clamp
+
+After the controlled change, the one-second E4 scenario reaches the right playfield boundary.
+
+For that reason, the result is supported by the additional 0.5-second measurement, where neither simulation has yet reached the boundary and both travel exactly `230.000 px`.
+
+---
+
+## Evaluation Rules and Evidence Discipline
+
+For this controlled-change experiment, the following order was preserved:
+
+1. Preserve original baseline commit `936e047`.
+2. Define the E1–E4 expectations before the controlled change.
+3. Introduce and preserve runtime-contract reference commit `17c0df0`.
+4. Execute and record the formal E3 result.
+5. Execute and preserve the formal E4 baseline measurement: `115.000 px` at 60 FPS and `230.000 px` at 120 FPS.
+6. Define and commit the controlled-change claim, signal, hypothesis, minimum change, verification method, expected result and known limitation before changing FPS-related implementation.
 7. Change only the implementation layer relevant to the FPS issue.
-8. Repeat the same E1–E4 evaluation set after the controlled change.
-9. Compare the baseline and after-change results directly.
-10. Record any remaining limitation.
-11. Do not overwrite or delete the original baseline results.
+8. Preserve controlled-change commit `ec2fb7b`.
+9. Repeat the same E1–E4 evaluation set after the controlled change.
+10. Compare baseline and after-change results directly.
+11. Preserve known limitations.
+12. Do not overwrite or delete the original baseline results.
+
+## Final Evaluation Summary
+
+```text
+E1: PASS -> PASS
+E2: PASS -> PASS
+E3: PASS -> PASS
+E4: FAIL -> PASS
+```
+
+The controlled change resolved the selected E4 frame-rate-dependence problem without introducing a detected regression in E1, E2 or E3.
