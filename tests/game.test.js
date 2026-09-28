@@ -1,6 +1,43 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, launch, update, WIDTH } from '../src/game.js';
+import { createGame, launch, update, WIDTH, DEFAULT_GAME_CONFIG, validateGameConfig } from '../src/game.js';
+
+test('explicit valid GameConfig is accepted', () => {
+  const config = { lives: 3, brickRows: 5, brickColumns: 8 };
+  assert.deepEqual(DEFAULT_GAME_CONFIG, config);
+  assert.ok(Object.isFrozen(DEFAULT_GAME_CONFIG));
+  assert.deepEqual(validateGameConfig(config), config);
+  const game = createGame(config);
+  assert.equal(game.lives, 3);
+  assert.equal(game.bricks.length, 40);
+});
+
+test('default and explicit valid GameConfig produce equivalent initial states', () => {
+  assert.deepEqual(createGame(), createGame({ lives: 3, brickRows: 5, brickColumns: 8 }));
+});
+
+test('E3 rejects string lives with the exact TypeError without coercion', () => {
+  assert.throws(() => createGame({ lives: '3', brickRows: 5, brickColumns: 8 }), {
+    name: 'TypeError',
+    message: 'Invalid GameConfig: lives must be the integer 3.',
+  });
+});
+
+test('GameConfig rejects a missing required property', () => {
+  assert.throws(() => createGame({ lives: 3, brickRows: 5 }), TypeError);
+});
+
+test('GameConfig rejects an extra property', () => {
+  assert.throws(() => createGame({ lives: 3, brickRows: 5, brickColumns: 8, extra: true }), TypeError);
+});
+
+test('GameConfig rejects null and non-object input', () => {
+  for (const input of [null, 3, '3', true, []]) {
+    assert.throws(() => validateGameConfig(input), TypeError);
+    assert.throws(() => createGame(input), TypeError);
+  }
+  assert.throws(() => validateGameConfig(undefined), TypeError);
+});
 
 function playing() {
   const game = createGame();

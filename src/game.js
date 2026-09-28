@@ -3,15 +3,38 @@ export const HEIGHT = 600;
 const PADDLE_SPEED = 460;
 const STEP = 1 / 240;
 
+export const DEFAULT_GAME_CONFIG = Object.freeze({ lives: 3, brickRows: 5, brickColumns: 8 });
+
+export function validateGameConfig(config) {
+  if (config === null || typeof config !== 'object' || Object.getPrototypeOf(config) !== Object.prototype) {
+    throw new TypeError('Invalid GameConfig: expected a plain object.');
+  }
+  const fields = Object.keys(DEFAULT_GAME_CONFIG);
+  if (Reflect.ownKeys(config).length !== fields.length || fields.some((field) => !Object.hasOwn(config, field))) {
+    throw new TypeError('Invalid GameConfig: expected exactly lives, brickRows, brickColumns.');
+  }
+  const validated = {};
+  for (const field of fields) {
+    const value = Object.getOwnPropertyDescriptor(config, field).value;
+    const expected = DEFAULT_GAME_CONFIG[field];
+    if (!Number.isInteger(value) || value !== expected) {
+      throw new TypeError(`Invalid GameConfig: ${field} must be the integer ${expected}.`);
+    }
+    validated[field] = value;
+  }
+  return validated;
+}
+
 function resetBall(game) {
   game.paddle = { x: 345, y: 552, width: 110, height: 14 };
   game.ball = { x: 400, y: 543, radius: 8, vx: 190, vy: -280 };
 }
 
-export function createGame() {
-  const game = { score: 0, lives: 3, status: 'ready', bricks: [] };
-  for (let row = 0; row < 5; row++) {
-    for (let column = 0; column < 8; column++) {
+export function createGame(config = DEFAULT_GAME_CONFIG) {
+  const { lives, brickRows, brickColumns } = validateGameConfig(config);
+  const game = { score: 0, lives, status: 'ready', bricks: [] };
+  for (let row = 0; row < brickRows; row++) {
+    for (let column = 0; column < brickColumns; column++) {
       game.bricks.push({ x: 44 + column * 90, y: 64 + row * 30, width: 82, height: 22, alive: true });
     }
   }
