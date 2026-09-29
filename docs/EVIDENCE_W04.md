@@ -104,6 +104,16 @@ Troubleshooting included failed HTTP 403 `generateContent` attempts and a succes
 
 The final Isidora review, role swap, secret-boundary review, and joint-understanding confirmation remain unresolved process requirements. The technical readiness result and process-compliance result remain separate.
 
+## Final pre-push candidate evidence — `5ef841c`
+
+The final candidate commit `5ef841c docs: finalize Week 4 live evidence` passed Elena's Mac local gate: `npm run typecheck`, `npm run build:server`, and `npm test` all passed; the test suite recorded 86 tests, 86 pass, 0 fail, and 0 skipped. `npm run build` passed with Vite 7.3.6. `git diff --check` was clean and `git status --short` was clean.
+
+The baseline comparison `76f50304a9372b3c497692970975d99c2acea3a3..5ef841c` contained 29 changed paths limited to Week 4 backend migration, AI Hint/Gemini integration, tests, documentation, environment/example configuration, package/SpecKit changes, and Vite proxy/configuration. No unrelated gameplay redesign was identified; Week 3 regression coverage remained green.
+
+The final security audit observed ignored `.env`, only `.env.example` tracked with `AI_PROVIDER=fake` and empty `GEMINI_API_KEY=`, backend-only key references, backend/package-side Google GenAI/model references, relative frontend `/api/ai`, and `CURRENT_TRACKED_KEY_LEAK=NONE`, `GIT_HISTORY_KEY_LEAK=NONE`, `DIST_KEY_LEAK=NONE`, and `FRONTEND_PROVIDER_REFERENCE=NONE`. No secret value is recorded here.
+
+This final gate is distinct from earlier checkpoints. The limited live provider demonstration remains PASS. Pair-process compliance remains unresolved because final Isidora review, role swap, secret-boundary review, and joint-understanding evidence are not present.
+
 ### Week 4 contribution history
 
 Isidora's earlier Week 4 JavaScript/runtime/backend work remains attributed to the history documented above. Elena continued independently with SpecKit, the TypeScript migration, final contract, fake-provider integration, Gemini adapter, frontend integration, tests, manual verification, and security checks. No later Isidora review, approval, role swap, or joint sign-off is claimed.

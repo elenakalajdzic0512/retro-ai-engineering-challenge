@@ -397,6 +397,39 @@ With the real Gemini backend running, Elena manually used **Ask AI for Hint** in
 
 The limited live provider demonstration is **PASS**. The final Isidora review, role swap, and joint-understanding evidence remain unresolved process requirements, so the Week 4 assignment is not declared fully process-complete.
 
+## Final pre-push candidate gate — `5ef841c`
+
+This section records the final candidate verification on commit `5ef841c docs: finalize Week 4 live evidence`, separately from earlier historical checkpoints.
+
+### Elena's Mac local gate
+
+| Command | Observed result |
+| --- | --- |
+| `npm run typecheck` | PASS |
+| `npm run build:server` | PASS |
+| `npm test` | PASS — 86 tests, 86 pass, 0 fail, 0 skipped |
+| `npm run build` | PASS — Vite 7.3.6 |
+| `git diff --check` | clean |
+| `git status --short` | clean |
+
+### Baseline diff review
+
+Compared `76f50304a9372b3c497692970975d99c2acea3a3..5ef841c`: 29 changed paths. Changes were limited to the Week 4 TypeScript backend migration, AI Hint integration, Gemini provider, tests, documentation, environment/example configuration, package dependency/configuration, SpecKit tasks, and Vite proxy/configuration. No unrelated gameplay redesign was identified, and the Week 3 gameplay regression suite remained green.
+
+### Final security audit
+
+- `.env` is ignored by `.gitignore`.
+- The only tracked environment file is `.env.example`, containing `AI_PROVIDER=fake` and an empty `GEMINI_API_KEY=`.
+- `GEMINI_API_KEY` is referenced only backend-side in `server/index.ts`.
+- `GoogleGenAI`, `@google/genai`, and model references are backend/package-side.
+- Frontend code references only relative `/api/ai`.
+- `CURRENT_TRACKED_KEY_LEAK=NONE`.
+- `GIT_HISTORY_KEY_LEAK=NONE`.
+- `DIST_KEY_LEAK=NONE`.
+- `FRONTEND_PROVIDER_REFERENCE=NONE`.
+
+The limited live provider demonstration remains PASS. The final Isidora review, role swap, secret-boundary review, and joint-understanding evidence remain unresolved; no participation or approval is fabricated.
+
 ### Final auth/access reliability correction
 
 Commit `c56f96c` fixes the Gemini auth/access classification gap: SDK status/code 401 and 403 map to the existing non-retryable `NOT_CONFIGURED` failure, raw SDK details are not exposed, other errors retain the existing transient/timeout path, and no public contract or fallback provider/model changed. After this fix on Elena's Mac, `npm test` passed 86/86 with 0 failures and 0 skipped tests; the command includes backend compilation. The Codex sandbox's HTTP `EPERM` failures remain environment-specific and are not treated as application failures.
