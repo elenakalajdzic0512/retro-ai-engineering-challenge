@@ -20,7 +20,7 @@ test('Gemini provider sends the fixed model, validated snapshot, and structured 
   assert.match(captured.contents, /lives=2/);
   assert.match(captured.contents, /bricksRemaining=31/);
   assert.equal(captured.config.responseMimeType, 'application/json');
-  assert.deepEqual(captured.config.responseSchema.required, ['hint', 'category']);
+  assert.deepEqual(captured.config.responseJsonSchema.required, ['hint', 'category']);
   assert.equal(result.output.output, '{"hint":"Watch timing.","category":"timing"}');
 });
 

@@ -55,7 +55,7 @@ export function createGeminiProvider({ apiKey, client }: GeminiProviderOptions =
           abortSignal: options.signal,
           maxOutputTokens: validatedRequest.maxOutputTokens,
           responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
+          responseJsonSchema: RESPONSE_SCHEMA,
         },
       });
       return {
