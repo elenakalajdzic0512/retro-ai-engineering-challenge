@@ -4,7 +4,7 @@ This guide describes commands and scenarios **after implementation**. New script
 
 ## Baseline and proposed commands
 
-Before migrating, record `git rev-parse HEAD`, working-tree status, `node --version`, `npm test` and `npm run build` results. These currently exercise the old contract, not final AI Hint acceptance. Install the planned dependencies only during implementation and commit lockfile changes. Subsequent clean installations use `npm ci`.
+Before migrating, record `git rev-parse HEAD` as the implementation baseline SHA (T001), working-tree status, `node --version`, `npm test` and `npm run build` results. These currently exercise the old contract, not final AI Hint acceptance. Install the planned dependencies only during implementation and commit lockfile changes. Subsequent clean installations use `npm ci`.
 
 | Planned script | Definition / purpose |
 | --- | --- |
@@ -17,7 +17,25 @@ Before migrating, record `git rev-parse HEAD`, working-tree status, `node --vers
 
 For offline evaluation run `npm run build:server -- --watch` in one terminal, `AI_PROVIDER=fake npm run dev:api` in another, and `npm run dev` in a third. The shell mode selects only deterministic fake behavior; fake mode does not use credentials or network. The browser sends relative `/api/ai`, proxied to loopback 3001. Avoid mixing fake and live processes. Default real mode with no configured key must yield NOT_CONFIGURED, not a fake success.
 
-For compiled local execution run `npm run build:server`, then `AI_PROVIDER=fake npm run start:api`; run `npm run build` and `npm run preview` for the built frontend. Preview has the same local API proxy. This verifies production artifacts locally, not deployment. Real `.env` creation belongs to the later, separately invoked live phase; `.env.example` remains an empty key placeholder.
+For manual browser checks, keep compile-watch and Vite running, and start exactly one of these backend processes at a time. Stop the previous backend before switching scenarios; no source edits or browser settings are needed:
+
+```sh
+AI_PROVIDER=fake AI_FAKE_SCENARIO=success npm run dev:api
+AI_PROVIDER=fake AI_FAKE_SCENARIO=delay npm run dev:api
+AI_PROVIDER=fake AI_FAKE_SCENARIO=failure npm run dev:api
+```
+
+The scenarios return, respectively, immediate fixed valid success, the same success after a fixed 2,000 ms cancellable delay, and non-retryable safe UNAVAILABLE. Each request starts the same scenario afresh. This non-secret setting is meaningful only in fake mode; omitted means success, unknown fake scenarios yield local NOT_CONFIGURED before provider creation, and real Gemini mode ignores it. It is never browser input, never a frontend selector and never automatic fallback. `.env.example` still contains only `GEMINI_API_KEY=`.
+
+For compiled local execution run `npm run build:server`, then select one backend command:
+
+```sh
+AI_PROVIDER=fake AI_FAKE_SCENARIO=success npm run start:api
+AI_PROVIDER=fake AI_FAKE_SCENARIO=delay npm run start:api
+AI_PROVIDER=fake AI_FAKE_SCENARIO=failure npm run start:api
+```
+
+Run only one at a time; run `npm run build` and `npm run preview` for the built frontend. Preview has the same local API proxy. This verifies production artifacts locally, not deployment. Real `.env` creation belongs to the later, separately invoked live phase; `.env.example` remains an empty key placeholder.
 
 ## Deterministic acceptance matrix
 
@@ -33,14 +51,14 @@ Record expectations before running. For every row record actual result, PASS/FAI
 | D6 / A10 | Transient failure then success → fixed 250 ms backoff, **providerCallCount === 2**, valid hint | orchestration |
 | D7 / A10 | Two transient unavailability failures → **providerCallCount === 2 maximum**, safe UNAVAILABLE | orchestration + API |
 | D8 / A10 | 1,249 ms remains: no backoff/retry; 1,250 ms permits backoff; after backoff 999 ms prevents retry and 1,000 ms permits it | orchestration |
-| D9 / A7 | Missing/locally invalid configuration → NOT_CONFIGURED, **zero calls**; provider auth failure separately maps safely after one call | API/config + adapter |
+| D9 / A7 | Missing/locally invalid configuration → NOT_CONFIGURED, **zero calls**; provider-reported authentication/configuration rejection maps to NOT_CONFIGURED after one observed call, no retry | API/config + adapter |
 | D10 / A7 | Refusal/policy, including valid-looking accompanying text → REFUSED, no retry | adapter + orchestration |
 | D11 / A8/A9 | Raw error/stack/private payload/key-like non-secret sentinels absent from response and logs | API/adapter security |
 | D12 / A10 | Unknown or explicitly non-retryable error → UNAVAILABLE, one call, no retry | orchestration |
 | D13 / A12 | Complete preserved Week 3 suite remains green | `tests/game.test.js` + full suite |
 | D14 / A10 | Attempt timeout can retry only if classified transient and time sufficient; no retry at total expiry; backoff/validation expiry rejects late success | orchestration |
 | D15 / A5/A6/A8 | No automatic calls; one capture; double activation → one request; new round clears output; old success/error/finally cannot overwrite newer state | `tests/ai-hint.test.js` |
-| D16 / A3/A8 | Never-settling fetch/body read and unreachable backend → leave loading by 12s; retry activation possible; only fixed safe messages | UI fake clock/fetch |
+| D16 / A3/A8 | Never-settling fetch/body read and unreachable backend → leave loading by 12s; absolute monotonic deadline checked before success and after parsing; with clock beyond 12,000 ms and watchdog callback withheld, resolve fetch/body → TIMEOUT, no success; also cover exact deadline equality and stale timeout settlement after reset/new request; retry activation remains possible and messages stay application-owned | UI fake clock/fetch |
 | D17 / A8 | HTML/script-looking hint/category handled through textContent; failed request does not retain old successful hint | UI + manual browser |
 | D18 / A9/A10 | Fixed Gemini model/prompt/schema/snapshot; no tools; retries disabled; signal/timeout forwarded; ≤2 total SDK transports | `tests/gemini-provider.test.js` with stub SDK |
 | D19 / A10 | Provider proposes tool → INVALID_OUTPUT and **tool execution count 0**; historical empty-argument/read-only tool tests still pass separately | orchestration + tools |
@@ -61,9 +79,9 @@ After each major phase run appropriate focused test files through Node against f
 
 ## Manual gameplay and UI verification
 
-With deterministic success, delayed success and safe failure modes, verify game start, terminal restart, arrow/A/D paddle controls and boundaries, wall/paddle collisions, brick destruction, scoring, life loss/relaunch, win and lose states. Verify uninterrupted gameplay while hint loads, after success and after failure. Check AI Hint availability in all four statuses, loading/duplicate protection, plain-text hint/category, old-state clearing, and late response after restart. Stop backend during request to verify recovery within 12 seconds; reload/use a new request after recovery. Ensure keyboard activation of the button does not accidentally launch/restart or break paddle input.
+Using the exact `AI_FAKE_SCENARIO` commands above for deterministic success, delayed success and safe failure, verify game start, terminal restart, arrow/A/D paddle controls and boundaries, wall/paddle collisions, brick destruction, scoring, life loss/relaunch, win and lose states. Verify uninterrupted gameplay while hint loads, after success and after failure. Check AI Hint availability in all four statuses, loading/duplicate protection, plain-text hint/category, old-state clearing, and late response after restart. Stop backend during request to verify recovery within 12 seconds; reload/use a new request after recovery. Ensure keyboard activation of the button does not accidentally launch/restart or break paddle input.
 
-Keep `src/game.js` unchanged. If timing/movement code is touched despite this plan, explicitly rerun/record equivalent-duration movement at multiple frame rates and slow-frame clamping/substep checks, in addition to existing regression tests; do not infer frame-rate preservation from test count alone.
+Keep `src/game.js` unchanged. Substitute T001’s recorded SHA into `git diff <baseline-sha> -- src/main.js src/game.js tests/game.test.js` during implementation. For the committed candidate use `git diff --stat <baseline-sha> HEAD` plus targeted baseline-to-HEAD diffs; separately inspect `git diff`, `git diff --cached` and `git status --short` for unstaged, staged and untracked work. A clean working tree does not hide committed changes from these baseline comparisons. If timing/movement code is touched despite this plan, explicitly rerun/record equivalent-duration movement at multiple frame rates and slow-frame clamping/substep checks, in addition to existing regression tests; do not infer frame-rate preservation from test count alone.
 
 ## Separate limited live check (not part of automated tests)
 
