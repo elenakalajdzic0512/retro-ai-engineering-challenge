@@ -1,0 +1,291 @@
+---
+description: "Dependency-ordered Week 4 Core implementation tasks for Neon Breaker AI Hint"
+---
+
+# Tasks: Neon Breaker AI Hint
+
+**Branch**: `week4/integration`  
+**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [API contract](contracts/api.md), [provider contract and fixed instructions](contracts/provider.md), [quickstart.md](quickstart.md), and `.specify/memory/constitution.md` v1.0.0.  
+**Status**: Task generation only. Every task below is unperformed and unchecked. Planning artifacts are existing context, not evidence that implementation, tests, security, manual play, live evaluation or review passed.
+
+## Format and execution rules
+
+Use `- [ ] Tnnn [P?] [USn?] Description`. Paths are repository-relative; commands run from repository root. `[P]` identifies only the explicitly paired independent work described below, after its prerequisites pass. It does not authorize parallel edits to shared files or concurrent evidence updates. No agent delegation or additional pair participation is assumed.
+
+User stories from the specification:
+
+- **US1 (P1)** — Request one useful game hint: one explicit activation captures one snapshot and displays validated plain-text advice for that snapshot, without altering gameplay.
+- **US2 (P1)** — Continue playing when hints fail: invalid input, provider failures, invalid output and stale results terminate safely; controls remain usable.
+
+The user's requested 17-phase dependency sequence takes precedence over the template's one-phase-per-story layout. Story-specific work is labelled throughout; shared setup and final cross-cutting gates have no story label. Both stories are Core. There is no optional/stretch backlog here. The smallest demonstrable MVP is a fake-backed US1 flow with the US2 validation, bounded failure and isolation protections already working; success-only UI is not a releasable MVP.
+
+**Hard gates**:
+
+- No implementation or dependency installation before T006 records the independently observed baseline. Do not substitute the reported 77 tests for execution.
+- Add requested tests before the behavior they specify, demonstrate the expected initial failure where applicable, then implement and rerun. Later matrix phases extend coverage; they do not defer all tests until after implementation.
+- Each phase gate records expectations first, then actual commands, exit/result, revision/dirty state, fake/live, counts/timing where relevant and limitations in `docs/EVALS_W04.md`. Use NOT RUN until executed; never prefill PASS. Initialize this record in Phase 1 and consolidate it in Phase 14.
+- Before each backend-focused run, run `npm run build:server`; focus with `node --test <explicit test file(s)>`. At code phase boundaries, also run `npm test`, `npm run typecheck`, and `npm run build`; record backend compilation results as well. Any failure blocks dependent phases. Phase 2 introduces these scripts; baseline uses existing commands.
+- Automated suites inject fake providers/stub SDK transport, do not load `.env`, and need no live key, internet or credits. Dependency installation is a separate future setup operation, not a test requirement. No live calls in build/test/startup/health checks.
+- Preserve `src/game.js`, `tests/game.test.js`, `docs/EVALS.md`, `docs/EVIDENCE_003.md` and existing Week 3 usage entries. Do not rewrite gameplay to TypeScript or rewrite history.
+- Phase 15 is separately invoked and remains blocked until T088, T095 and T100 are green on the relevant revision. Changes affecting those gates invalidate their evidence. Missing actual reviewer participation remains the process limitation documented in the plan, not fabricated approval or full assignment compliance.
+- All tasks describe future work. This task-generation step creates only this file and authorizes no implementation, installation, Gemini request, push or merge now.
+
+## Phase 1: Setup — independently observed baseline before implementation
+
+**Goal**: Establish reproducible evidence before touching application code (FR-014/016, A12/A13). **Independent check**: observed automated/build results and actual Week 3 play checks exist with revision and limitations.
+
+- [ ] T001 Initialize `docs/EVALS_W04.md` with a baseline section and record `git rev-parse HEAD`, `git status --short`, `node --version`, `npm --version`, current command definitions from `package.json`, and expected test/build/gameplay behavior before execution; all actual-result fields initially NOT RUN.
+- [ ] T002 Independently run existing `npm test` against `tests/game.test.js`, `tests/contracts.test.js`, `tests/api.test.js`, `tests/fake-provider.test.js`, `tests/orchestration.test.js` and `tests/tools.test.js`; record actual count, failures, exit status and revision in `docs/EVALS_W04.md`, distinguishing the old question/answer contract from final acceptance.
+- [ ] T003 Run existing `npm run build` from `package.json` and record actual exit/result in `docs/EVALS_W04.md`; inspect generated frontend behavior without treating this as final AI Hint readiness.
+- [ ] T004 Use `npm run dev` to verify current Week 3 start/launch/restart, paddle controls, wall/paddle collisions, brick destruction, score, lives and won/lost behavior against `docs/GAME_SPEC.md`; record observed results and evaluator in `docs/EVALS_W04.md`, including any unperformed case as NOT RUN.
+- [ ] T005 Start `docs/EVIDENCE_W04.md` with the planning context and truthful process status: original Isidora backend contribution, Elena's independent continuation, and the still-unmet planned pair review/role swap under constitution X and FR-015; preserve authoritative specification/constitution and historical `docs/EVIDENCE_003.md` unchanged.
+- [ ] T006 Record the Phase 1 gate in `docs/EVALS_W04.md`: T001–T005 completed and baseline results reviewed before any code/install task; baseline failures or unverified gameplay block T007 and must be reported/resolved with a fresh recorded baseline rather than hidden or assumed green.
+
+## Phase 2: Foundation — behavior-preserving TypeScript backend migration
+
+**Depends on**: T006. **Goal**: Preserve old verified backend behavior before replacing contracts. **Independent check**: migrated ESM backend passes old applicable tests, strict typecheck and frontend build (FR-006/014, A9/A12). New `server/config.ts`, `server/ai/prompt.ts` and `server/ai/gemini-provider.ts` are added in later phases; they are not existing JS files to migrate.
+
+- [ ] T007 Install compatible stable TypeScript and Node 24 types with `npm install --save-dev typescript @types/node@24`; lock exact resolved versions in `package-lock.json`, preserve Vite and ESM in `package.json`, and record compatibility/version choices in `docs/EVIDENCE_W04.md` without introducing a new runner/framework.
+- [ ] T008 Add `tsconfig.server.json` with `strict: true`, `target: ES2022`, `module: NodeNext`, `moduleResolution: NodeNext`, `rootDir: server`, `outDir: dist-server`, `noEmitOnError: true`, Node types and server-only TS inclusion; exclude frontend/tests/generated output; add `dist-server/` to `.gitignore` while preserving env rules.
+- [ ] T009 Migrate `server/contracts.js` to `server/contracts.ts` without changing old question/snapshot/answer behavior or runtime validation; model untrusted inputs as `unknown`, narrow at runtime, and preserve `.js` ESM import specifiers for compiled output.
+- [ ] T010 Migrate `server/tools.js` to `server/tools.ts` and `server/ai/contracts.js` to `server/ai/contracts.ts` while preserving existing read-only and provider-neutral behavior; do not add tools or silently replace contract expectations yet.
+- [ ] T011 Migrate `server/ai/fake-provider.js` to `server/ai/fake-provider.ts` and `server/ai/orchestrator.js` to `server/ai/orchestrator.ts`, preserving scripted outcomes, injected time/sleep, existing retry/timeout behavior and call-count recording until Phase 4 deliberately changes policy.
+- [ ] T012 Migrate `server/index.js` to `server/index.ts`, preserving HTTP route, dependency injection and old response behavior; retain entry-point detection and loopback binding under emitted ESM.
+- [ ] T013 Add scripts in `package.json`: `build:server` = `tsc -p tsconfig.server.json`, `typecheck` = `tsc -p tsconfig.server.json --noEmit`, `dev:api` = `node --env-file-if-exists=.env --watch dist-server/index.js`, `start:api` = `node --env-file-if-exists=.env dist-server/index.js`; retain Vite scripts and document compile-watch plus Node-watch usage in `docs/EVIDENCE_W04.md`.
+- [ ] T014 Change server imports in `tests/contracts.test.js`, `tests/api.test.js`, `tests/fake-provider.test.js`, `tests/orchestration.test.js` and `tests/tools.test.js` to `../dist-server/...js`; set `package.json` test script to `npm run build:server && node --test tests/*.test.js`; keep JavaScript test files and gameplay tests unchanged and avoid duplicate discovery/stale emitted dependencies.
+- [ ] T015 Verify the migrated old behavior with `npm run typecheck`, `npm run build:server`, `npm test`, `npm run build` and a loopback smoke test of `npm run start:api` using the existing fake-only composition; record equivalence and actual results in `docs/EVALS_W04.md` before removing any still-present legacy JS copies.
+- [ ] T016 After T015 passes, remove any remaining migrated `.js` source copies at `server/index.js`, `server/contracts.js`, `server/tools.js`, `server/ai/contracts.js`, `server/ai/orchestrator.js` and `server/ai/fake-provider.js`; verify imports/scripts resolve only TS source or emitted `dist-server/` as appropriate and `git ls-files server` exposes no competing JS entry point (renames may already have removed them).
+- [ ] T017 Run the Phase 2 code gate after cleanup and record it in `docs/EVALS_W04.md`: strict typecheck, server build, complete old-contract suite and frontend build pass; `git diff -- src/game.js tests/game.test.js` confirms preserved gameplay. No final-contract migration begins before this evidence exists.
+
+## Phase 3: US1 — final request and response boundary (P1)
+
+**Depends on**: T017. **Goal**: A valid snapshot produces only a validated hint; share the same boundary with US2. **Independent check**: API/fake tests exercise all four statuses and zero-call input rejection (FR-002/003/004/007, A1/A2/A4). T018 and T019 may be authored in parallel; do not concurrently run compilation/evidence updates.
+
+- [ ] T018 [P] [US1] Replace superseded public contract cases in `tests/contracts.test.js` with snapshot and AiHintResponse expectations; quote/enforce “score is finite 0–400 (fractions allowed), lives integer 0–3, bricksRemaining integer 0–40”, exact status enum, exact keys and Unicode/UTF-8 bounds from `data-model.md`; demonstrate failures against the old contract.
+- [ ] T019 [P] [US1] Add endpoint acceptance fixtures in `tests/api.test.js` for root four-field requests and rejection of malformed JSON, missing/wrong content type, missing/extra fields, null/arrays, wrong types, numeric strings, overflow/non-finite/range values, old question/snapshot wrapper and browser provider/model/tool(s)/timeout/retry/security settings; spy on both provider factory and generate and assert `providerCallCount === 0` and zero provider creation for every invalid case.
+- [ ] T020 [US1] Replace the public input parser in `server/contracts.ts` with exactly `status`, `score`, `lives`, `bricksRemaining`; status is `ready | playing | won | lost`, score finite number 0–400 inclusive, lives integer 0–3 inclusive, bricksRemaining integer 0–40 inclusive; reject coercion/defaults/extra fields, allow fractional score and independent zero boundaries, and add no undocumented cross-field rule (FR-002/003).
+- [ ] T021 [US1] Replace the HTTP body boundary in `server/index.ts`: JSON only (optional UTF-8 charset), maximum “1,024 UTF-8 bytes” including whitespace, actual streamed byte counting even for chunked input, bounded buffering, no trust in Content-Length alone and no unsupported body encodings; complete parsing/runtime validation before provider factory creation/invocation (FR-003/A2).
+- [ ] T022 [US1] Implement raw provider text validation in `server/contracts.ts`: “Exactly `hint: string` and `category: movement | timing | strategy | general`”; “Trim only surrounding hint whitespace; count Unicode code points after trimming, 1–240 inclusive”; “Validate raw JSON payload bytes before parsing (≤2,048 UTF-8 bytes)”; reject entire invalid documents, fragments/prose/fences, partial JSON, null/array, wrong types, unknown categories, missing/extra fields, whitespace-only hints and overlong payloads; no truncation/coercion/repair (FR-004/A4).
+- [ ] T023 [US1] Adapt `server/ai/contracts.ts` and `server/ai/fake-provider.ts` to a typed provider-neutral validated snapshot input and raw structured JSON success payload; retain deterministic call recording, let invalid raw text reach the application validator, and remove public question/answer compatibility without introducing Gemini dependencies.
+- [ ] T024 [US1] Wire `server/ai/orchestrator.ts` and `server/index.ts` to the new input/output runtime validators and fresh `{hint, category}` success object only; update `tests/fake-provider.test.js` and applicable `tests/orchestration.test.js` fixtures while preserving historical standalone tool validation for Phase 6; no provider/model/envelope/diagnostic fields in success (FR-004/006).
+- [ ] T025 [US1] Add four-status HTTP success checks and snapshot-copy/immutability assertions in `tests/api.test.js`; demonstrate exactly one provider invocation and exact response fields, including ready after lost life and valid fractional score without invented cross-field rejection (A1/SC-001).
+- [ ] T026 [US1] Run focused `tests/contracts.test.js`, `tests/api.test.js`, `tests/fake-provider.test.js`, `tests/orchestration.test.js` after compilation and the phase code gate; record replaced Week 4 expectations and explicit zero-call assertions in `docs/EVALS_W04.md` without deleting relevant coverage to improve test counts.
+
+## Phase 4: US2 — stable failures and bounded reliability (P1)
+
+**Depends on**: T026. **Goal**: Optional AI failures terminate safely (FR-008/009, A3/A7/A10). **Independent check**: deterministic HTTP/clock tests demonstrate exact safe failures, deadline and budget, without frontend or SDK access.
+
+- [ ] T027 [US2] Add failure-table and reliability expectations first in `tests/orchestration.test.js` and `tests/api.test.js`: top-level `{code,message}` only, exact messages/status mapping from `contracts/api.md`, explicit transient-only retry, shared deadline and no raw-error leak; record expected failures against the superseded five-second/randomized behavior.
+- [ ] T028 [US2] Implement application-owned failures in `server/ai/orchestrator.ts`, `server/ai/contracts.ts` and `server/index.ts`: INVALID_INPUT “Cannot request a hint for this game state.”; UNAVAILABLE “AI hint is unavailable. Please try again later.”; TIMEOUT “AI hint took too long. Please try again.”; INVALID_OUTPUT “AI hint could not be read. Please try again later.”; NOT_CONFIGURED “AI hints are not available right now.”; REFUSED “AI could not provide a hint for this request.”; use API-contract HTTP statuses, no error wrapper/raw exception/stack/private payload (FR-008).
+- [ ] T029 [US2] Replace the old timing policy in `server/ai/orchestrator.ts` with one monotonic 10,000 ms deadline starting immediately before first invocation, spanning attempts/waits/validation, and maximum two calls; inject clock/scheduler for deterministic tests, use an independent watchdog and never reset the deadline or layer another retry engine (FR-009).
+- [ ] T030 [US2] Implement explicitly classified transient-only retry in `server/ai/contracts.ts` and `server/ai/orchestrator.ts`: fixed 250 ms backoff, require remaining ≥1,250 ms before backoff and ≥1,000 ms after backoff before retry; allow equality, return last applicable safe failure if insufficient time, and TIMEOUT on expiry/final timeout; remove jitter/randomness.
+- [ ] T031 [US2] Enforce non-retryability in `server/ai/orchestrator.ts` for invalid local input/output, local and remote auth/configuration failure, policy/refusal, unknown failure and expired total deadline; unknown exceptions map non-retryable UNAVAILABLE, not a retryable classification inferred from arbitrary error text/name.
+- [ ] T032 [US2] Add cancellation and late-result rejection in `server/ai/orchestrator.ts`: forward AbortSignal, abort supported work at timeout, clear timers/listeners, guard after every await and output validation, reject success at/after deadline and ignore non-cooperative late completion; keep retry allowances within remaining total time.
+- [ ] T033 [US2] Run focused `tests/orchestration.test.js` and `tests/api.test.js` plus the phase code gate; record fixed failure bodies, two-call maximum, deadline/guard evidence and absence of old jitter behavior in `docs/EVALS_W04.md` before matrix expansion.
+
+## Phase 5: US1/US2 — complete deterministic fake-provider matrix
+
+**Depends on**: T033. **Goal**: Complete the offline acceptance matrix before any real adapter wiring (FR-012, A1–A4/A7/A10). **Independent check**: failures and success are reproducible without env credentials, external network or wall-clock waits. After T037, T038 and T041 are an independent test-authoring pair; T039–T040 depend on T038 and both branches join before T042.
+
+- [ ] T034 [US2] Extend `server/ai/fake-provider.ts` and `tests/fake-provider.test.js` with deterministic raw JSON success, malformed output, explicit transient/non-retryable failures, refusal, never-completion and deferred late resolution; preserve immutable call snapshots, per-request sequences and invocation counts; tests never prevalidate malformed text into success.
+- [ ] T035 [US1] Complete success/range/boundary fixtures in `tests/contracts.test.js` and `tests/api.test.js`: all statuses, exact minima/maxima and adjacent failures, fractional valid score, invalid fractional lives/bricks, direct NaN/Infinity and JSON exponent overflow; each invalid local endpoint request has provider creation count 0 and `providerCallCount === 0` (D1/D2).
+- [ ] T036 [US2] Add byte and Unicode cases in `tests/contracts.test.js` and `tests/api.test.js`: 1,024 versus 1,025 request bytes, chunked bodies/whitespace, multibyte UTF-8, 2,048 versus 2,049 raw output bytes before parsing/trim, 240 versus 241 code points including astral characters; cover prose-fragment recovery, schema errors and category whitespace rejection (D5 and boundary cases).
+- [ ] T037 [US2] Add `tests/config.test.js` plus `tests/api.test.js` coverage of injected missing/invalid local configuration → NOT_CONFIGURED with zero provider creation/calls, invalid input taking precedence over configuration lookup, and provider-reported auth/config rejection → one call/no retry; use local stubs until real `server/config.ts` wiring in Phase 8 (D9).
+- [ ] T038 [P] [US2] Complete `tests/orchestration.test.js` cases for unavailable → safe UNAVAILABLE; never-completing provider → bounded TIMEOUT; transient then success → exactly 2 calls; two transient failures → at most 2 calls and safe UNAVAILABLE unless timeout applies; malformed output/refusal/unknown non-retryable errors → no retry (D3–D7/D10/D12).
+- [ ] T039 [US2] Add fake-time cases in `tests/orchestration.test.js` for 1,249/1,250 ms before backoff and 999/1,000 ms after backoff; assert whether sleep and retry start, fixed 250 ms delay, shared deadline, transient attempt timeout with/without sufficient allowance and zero retry after total expiry (D8/D14).
+- [ ] T040 [US2] Add deferred-resolution and validation-expiry cases in `tests/orchestration.test.js`: late success after timeout cannot settle as success, cancellation observed where supported, backoff/validation cannot extend deadline, and timer cleanup prevents a terminal result from changing (D4/D14).
+- [ ] T041 [P] [US2] Add non-secret error/stack/private-payload/telemetry sentinels in `tests/api.test.js` and assert they never appear in success, failure or captured logs; assert only safe exact field sets/messages for all known and unexpected failures (D11).
+- [ ] T042 [US2] Ensure `tests/fake-provider.test.js`, `tests/api.test.js`, `tests/orchestration.test.js` and `package.json` test execution explicitly inject fakes, prevent external provider transport, never load `.env`, and remain runnable without GEMINI_API_KEY or internet; preserve loopback HTTP tests without mistaking them for live provider access.
+- [ ] T043 [US2] Run the full phase code gate and record D1–D14 plus byte/Unicode outcomes, call counts, precise test names and revisions in `docs/EVALS_W04.md`; do not treat the pre-configuration stub tests as final proof of Phase 8 environment wiring.
+
+## Phase 6: US2 — historical tool isolation and Hint-path cleanup
+
+**Depends on**: T043. **Goal**: Keep useful prior coverage without a tool-dependent Hint flow (FR-013/A10). **Independent check**: isolated helper still validates; any provider function/tool proposal executes zero tools.
+
+- [ ] T044 [US2] Preserve and adapt isolated `server/tools.ts` and `tests/tools.test.js` coverage: exactly empty arguments, exact validated request snapshot copy, unknown/nonempty authority-expanding requests rejected; confirm Phase 2 migration did not create a second helper or permit writes.
+- [ ] T045 [US2] Add no-execution tests in `tests/orchestration.test.js` before removing tool-path support: unexpected tool/function outcome → INVALID_OUTPUT, no retry/continuation and `toolExecutionCount === 0`; replace superseded continuation-success expectations and record the reason in `docs/EVALS_W04.md`.
+- [ ] T046 [US2] Remove all Hint-path tool imports/declarations/execution/continuation from `server/index.ts`, `server/ai/contracts.ts`, `server/ai/orchestrator.ts` and `server/ai/fake-provider.ts`; leave only the disconnected historical `server/tools.ts` helper and its useful validator/tests; no new tools or loops.
+- [ ] T047 [US2] Run focused `tests/tools.test.js`, `tests/orchestration.test.js`, `tests/fake-provider.test.js` and the phase code gate; inspect Hint-path imports and record zero tool execution in `docs/EVALS_W04.md`; Phase 7 must register no Gemini tools.
+
+## Phase 7: US1 — backend-only Gemini adapter and fixed prompt
+
+**Depends on**: T047. **Goal**: Implement the sole real provider boundary entirely with stubbed verification (FR-005/006/007/011). **Independent check**: injected SDK/transport proves exact construction/extraction/classification and no hidden extra provider call. No real generation in this phase.
+
+- [ ] T048 [US1] Install official `@google/genai` with `npm install @google/genai`; lock the compatible tested version in `package-lock.json` and `package.json`; check its installed types/documentation for structured schema, retry-disable, timeout and AbortSignal support before wiring, and record resolved version in `docs/EVIDENCE_W04.md`.
+- [ ] T049 [US1] Create `tests/gemini-provider.test.js` with an injected stub SDK/transport boundary and no network: first specify exact `gemini-3.5-flash-lite`, fixed instructions, four-field snapshot, one textual candidate, JSON schema, no tools, retry-disable and remaining-time/signal expectations.
+- [ ] T050 [US1] Add fixed instructions and response schema in `server/ai/prompt.ts` matching `contracts/provider.md`: brief English status-appropriate actionable advice, fixed known rules only, ready can follow life loss, no unseen positions/exact trajectories/invented details/promised outcomes, JSON AiHintResponse only; schema requires hint/category and disallows additional properties, with no browser instruction input.
+- [ ] T051 [US1] Add server-only `server/ai/gemini-provider.ts` using `GoogleGenAI` and `models.generateContent`, fixed model `gemini-3.5-flash-lite`, explicit backend-provided key, and only validated serialized snapshot plus fixed instructions; request `responseMimeType: application/json`, `responseJsonSchema`, one candidate, no tools/history/grounding and server-owned initial 512 output-token ceiling.
+- [ ] T052 [US1] Set `httpOptions.retryOptions.attempts: 1` in `server/ai/gemini-provider.ts` to disable SDK retries; forward current remaining deadline through HTTP timeout and AbortSignal, leaving the application the sole owner of the two-call budget and independent deadline watchdog; do not retry inside the adapter.
+- [ ] T053 [US1] Implement strict SDK-envelope extraction in `server/ai/gemini-provider.ts`: refusal/policy takes precedence over hint-like content; require one complete textual candidate; reject tool/function content, missing/non-text/partial/truncated/abnormal output; return raw structured text to the existing application validator, never repaired success or metadata (FR-004).
+- [ ] T054 [US1] Map SDK failures to provider-neutral classes in `server/ai/gemini-provider.ts` and `server/ai/contracts.ts`: known temporary network/service conditions only are transient; auth/configuration and policy are non-retryable; unknown failures → non-retryable UNAVAILABLE; preserve no raw SDK message/stack/private payload in public output or logs (FR-008/009).
+- [ ] T055 [US1] Complete `tests/gemini-provider.test.js` coverage for raw extraction, refusal precedence, abnormal/malformed output, auth/config errors, transient/unknown classification and leak sentinels; route extracted text through `server/contracts.ts` via orchestrator tests to prove provider schema support never substitutes for runtime validation.
+- [ ] T056 [US1] Add SDK-transport-count integration in `tests/gemini-provider.test.js`: one orchestrator attempt causes one stubbed transport call, transient recovery permits exactly two total, two failures never create a third; assert retry disable, deadline propagation and tool/function proposals cannot execute anything.
+- [ ] T057 [US1] Run focused `tests/gemini-provider.test.js`, `tests/orchestration.test.js` and the phase code gate, recording tested SDK version and stub-only results in `docs/EVALS_W04.md`; inspect imports to verify `@google/genai` is server-only and no live provider call occurred.
+
+## Phase 8: US2 — server-only configuration and secrets
+
+**Depends on**: T057. **Goal**: Correct configuration fails safely without accidental live/fake behavior (FR-007/008, A7/A9). **Independent check**: environment-selection tests require no real key; missing config costs zero calls and Gemini failure never invokes fake.
+
+- [ ] T058 [US2] Extend `tests/config.test.js` before implementing configuration: default Gemini, explicit backend-only `AI_PROVIDER=fake`, unknown mode rejected, missing/locally invalid key → NOT_CONFIGURED with zero provider calls, and invalid input rejected before factory/configured provider creation.
+- [ ] T059 [US2] Add `server/config.ts` with backend-only environment loading/validation and fixed Google Gemini API/model selection; read `GEMINI_API_KEY` only in backend process, default to real Gemini, permit explicit fake process mode for local deterministic checks, reject unknown configuration and never derive model/provider/settings from browser fields.
+- [ ] T060 [US2] Wire lazy configuration/provider composition in `server/index.ts` only after valid local input; adapt injected config tests to the real module in `tests/config.test.js` and `tests/api.test.js`; test Gemini failure does not create/invoke a fake provider and distinguish remote auth failure after one call from missing local key before any call.
+- [ ] T061 [US2] Create `.env.example` containing exactly `GEMINI_API_KEY=` plus newline and verify `.gitignore` still ignores `.env` and local `.env.*` variants while allowing `.env.example`; do not create/populate a real `.env` during offline phases.
+- [ ] T062 [US2] Confirm `package.json` backend start/dev commands alone read local environment, tests do not load `.env`, and no key enters `src/main.js`, `src/ai-hint.js` when later created, `vite.config.js` when later created, `VITE_*`, `define`, bundled config, fixtures or logs; document non-secret startup/fake-mode behavior in `docs/EVIDENCE_W04.md`.
+- [ ] T063 [US2] Run focused `tests/config.test.js`, `tests/api.test.js`, `tests/gemini-provider.test.js` and the phase code gate; record zero-call missing configuration and absence of automatic fake fallback in `docs/EVALS_W04.md` before frontend integration.
+
+## Phase 9: US1/US2 — explicit frontend AI Hint control
+
+**Depends on**: T063. **Goal**: US1 has one explicit hint request and US2 has safe terminal UI states (FR-001/002/004/008/010, A1/A3/A5/A8). **Independent check**: injected fetch/scheduler tests validate request/rendering behavior without backend or network; round isolation follows in Phase 10.
+
+- [ ] T064 [US1] Add `tests/ai-hint.test.js` expectations for one activation in each ready/playing/won/lost status, exactly one capture of status/score/lives/alive-brick count, relative `POST /api/ai`, exact four-field JSON, no free-text question/full game state, loading/success and duplicate suppression; use injected fetch/render/clock without a new frontend framework.
+- [ ] T065 [US1] Add one AI Hint (or Ask AI for Hint) button and polite loading/result/error region to `index.html`; add minimal readable idle/loading/success/failure styling in `src/style.css`, without unrelated gameplay layout redesign or additional AI controls.
+- [ ] T066 [US1] Implement `src/ai-hint.js` activation flow with an immutable single snapshot capture, JSON POST to relative `/api/ai`, idle/loading/success/failure state, disabled duplicate activation while pending and previous hint/error cleared when a new request begins; do not send request IDs or configuration in the body.
+- [ ] T067 [US2] Add safe response/rendering expectations in `tests/ai-hint.test.js`, then implement `src/ai-hint.js` success-shape checks and application-owned error mapping: hint/category through `textContent`, no HTML/Markdown/code execution, no raw server/fetch exception text, malformed/unexpected backend envelope → fixed UNAVAILABLE, no old success left visible after failure.
+- [ ] T068 [US2] Add fake-clock fetch/body-never-settles and transport-failure tests in `tests/ai-hint.test.js`, then implement a 12,000 ms end-to-end watchdog from activation in `src/ai-hint.js` with AbortController, fixed TIMEOUT/UNAVAILABLE messages, timer cleanup and re-enabled control after settlement; include response body parsing in the deadline.
+- [ ] T069 [US1] Wire `src/main.js` to the controller only from explicit button activation; count alive bricks only at capture, label results “Advice for the game when requested”, and keep fetch out of frame/draw/physics/status transitions; leave `src/game.js` and game timing/movement untouched.
+- [ ] T070 [US1] Add browser-wiring assertions where practical in `tests/ai-hint.test.js` and review `src/main.js` keyboard handling so native button activation does not also trigger Space launch/restart or break paddle controls; exercise ordinary gameplay updates in tests to prove no automatic fetch and no mutation of score/lives/bricks/movement/collision/timing by hint logic.
+- [ ] T071 [US1] Run `node --test tests/ai-hint.test.js`, `tests/game.test.js` and the phase code gate; record all-status activation, one-capture/one-request, safe text rendering, failure recovery and 12s bound in `docs/EVALS_W04.md`; do not claim stale-response completion until Phase 10 passes.
+
+## Phase 10: US1 — stale-response and round isolation
+
+**Depends on**: T071. **Goal**: Advice remains associated with its capture and cannot corrupt a newer round/request (FR-010, A6/A8). **Independent check**: deferred promises settle in deliberately wrong order and cannot affect newer UI; gameplay values remain unchanged.
+
+- [ ] T072 [US1] Add deterministic out-of-order scenarios in `tests/ai-hint.test.js`: old success ignored, old failure ignored, old finally cannot clear newer loading state, superseded request cannot overwrite new success/failure, and reset clears both pending and already settled content.
+- [ ] T073 [US1] Add monotonically increasing request token and round generation in `src/ai-hint.js`; require both to match for success/catch/finally/timeout updates, retain captured snapshot ownership, and invalidate old tokens before allowing a newer activation.
+- [ ] T074 [US1] Implement reset/new-round invalidation in `src/ai-hint.js`: abort request, clear timers, increment generation/token, clear hint/error, restore idle and prevent any late handler from changing current state; no game-state mutation.
+- [ ] T075 [US1] Wire `src/main.js` existing launch/restart path to initial-new-round and terminal won/lost restart invalidation; preserve relaunch after nonfinal life loss as the same round and avoid assuming every `ready` is a new game; every existing restart entry point must use the same helper without modifying `src/game.js` physics.
+- [ ] T076 [US1] Extend `tests/ai-hint.test.js` with initial launch, life-loss ready/relaunch, won/lost restart, reset while pending, reset after success/failure and late completion after watchdog; assert exactly one captured snapshot and untouched game score/lives/bricks/movement/collision/timing across each sequence.
+- [ ] T077 [US1] Run focused `tests/ai-hint.test.js`, `tests/game.test.js` and the phase code gate; record the token/generation stale-success/failure/finally evidence and round distinction in `docs/EVALS_W04.md` (D15–D17/A6).
+
+## Phase 11: US1 — minimal local frontend/backend integration
+
+**Depends on**: T077. **Goal**: Same browser flow reaches only our local backend in dev and built preview (FR-006/007, A1/A9). **Independent check**: browser Network view plus fake-only backend shows the exact request and no provider/secret exposure.
+
+- [ ] T078 [US1] Add `vite.config.js` mapping `/api` to `http://127.0.0.1:3001` for Vite development and local preview; keep relative fetch in `src/ai-hint.js`, loopback backend in `server/index.ts`, and no broad CORS framework, environment spreads, `VITE_GEMINI_API_KEY` or secret-bearing `define` entries.
+- [ ] T079 [US1] Follow `quickstart.md` using compile-watch, `AI_PROVIDER=fake npm run dev:api` and `npm run dev`; inspect a deliberate hint request in the browser to prove exact body, local backend destination, plain-text result and uninterrupted play; record actual commands/ports/results in `docs/EVALS_W04.md`.
+- [ ] T080 [US1] Run `npm run build:server`, `AI_PROVIDER=fake npm run start:api`, `npm run build` and `npm run preview`; verify compiled backend and production frontend through preview proxy, then stop backend and verify safe UI settlement within 12s; record in `docs/EVALS_W04.md` without deployment or real Gemini use.
+- [ ] T081 [US1] Run the Phase 11 code gate and review `vite.config.js`, `src/ai-hint.js`, `server/index.ts` and generated `dist/` for frontend/backend separation; record actual development/preview integration outcomes and any platform limitations in `docs/EVALS_W04.md`.
+
+## Phase 12: Cross-cutting complete local technical and gameplay gates
+
+**Depends on**: T081. **Goal**: Both P1 stories and Week 3 regression pass before live consideration (A1–A10/A12, SC-001–004). **Independent criteria**: US1's all-status success is observed using a fake; US2's bounded failures/recovery work independently using the same offline fixtures.
+
+- [ ] T082 Record expected final local outcomes and relevant revision in `docs/EVALS_W04.md`, then run complete `npm test`; account for all retained/adapted suites plus `tests/ai-hint.test.js`, `tests/config.test.js` and `tests/gemini-provider.test.js`, confirming deterministic fake-provider matrix, controller tests and Week 3 regressions PASS without live credentials/network.
+- [ ] T083 Run `npm run typecheck`, `npm run build:server` and `npm run build` separately and record actual exit/output summaries in `docs/EVALS_W04.md`; compilation success does not substitute for runtime validation or test execution.
+- [ ] T084 Verify `src/main.js` and `src/game.js` manually against `docs/GAME_SPEC.md`: start, launch, restart, left/right/A/D controls and paddle bounds, wall/paddle collisions, brick destruction, score increments, lives, life-loss relaunch, won state and lost state; record every actual case in `docs/EVALS_W04.md`.
+- [ ] T085 Manually play using explicit local fake success/delayed/failure fixtures from `server/ai/fake-provider.ts`: controls/collisions/scoring continue during AI loading, after success and after failure; exercise all statuses, restart during pending, safe markup-like text, disabled duplicate activation, backend outage and recovery; record observed latency/result in `docs/EVALS_W04.md` without adding a browser provider selector.
+- [ ] T086 Inspect `git diff` for `src/main.js` and `src/game.js`; if movement/timing source changed, explicitly rerun `tests/game.test.js` frame-rate/slow-frame coverage and manually compare equivalent-duration behavior at multiple frame rates; record evidence in `docs/EVALS_W04.md`, or mark the conditional check not applicable with diff-based reason (not a fabricated PASS).
+- [ ] T087 Review `docs/EVALS_W04.md` against quickstart D1–D19 and A1–A10/A12, including 240-code-point/byte bounds, zero calls for invalid input/config, exact retries/guards, late results, safe text and tool exclusion; fill any missing deterministic acceptance coverage before declaring the matrix complete.
+- [ ] T088 Record the Phase 12 local gate in `docs/EVIDENCE_W04.md` with links to actual suite/typecheck/backend-build/frontend-build/manual/regression outcomes and revision; all must pass, no skipped required case treated as green; Phase 15 remains blocked until Phase 13 security and Phase 14 evidence gates also pass.
+
+## Phase 13: Cross-cutting security verification
+
+**Depends on**: T088. **Goal**: Prove checked secret/validation boundaries before live/final review (FR-003/004/007/008, A2/A4/A9). **Rule**: use clearly non-secret sentinels; never print a real key or raw scanner match. Detected real secrets block readiness; do not silently rewrite history.
+
+- [ ] T089 Verify `.gitignore` and `.env.example` with `git check-ignore .env .env.local .env.production`, `git check-ignore .env.example` (expected no match), and `git ls-files`; assert local env files are untracked and `.env.example` is exactly the empty `GEMINI_API_KEY=` assignment; record safe findings in `docs/EVALS_W04.md`.
+- [ ] T090 Review `src/main.js`, `src/ai-hint.js`, `vite.config.js`, `index.html` and generated `dist/` for key/provider/server-module exposure; build using a non-secret backend-key sentinel and verify it is absent from frontend source/bundle; inspect browser network for only backend `/api/ai`, no direct Gemini access or bundled provider config; record in `docs/EVALS_W04.md`.
+- [ ] T091 Run a redacting secret scanner over working tree, `server/`, `src/`, `tests/`, `specs/`, `docs/`, prompts and production `dist/`; record exact scanner/version/command/scope and only safe findings in `docs/EVALS_W04.md`; where a local key already exists, perform an in-memory exact-key absence check without printing it or creating a real-key test fixture.
+- [ ] T092 Scan all reachable Git history for secrets using a redacting scanner and review tracked env history; record revision/scope and unavailable/unreachable-history limitations in `docs/EVALS_W04.md`, never keys/matches; any detected real secret blocks readiness and requires separately documented remediation, not silent history rewriting.
+- [ ] T093 Run `tests/api.test.js`, `tests/config.test.js` and `tests/gemini-provider.test.js` leak-sentinel cases and inspect captured backend logs: public output/logs must contain no key, raw SDK/provider errors, stack, internal payload or private telemetry; record redacted results in `docs/EVALS_W04.md`.
+- [ ] T094 Inspect and test validation ordering across `server/index.ts`, `server/contracts.ts`, `server/ai/orchestrator.ts` and `src/ai-hint.js`: invalid input precedes provider creation/invocation, untrusted output passes byte/JSON/schema/deadline checks before success/UI, invalid output never displays as valid; record provider factory/call counts and safe render assertions in `docs/EVALS_W04.md`.
+- [ ] T095 Record the Phase 13 security gate in `docs/EVIDENCE_W04.md`: T089–T094 pass on the relevant revision, no detected real secret unresolved, coverage limitations stated and reviewer identity/status truthful; any failure/required unchecked surface blocks Phase 15 and final readiness. Record pair-review absence as the existing process limitation, not as completed review.
+
+## Phase 14: Cross-cutting Week 4 evaluation and evidence
+
+**Depends on**: T095. **Goal**: Consolidate actual offline outcomes before separately invoked live evaluation (FR-016/A13). Records have been created progressively, so this phase must not manufacture retrospective expectations.
+
+- [ ] T096 Complete `docs/EVALS_W04.md` with A1 structured success, A2 invalid input and `providerCallCount === 0`, A3 provider failure/timeout, A4 invalid output, and every retry/deadline/refusal/configuration/UI/security/regression case; for each include expectation recorded before execution, actual result, PASS/FAIL or NOT RUN, exact command/test, revision/dirty state, fake/live, applicable call count/latency and limitations.
+- [ ] T097 Complete `docs/EVIDENCE_W04.md` architecture section with a diagram of frontend → TypeScript backend → provider-neutral orchestration → Gemini adapter → `gemini-3.5-flash-lite`, secret storage in ignored backend `.env`/process env, and references to `spec.md`, `contracts/api.md`, `contracts/provider.md` and `server/ai/prompt.ts` for request/response/fixed instructions; avoid duplicated drifting feature specifications.
+- [ ] T098 Complete `docs/EVIDENCE_W04.md` success/failure flows, TS/backend evidence, test/typecheck/backend/frontend-build results, fake matrix, security, manual play, known limitations and actual contribution section; reserve live rows as NOT RUN and show separate technical versus process-compliance status.
+- [ ] T099 Append a clearly dated Week 4 section to `docs/AI_USAGE_LOG.md` containing actual assistance, human decisions, contributions, validation and limitations for planning/implementation so far; preserve existing Week 3 entries and verify `docs/EVALS.md` and `docs/EVIDENCE_003.md` unchanged.
+- [ ] T100 Audit `docs/EVALS_W04.md`, `docs/EVIDENCE_W04.md` and `docs/AI_USAGE_LOG.md` for complete offline evidence, pre-recorded expectations, valid references, no secrets/fabricated PASS and exact provider/model; record local/security gate revisions and live NOT RUN status. This is the Phase 14 evidence gate, not permission to run live automatically.
+
+## Phase 15: Separately invoked limited live Gemini validation — BLOCKED
+
+**Entry conditions**: T088, T095 and T100 green for the current relevant revision; any affected code/config change requires fresh local/security evidence. A separate explicit live invocation is required; normal implementation/test commands must not run this phase automatically. Record reviewer gate status under the plan's documented independent-completion limitation; do not claim constitutional/pair compliance if review did not happen.
+
+**Budget**: At most four deliberate user-level hint requests, exactly one per fixture below. No automated live loop, no intentional retry induction, no model/provider fallback and no live call in `npm test`. Do not repeat a failed status within this batch. Ordinary bounded application retries remain enabled and count separately (at most two actual provider calls per request); minimize actual usage and report observable counts honestly. Further live evaluation requires a documented reason, separate invocation and fresh applicable gates, not automatic task retry.
+
+**Record for each live task**: Before the call, expected structured/brief/useful/status-relevant result; after the call, Google Gemini API, exact model `gemini-3.5-flash-lite`, snapshot, actual application response, contract validity, usefulness/status relevance, latency, observable provider call count or “unavailable”, exposed token/cost information or “unavailable” (not zero), success/failure, revision and limitation. Never record keys or raw private provider payloads. Non-secret usage evidence stays out of public API responses.
+
+- [ ] T101 On separate invocation only, verify T088/T095/T100 and actual reviewer/process status in `docs/EVIDENCE_W04.md`, record the four-call budget/expectations in `docs/EVALS_W04.md`, supply the real key locally in ignored `.env` without printing it, and start the compiled real backend via `package.json` `start:api` with fake mode unset; inspect fixed model/config without a probe/generation call.
+- [ ] T102 Perform one deliberate ready hint request with `{"status":"ready","score":0,"lives":3,"bricksRemaining":40}` from `contracts/provider.md`; record all per-call fields in `docs/EVALS_W04.md`, expecting preparation/launch advice with no unseen positions or invented details; do not repeat on failure.
+- [ ] T103 Perform one deliberate playing hint request with `{"status":"playing","score":120,"lives":2,"bricksRemaining":28}`; record all per-call fields in `docs/EVALS_W04.md`, expecting concise actionable focus appropriate to active play without exact trajectories; do not intentionally induce retry.
+- [ ] T104 Perform one deliberate won hint request with `{"status":"won","score":400,"lives":2,"bricksRemaining":0}`; record all per-call fields in `docs/EVALS_W04.md`, expecting a future-round focus appropriate to completion rather than claims about remaining bricks.
+- [ ] T105 Perform one deliberate lost hint request with `{"status":"lost","score":120,"lives":0,"bricksRemaining":28}`; record all per-call fields in `docs/EVALS_W04.md`, expecting useful next-round advice appropriate to zero lives without invented positions or guaranteed outcomes.
+- [ ] T106 Evaluate the four observed rows in `docs/EVALS_W04.md`: every response must pass exact application contract and usefulness/status criteria to claim technical live readiness; record failures/NOT RUN and actual observable total calls/usage honestly, stop the live backend when finished, and do not hide failures through extra calls or fake fallback.
+- [ ] T107 Update `docs/EVIDENCE_W04.md` and the Week 4 section of `docs/AI_USAGE_LOG.md` with actual limited-live outcomes, latency/usage limitations, model-access/quality findings and separate process status; mark Phase 15 passed only if all four satisfy criteria, otherwise keep readiness blocked and document the limitation.
+
+## Phase 16: Cross-cutting contribution and process truthfulness
+
+**Depends on**: recorded Phase 15 disposition (success, failure or not run); does not authorize further calls. **Goal**: Honest accountability throughout and at final review (FR-015/016, A13/SC-006). A documentation task may complete by accurately recording an unmet requirement; that does not make the underlying pair requirement pass.
+
+- [ ] T108 Verify and preserve Isidora's actual initial runtime contracts, JavaScript API, fake provider, orchestration/reliability and associated tests using Git history and existing records; add accurate revision references in `docs/EVIDENCE_W04.md` without attributing later Elena work or a later review to Isidora.
+- [ ] T109 Record Elena's actual independent verification, integration branch, SpecKit setup, constitution, spec, plan and subsequent implementation/tests/security/evaluation/evidence in `docs/EVIDENCE_W04.md` and the Week 4 section of `docs/AI_USAGE_LOG.md`; distinguish user-reported historical facts from newly observed work and pending tasks.
+- [ ] T110 Audit FR-015/A13/SC-006 and constitution X against `docs/EVIDENCE_W04.md`: include later Isidora review/approval/role swap only if performed with evidence; otherwise explicitly retain pair-work and reviewer-dependent process limitations, do not amend authoritative documents silently, and do not claim both members reviewed/explained the final flow without evidence.
+
+## Phase 17: Final repository / PR gates and conditional post-merge verification
+
+**Depends on**: Core technical/security/evidence gates and an honest live/process disposition. A failed/missing required technical/live gate blocks release readiness; the documented pair limitation must be visible independently. **No merge is performed as part of task generation or automatically by checking tasks.** PR readiness and merge are separate later actions after actual completion; they cannot be inferred from this document.
+
+- [ ] T111 Review final diff against the recorded Phase 1 baseline with `git diff --stat` and targeted file review, including `server/`, `src/main.js`, `src/ai-hint.js`, `vite.config.js`, tests/config/docs; confirm one AI feature, smallest change surface, no unrelated gameplay redesign, no old JS server entry points/tools in Hint path, preserved Week 3 history and no secrets; record findings in `docs/EVIDENCE_W04.md`.
+- [ ] T112 Run final complete `npm test`, `npm run typecheck`, `npm run build:server` and `npm run build` on the final candidate; record exact revision/dirty state and outcomes in `docs/EVALS_W04.md`; no skipped fake/controller/adapter/game regression coverage and no live network dependence.
+- [ ] T113 Perform final manual play-test of start/launch/restart, controls/collisions/bricks/score/lives/won/lost and gameplay during pending/after success/after failure using fake mode; repeat affected security checklist checks over source/bundle/history/logs/public responses and frame-rate verification if timing changed; record actual results in `docs/EVALS_W04.md`, avoiding any additional live demonstration call.
+- [ ] T114 Audit final `docs/EVALS_W04.md`, `docs/EVIDENCE_W04.md`, `docs/AI_USAGE_LOG.md` and this `specs/001-neon-breaker-ai-hint/tasks.md` for accurate completion states, commands/revisions, limited-live results, known limitations and truthful contributions; no required unexecuted evaluation marked PASS, no keys or private payloads, and no implied pair approval.
+- [ ] T115 Commit only reviewed intended files including `specs/001-neon-breaker-ai-hint/tasks.md` and Week 4 evidence, preserving unrelated work; verify `git status --short` is clean and link recorded candidate results to the final commit in PR review context. If code changed after T112/T113, rerun affected gates before finalizing; never discard files merely to achieve clean status.
+- [ ] T116 In a later authorized repository-work step, inspect `gh pr view 3 --json number,url,isDraft,headRefName,baseRefName,headRefOid`, confirm draft PR #3 targets the intended integration branch/base, and push the verified commits through the configured upstream; verify PR head matches local revision and summarize changes/tests/limitations in PR #3, referencing `docs/EVIDENCE_W04.md`; keep it draft at this task and do not force-push/merge.
+- [ ] T117 Separately assess release readiness for PR #3 after all required technical/evidence/live tasks actually pass, final clean status and checks are confirmed, and `docs/EVIDENCE_W04.md` discloses the pair limitation; report failed/unmet gates honestly. Taking the PR out of draft and merging require a separate later action/invocation; do not perform them merely because this checklist exists.
+- [ ] T118 **Conditional, only after a separately performed merge**: fetch/update local `main` safely, verify merge commit/clean status, then run `npm ci` for the committed lockfile (use `npm install` only with a documented lockfile reason), `npm test`, `npm run typecheck`, `npm run build:server` and `npm run build`; capture results for `package.json`/`package-lock.json` at the main revision without live provider calls.
+- [ ] T119 **Conditional after T118**: attach the final main-branch revision, exact commands/results and clean-status evidence to PR #3 or a clearly labelled follow-up to `docs/EVIDENCE_W04.md`; report any regression as unresolved rather than claiming merge success proves runtime correctness, and keep after-merge failures visible for separate corrective work.
+
+## Dependencies and execution order
+
+The default is phase-serial execution. Within a phase, tasks follow ID order unless an explicit `[P]` pair below applies. Each phase depends on the preceding phase's recorded checkpoint, not simply its code existing. Never run gate commands while a parallel partner is still editing the files under test.
+
+```text
+Phase 1 baseline T006
+  → Phase 2 behavior-preserving TS gate T017
+  → US1 boundary Phase 3 T026
+  → US2 failure/reliability Phase 4 T033
+  → fake matrix Phase 5 T043 → tool isolation Phase 6 T047
+  → US1 stub-tested adapter Phase 7 T057
+  → US2 configuration Phase 8 T063
+  → US1 + US2 UI Phase 9 T071 → US1 isolation Phase 10 T077
+  → US1 local integration Phase 11 T081
+  → complete local gates T088 → security T095 → evidence T100
+  → [separate invocation only] limited live T101–T107
+  → truthful process audit T108–T110
+  → final repository/PR gates T111–T117
+  → [separate merge occurs outside this checklist] main checks T118–T119
+```
+
+US1 begins with the boundary after foundational migration; US2 builds on the same validated boundary and can be tested independently using fake input/output failures. The browser delivery of US1 depends on US2's safe API/configuration behavior. Neither story is released without the other. US1's full independent acceptance is all-status explicit request/validated response plus no automatic calls, one capture and stale-response rejection. US2's independent acceptance is the fake failure matrix with precise call counts/deadlines, sanitized failures, UI recovery within 12s and gameplay still usable.
+
+The early baseline/evidence initialization and ongoing expectation recording are prerequisites to meaningful Phase 14 consolidation. Phase 16's final audit does not defer truthful process status: T005, T095 and T101 already require it. Recording a blocked live disposition allows honest documentation work, but never unlocks a technical-live PASS or ready-to-merge claim.
+
+## Parallel opportunities and examples
+
+`[P]` means safe file separation with shared prerequisites already complete, not an obligation to delegate. Elena can execute all tasks sequentially.
+
+- **US1 boundary example**: after T017, T018 (`tests/contracts.test.js`) and T019 (`tests/api.test.js`) may be authored concurrently; join before T020 and coordinate test execution/evidence writes. These are independent tests of the fixed documented contract.
+- **US2 failure-test example**: after T037, T038 (`tests/orchestration.test.js`) and T041 (`tests/api.test.js`) may be authored concurrently. T039–T040 must wait for T038 because they edit its file; join both branches before T042. No shared evidence update or gate execution runs concurrently. Other US2 implementation work shares orchestrator/controller files and stays serial.
+- Gate execution, shared `package.json`/lockfile changes, evidence updates, live calls and PR mutations are always serialized. Do not parallelize four live requests or treat the two stories as independent file trees.
+
+## Implementation strategy and requirement coverage
+
+Deliver increments with observed gates: baseline → type-only migration under old expectations → final runtime contracts → bounded failures/fake matrix → tool removal → stub-only adapter/config → explicit UI/isolation → offline integration → complete local/security/evidence → separately invoked minimal live check → truthful final review. No stretch work is planned; do not add fallback providers, agents, RAG, databases, authentication, multiplayer, deployment, write tools or AI-controlled gameplay.
+
+| Requirement / acceptance | Primary tasks |
+| --- | --- |
+| FR-001/002/005; A1/A5; SC-001 | T018–T025, T049–T051, T064–T071, T102–T105 |
+| FR-003; A2; SC-002 | T019–T021, T035–T037, T060, T094 |
+| FR-004/008; A3/A4/A7/A8 | T022–T024, T027–T041, T053–T055, T067–T068, T093–T094 |
+| FR-006/007; A9 | T007–T017, T048–T063, T078–T081, T089–T095 |
+| FR-009; A10; SC-003 | T029–T032, T038–T040, T052/T056, T068/T072–T077 |
+| FR-010; A5/A6/A8 | T064–T077, T084–T085 |
+| FR-011; A11; SC-005 | T048–T057, T097, T100–T107; live remains gated |
+| FR-012/013; A10; SC-004 | T034–T047, T049/T055–T057, T082–T088 |
+| FR-014; A12 | T001–T017, all phase gates, T082–T088, T111–T113/T118 |
+| FR-015/016; A13; SC-006 | T005, T096–T110, T114–T119; pair compliance remains unmet without actual participation |
+
+**Completion semantics**: Check off a task only after its described action and verification are observed. For conditional after-merge tasks, leave unchecked until their condition occurs. Record not-applicable conditional checks explicitly; do not equate them with observed PASS. A final technical result, live readiness result and assignment process-compliance result are distinct and must remain distinguishable in evidence.
