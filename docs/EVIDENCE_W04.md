@@ -80,6 +80,24 @@ The following historical artifacts remain preserved and unchanged: `docs/EVIDENC
 
 No `npm test`, `npm run build`, `npm run dev`, provider call or Gemini call was performed for T005. T006 was subsequently completed as the Phase 1 gate; T008 and all later tasks remain NOT STARTED / NOT RUN.
 
+## Current Week 4 implementation evidence
+
+The initial planning checkpoint above remains historical evidence and is preserved. The implementation now has the following verified shape:
+
+- Week 3 gameplay remains preserved through baseline regression and manual verification.
+- The browser communicates with the TypeScript backend through `POST /api/ai`; the browser never calls Gemini directly.
+- The backend validates the four-field request and the `{ hint, category }` response at runtime.
+- The single visible AI feature is the explicitly triggered Neon Breaker AI Hint.
+- The configured real provider is Google Gemini with fixed model `gemini-3.5-flash-lite`; the deterministic fake provider remains available for offline evaluation.
+- `GEMINI_API_KEY` is backend-only. `.env` variants are ignored, `.env.example` contains no secret, frontend calls remain relative, and the production bundle contained no `GEMINI_API_KEY`, `@google/genai`, or `gemini-3.5-flash-lite` reference. A non-secret sentinel build and scan passed.
+- TypeScript migration, contract tests, fake-provider integration, frontend integration, strict typecheck, server build, full 85-test suite, frontend build, and manual fake-provider browser flow have observed PASS evidence.
+
+The real Gemini adapter has only been exercised with an injected stub client. **Limited live Gemini validation is NOT RUN**, and no real key or provider response has been recorded. The planned pair-review, role-swap, secret-boundary review, and joint understanding confirmation also remain unresolved process requirements. These limitations are separate from the technical local gates and are not represented as complete.
+
+### Week 4 contribution history
+
+Isidora's earlier Week 4 JavaScript/runtime/backend work remains attributed to the history documented above. Elena continued independently with SpecKit, the TypeScript migration, final contract, fake-provider integration, Gemini adapter, frontend integration, tests, manual verification, and security checks. No later Isidora review, approval, role swap, or joint sign-off is claimed.
+
 ## T007 — TypeScript dependency installation evidence
 
 The observed T007 installation was:

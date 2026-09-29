@@ -57,3 +57,13 @@ AI je korišćen za ubrzavanje analize, strukturisanje dokumentacije i predlagan
 - Privatni chain-of-thought nije beležen.
 - Rezultati se nisu prihvatali samo zato što ih je AI generisao; svaki relevantan rezultat prolazio je ljudsku proveru i/ili lokalnu verifikaciju.
 - Codex nije commitovao niti pushovao odobrene implementacione promene; commit/push koraci su ostali pod ljudskom kontrolom.
+
+## Week 4 — AI Hint integration and evidence reconciliation (2026-09-29)
+
+AI assistance was used for SpecKit analysis and planning, controlled TypeScript migration, final-contract test-first work, deterministic fake-provider integration, Gemini adapter scaffolding with an injected stub client, frontend AI Hint integration, and evidence reconciliation. The intended result was a small explicit AI Hint flow with a browser/backend boundary and a server-controlled Gemini provider.
+
+Human decisions controlled the scope: no autonomous calls, no frame-loop integration, no fallback provider, no extra tools, no live Gemini call during this work, and no acceptance of unverified AI output as evidence. Elena reviewed the implementation changes, preserved the Week 3 game, ran the documented local gates, manually verified the browser/gameplay flow, and performed the secret-boundary checks.
+
+The contract work followed a test-first sequence: the focused final-contract tests first produced the recorded RED result, then passed in the recorded GREEN result. Fake-provider, backend, frontend-build, security-sentinel, and manual-browser results are kept distinct from live-provider evidence.
+
+Current limitations remain: limited live Gemini validation has not been run, and the planned final Isidora review/role swap, secret-boundary review, and joint confirmation that both members can explain the final flow are not evidenced. These are recorded as limitations rather than inferred from AI output or fabricated participation.

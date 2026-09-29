@@ -314,6 +314,61 @@ The server process was terminated after the smoke test. No live provider or Gemi
 
 Strict TypeScript migration validation is **PASS**. The existing pre-final question/snapshot/answer behavior was preserved across typecheck, emitted backend build, the complete 77-test suite, frontend production build, and real loopback HTTP smoke test. **T015 is complete.** The final AI Hint contract has not yet begun.
 
+## Week 4 reconciliation at the current implementation checkpoint
+
+### Implementation identity and migration
+
+- Implementation baseline: `76f50304a9372b3c497692970975d99c2acea3a3`.
+- Phase 1 evidence checkpoint: `677ce44` (`docs: record Week 4 pre-implementation baseline`).
+- TypeScript backend migration: `4d551de` (`refactor: migrate Week 4 backend to TypeScript`). Strict typecheck, server build, the existing 77/77 tests, and frontend build passed.
+- Final contract implementation: `fa8b16b` (`feat: define final Week 4 AI Hint contract`). The focused contract RED phase observed 24 tests with 14 passing and 10 expected failures; the final focused GREEN phase observed 24/24 passing.
+
+### Backend and fake-provider evidence
+
+- Backend fake-provider integration: `ffef120` (`feat: integrate AI Hint through backend fake provider`). The final backend regression observed 81/81 tests passing, strict typecheck passing, and the frontend production build passing.
+- The fake provider is deterministic and performs no external network call. Automated coverage includes invalid input before provider invocation, provider failure and timeout, malformed output, safe public errors, and bounded retry behavior. Fake output quality is not evidence of Gemini output quality.
+
+### Gemini adapter evidence
+
+- Gemini integration: `518d268` (`feat: add Gemini provider integration`). `@google/genai` resolved to `2.24.0`; the fixed model is `gemini-3.5-flash-lite`.
+- The adapter has been verified only with an injected stub client. Gemini stub tests passed 4/4, the relevant AI backend suite passed 64/64, and the full suite after integration passed 85/85. Strict typecheck and production build passed.
+- **Live Gemini validation: NOT RUN.** No real Gemini request, API key, or provider credit was used.
+
+### Frontend and final local gate
+
+- Frontend integration: `1a0b261` (`feat: add AI Hint frontend integration`). The explicit Ask AI for Hint control sends only the four-field snapshot to relative `/api/ai`, shows loading/safe success/generic failure states, stays outside the frame/update loop, and does not intentionally mutate gameplay state.
+- Elena manually observed the deterministic fake-provider flow in the browser: category `general`, hint `Keep the ball in play.` This is fake-provider behavior, not Gemini quality evidence.
+- At `1a0b261`, the observed sequence `npm run typecheck`, `npm run build:server`, `npm test`, and `npm run build` completed with typecheck PASS, server build PASS, 85/85 tests passing, frontend build PASS, and `FINAL_LOCAL_GATE_EXIT=0`.
+- Elena also manually confirmed game launch, paddle controls, scoring/life-loss/restart behavior, AI Hint operation, continued gameplay after the hint, and no intentional gameplay mutation from requesting a hint. This is user-observed manual verification, not an automated browser test.
+
+### Assignment-Core checklist
+
+| Core requirement | Status | Evidence |
+| --- | --- | --- |
+| Week 3 game preserved | PASS | Baseline gameplay checks, regression suite, and manual browser verification |
+| Frontend/backend split | PASS | Browser uses relative `/api/ai`; provider remains server-side |
+| TypeScript backend | PASS | `4d551de`; strict typecheck and server build |
+| Backend-only provider secret boundary | PASS | Backend `GEMINI_API_KEY` reference; no key in frontend; sentinel absent from production bundle |
+| Exactly one visible AI feature | PASS | Single explicit AI Hint control and flow |
+| Feature specification | PASS | Week 4 SpecKit specification |
+| Explicit provider/model | PASS | Google Gemini, fixed `gemini-3.5-flash-lite` |
+| Backend endpoint | PASS | `POST /api/ai` |
+| Runtime local-input validation | PASS | Contract tests and zero-call invalid-input coverage |
+| Structured output | PASS | Gemini structured JSON request and fake raw JSON flow |
+| Runtime output validation | PASS | `parsePublicAiResponse` and malformed-output tests |
+| Timeout/failure handling | PASS | Existing bounded orchestration tests |
+| Safe user-facing errors | PASS | Sanitized backend/frontend error coverage |
+| Fake/mock provider tests | PASS | Deterministic offline fake and stub suites |
+| Success test | PASS | Final-contract GREEN and backend success tests |
+| Invalid input with zero provider calls | PASS | API/orchestration evidence |
+| Provider failure/timeout test | PASS | Automated regression coverage |
+| Malformed output test | PASS | Automated runtime validation coverage |
+| Local evidence | PASS | Baseline, migration, contract, backend, frontend, security, and manual records |
+| Limited live provider demonstration | NOT YET COMPLETE | No live Gemini request has occurred |
+| Final pair process / both members understand flow | NOT YET COMPLETE | No final Isidora review, role swap, secret-boundary review, or joint confirmation evidenced |
+
+The technical Core has substantial local PASS evidence, but the Week 4 assignment is not declared fully complete while live validation and the documented pair-process requirements remain outstanding.
+
 ## T016 — legacy server-source removal verification
 
 The six migrated TypeScript server sources are the only tracked server sources:
