@@ -1,7 +1,15 @@
 import { createServer as createHttpServer } from 'node:http';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ContractError, parseAiRequest, parsePublicAiResponse } from './contracts.js';
+import { createFakeProvider } from './ai/fake-provider.js';
+import {
+  AiOrchestrationError,
+  getAiOrchestrationErrorResponse,
+  getAiOrchestrationHttpStatus,
+  runGameAssistant,
+} from './ai/orchestrator.js';
+import { ContractError, parseAiRequest } from './contracts.js';
+import { invokeReadOnlyTool } from './tools.js';
 
 const MAX_REQUEST_BODY_BYTES = 16 * 1024;
 
@@ -36,11 +44,18 @@ function readRequestBody(request) {
   });
 }
 
-function createTemporaryLocalPlaceholderResponse() {
-  return { answer: 'Current game state received.' };
+function createLocalFakeProvider() {
+  return createFakeProvider({
+    outcomes: [{ type: 'final', output: { answer: 'Local fake provider response.' } }],
+  });
 }
 
-export function createApiServer() {
+export function createApiServer({
+  provider,
+  providerFactory = createLocalFakeProvider,
+  toolExecutor = invokeReadOnlyTool,
+  orchestrationOptions = {},
+} = {}) {
   return createHttpServer(async (request, response) => {
     let pathname;
     try {
@@ -75,7 +90,7 @@ export function createApiServer() {
       if (error instanceof RequestBodyTooLargeError) {
         writeJson(response, 413, { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large' } });
       } else if (error instanceof SyntaxError || error instanceof ContractError) {
-        writeJson(response, 400, { error: { code: 'INVALID_INPUT', message: 'Invalid request' } });
+        writeJson(response, 400, { error: { code: 'INVALID_REQUEST', message: 'Invalid request' } });
       } else {
         writeJson(response, 500, { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
       }
@@ -83,10 +98,20 @@ export function createApiServer() {
     }
 
     try {
-      const publicResponse = parsePublicAiResponse(createTemporaryLocalPlaceholderResponse(validatedRequest));
+      const activeProvider = provider ?? providerFactory();
+      const publicResponse = await runGameAssistant(validatedRequest, {
+        ...orchestrationOptions,
+        provider: activeProvider,
+        toolExecutor,
+      });
       writeJson(response, 200, publicResponse);
-    } catch {
-      writeJson(response, 500, { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+    } catch (error) {
+      if (response.destroyed || response.writableEnded) return;
+      if (error instanceof AiOrchestrationError) {
+        writeJson(response, getAiOrchestrationHttpStatus(error), getAiOrchestrationErrorResponse(error));
+      } else {
+        writeJson(response, 500, { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+      }
     }
   });
 }

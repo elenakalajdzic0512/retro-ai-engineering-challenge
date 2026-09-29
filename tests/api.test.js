@@ -26,7 +26,7 @@ after(async () => {
   });
 });
 
-test('valid POST /api/ai returns 200 with a validated placeholder response', async () => {
+test('valid POST /api/ai returns 200 with a validated local fake-provider response', async () => {
   const response = await fetch(`${baseUrl}/api/ai`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -34,7 +34,7 @@ test('valid POST /api/ai returns 200 with a validated placeholder response', asy
   });
   assert.equal(response.status, 200);
   assert.deepEqual(parsePublicAiResponse(await response.json()), {
-    answer: 'Current game state received.',
+    answer: 'Local fake provider response.',
   });
 });
 
@@ -45,7 +45,7 @@ test('empty question returns 400', async () => {
     body: JSON.stringify({ ...validRequest, question: '  ' }),
   });
   assert.equal(response.status, 400);
-  assert.deepEqual(await response.json(), { error: { code: 'INVALID_INPUT', message: 'Invalid request' } });
+  assert.deepEqual(await response.json(), { error: { code: 'INVALID_REQUEST', message: 'Invalid request' } });
 });
 
 test('invalid snapshot returns 400', async () => {
@@ -64,7 +64,7 @@ test('malformed JSON returns 400', async () => {
     body: '{"question":',
   });
   assert.equal(response.status, 400);
-  assert.deepEqual(await response.json(), { error: { code: 'INVALID_INPUT', message: 'Invalid request' } });
+  assert.deepEqual(await response.json(), { error: { code: 'INVALID_REQUEST', message: 'Invalid request' } });
 });
 
 test('unsupported method returns 405 and Allow header', async () => {
@@ -105,7 +105,7 @@ test('validation details are not exposed in the public error response', async ()
   });
   const body = await response.text();
   assert.equal(response.status, 400);
-  assert.equal(body, JSON.stringify({ error: { code: 'INVALID_INPUT', message: 'Invalid request' } }));
+  assert.equal(body, JSON.stringify({ error: { code: 'INVALID_REQUEST', message: 'Invalid request' } }));
   assert.doesNotMatch(body, /private-internal-detail|stack|ContractError/);
 });
 
