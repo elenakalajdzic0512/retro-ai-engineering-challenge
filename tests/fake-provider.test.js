@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createFakeProvider } from '../server/ai/fake-provider.js';
+import { createFakeProvider } from '../dist-server/ai/fake-provider.js';
 import {
   GAME_ASSISTANT_OPERATION,
   parseAiProviderRequest,
-} from '../server/ai/contracts.js';
-import { getReadOnlyToolDeclarations } from '../server/tools.js';
+} from '../dist-server/ai/contracts.js';
+import { getReadOnlyToolDeclarations } from '../dist-server/tools.js';
 
 const input = {
   question: 'How am I doing?',

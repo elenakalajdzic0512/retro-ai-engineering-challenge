@@ -5,10 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "node server/index.js",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "npm run build:server && node --test tests/*.test.js",
+    "build:server": "tsc -p tsconfig.server.json",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit",
+    "dev:api": "node --env-file-if-exists=.env --watch dist-server/index.js",
+    "start:api": "node --env-file-if-exists=.env dist-server/index.js"
   },
-  "devDependencies": { "vite": "^7.0.0" }
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.0.0"
+  }
 }

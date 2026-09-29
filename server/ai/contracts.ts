@@ -4,12 +4,26 @@ import {
   parseGameSnapshot,
   parseGetCurrentGameSnapshotArguments,
   parsePublicAiResponse,
+  type AiRequest,
+  type GameSnapshot,
+  type PublicAiResponse,
 } from '../contracts.js';
 
 export const GAME_ASSISTANT_OPERATION = 'game-assistant';
 export const MAX_AI_TIMEOUT_MS = 30_000;
 export const MAX_OUTPUT_TOKENS = 1_000;
-export const AI_FAILURE_RETRYABILITY = Object.freeze({
+
+export type AiFailureCode =
+  | 'INVALID_REQUEST'
+  | 'MALFORMED_PROVIDER_OUTPUT'
+  | 'UNKNOWN_TOOL'
+  | 'MISSING_TOOL_CALL'
+  | 'PROVIDER_UNAVAILABLE'
+  | 'TIMEOUT'
+  | 'POLICY_REFUSAL'
+  | 'NOT_CONFIGURED';
+
+export const AI_FAILURE_RETRYABILITY: Readonly<Record<AiFailureCode, boolean>> = Object.freeze({
   INVALID_REQUEST: false,
   MALFORMED_PROVIDER_OUTPUT: false,
   UNKNOWN_TOOL: false,
@@ -20,35 +34,89 @@ export const AI_FAILURE_RETRYABILITY = Object.freeze({
   NOT_CONFIGURED: false,
 });
 
-export function createAiFailure(code) {
+export interface AiFailure {
+  ok: false;
+  code: AiFailureCode;
+  retryable: boolean;
+}
+
+export interface AiProviderRequest {
+  operation: typeof GAME_ASSISTANT_OPERATION;
+  input: AiRequest;
+  timeoutMs: number;
+  maxOutputTokens: number;
+}
+
+export interface ToolDeclaration {
+  name: string;
+}
+
+export interface NormalizedFinalOutput {
+  kind: 'final';
+  output: PublicAiResponse;
+}
+
+export interface NormalizedToolCallOutput {
+  kind: 'tool_call';
+  toolName: 'get_current_game_snapshot';
+  arguments: Record<string, never>;
+}
+
+export type NormalizedProviderOutput = NormalizedFinalOutput | NormalizedToolCallOutput;
+
+export interface AiProviderSuccess {
+  ok: true;
+  provider: string;
+  model: string;
+  output: NormalizedProviderOutput;
+}
+
+export type AiProviderFailure = AiFailure;
+export type AiProviderResult = AiProviderSuccess | AiProviderFailure;
+
+export interface AiToolResult {
+  toolName: 'get_current_game_snapshot';
+  result: GameSnapshot;
+}
+
+export function createAiFailure(code: unknown): AiFailure {
   if (typeof code !== 'string' || !Object.hasOwn(AI_FAILURE_RETRYABILITY, code)) {
     return { ok: false, code: 'MALFORMED_PROVIDER_OUTPUT', retryable: false };
   }
-  return { ok: false, code, retryable: AI_FAILURE_RETRYABILITY[code] };
+  const failureCode = code as AiFailureCode;
+  return { ok: false, code: failureCode, retryable: AI_FAILURE_RETRYABILITY[failureCode] };
 }
 
-function fail(code, message) {
+function fail(code: string, message: string): never {
   throw new ContractError(code, message);
 }
 
-function readExactObject(value, fields, code, label) {
+function readExactObject(
+  value: unknown,
+  fields: readonly string[],
+  code: string,
+  label: string,
+): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) {
     fail(code, `${label} must be a plain object.`);
   }
-  const keys = Reflect.ownKeys(value);
+  const objectValue = value as object;
+  const keys = Reflect.ownKeys(objectValue);
   if (keys.length !== fields.length || fields.some((field) => !keys.includes(field))) {
     fail(code, `${label} must contain exactly: ${fields.join(', ')}.`);
   }
-  const result = {};
+  const result: Record<string, unknown> = {};
   for (const field of fields) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, field);
-    if (!Object.hasOwn(descriptor, 'value')) fail(code, `${label}.${field} must be a data property.`);
+    const descriptor = Object.getOwnPropertyDescriptor(objectValue, field);
+    if (descriptor === undefined || !Object.hasOwn(descriptor, 'value')) {
+      fail(code, `${label}.${field} must be a data property.`);
+    }
     result[field] = descriptor.value;
   }
   return result;
 }
 
-export function parseAiProviderRequest(request) {
+export function parseAiProviderRequest(request: unknown): AiProviderRequest {
   const values = readExactObject(
     request,
     ['operation', 'input', 'timeoutMs', 'maxOutputTokens'],
@@ -60,21 +128,31 @@ export function parseAiProviderRequest(request) {
   }
   const input = readExactObject(values.input, ['question', 'snapshot'], 'INVALID_INPUT', 'AI request input');
   const validatedInput = parseAiRequest(input);
-  if (!Number.isInteger(values.timeoutMs) || values.timeoutMs < 1 || values.timeoutMs > MAX_AI_TIMEOUT_MS) {
+  if (
+    typeof values.timeoutMs !== 'number' ||
+    !Number.isInteger(values.timeoutMs) ||
+    values.timeoutMs < 1 ||
+    values.timeoutMs > MAX_AI_TIMEOUT_MS
+  ) {
     fail('INVALID_INPUT', `timeoutMs must be an integer from 1 to ${MAX_AI_TIMEOUT_MS}.`);
   }
-  if (!Number.isInteger(values.maxOutputTokens) || values.maxOutputTokens < 1 || values.maxOutputTokens > MAX_OUTPUT_TOKENS) {
+  if (
+    typeof values.maxOutputTokens !== 'number' ||
+    !Number.isInteger(values.maxOutputTokens) ||
+    values.maxOutputTokens < 1 ||
+    values.maxOutputTokens > MAX_OUTPUT_TOKENS
+  ) {
     fail('INVALID_INPUT', `maxOutputTokens must be an integer from 1 to ${MAX_OUTPUT_TOKENS}.`);
   }
   return {
-    operation: values.operation,
+    operation: GAME_ASSISTANT_OPERATION,
     input: validatedInput,
     timeoutMs: values.timeoutMs,
     maxOutputTokens: values.maxOutputTokens,
   };
 }
 
-export function normalizeProviderOutput(output, toolDeclarations) {
+export function normalizeProviderOutput(output: unknown, toolDeclarations: readonly ToolDeclaration[]): NormalizedProviderOutput {
   if (output === null || typeof output !== 'object' || Object.getPrototypeOf(output) !== Object.prototype) {
     fail('MALFORMED_OUTPUT', 'Provider output must be a plain object.');
   }
@@ -95,17 +173,16 @@ export function normalizeProviderOutput(output, toolDeclarations) {
       'MALFORMED_OUTPUT',
       'tool-call provider output',
     );
-    return parseNormalizedProviderOutput({
-      kind: 'tool_call',
-      toolName: values.toolName,
-      arguments: values.arguments,
-    }, toolDeclarations);
+    return parseNormalizedProviderOutput(
+      { kind: 'tool_call', toolName: values.toolName, arguments: values.arguments },
+      toolDeclarations,
+    );
   }
 
   fail('MALFORMED_OUTPUT', 'Provider returned an unsupported output type.');
 }
 
-function parseNormalizedProviderOutput(output, toolDeclarations) {
+function parseNormalizedProviderOutput(output: unknown, toolDeclarations: readonly ToolDeclaration[]): NormalizedProviderOutput {
   if (output === null || typeof output !== 'object' || Object.getPrototypeOf(output) !== Object.prototype) {
     fail('MALFORMED_OUTPUT', 'Normalized provider output must be a plain object.');
   }
@@ -132,14 +209,14 @@ function parseNormalizedProviderOutput(output, toolDeclarations) {
     }
     return {
       kind: 'tool_call',
-      toolName: values.toolName,
+      toolName: 'get_current_game_snapshot',
       arguments: parseGetCurrentGameSnapshotArguments(values.arguments),
     };
   }
   fail('MALFORMED_OUTPUT', 'Provider returned an unsupported normalized output type.');
 }
 
-export function parseAiProviderResult(result, toolDeclarations) {
+export function parseAiProviderResult(result: unknown, toolDeclarations: readonly ToolDeclaration[]): AiProviderResult {
   if (result === null || typeof result !== 'object' || Object.getPrototypeOf(result) !== Object.prototype) {
     fail('MALFORMED_OUTPUT', 'Provider result must be a plain object.');
   }
@@ -158,29 +235,29 @@ export function parseAiProviderResult(result, toolDeclarations) {
   }
 
   const values = readExactObject(result, ['ok', 'provider', 'model', 'output'], 'MALFORMED_OUTPUT', 'provider success');
-  for (const field of ['provider', 'model']) {
+  for (const field of ['provider', 'model'] as const) {
     if (typeof values[field] !== 'string' || values[field].trim().length === 0 || values[field].length > 100) {
       fail('MALFORMED_OUTPUT', `Provider ${field} is invalid.`);
     }
   }
   return {
     ok: true,
-    provider: values.provider,
-    model: values.model,
+    provider: values.provider as string,
+    model: values.model as string,
     output: parseNormalizedProviderOutput(values.output, toolDeclarations),
   };
 }
 
-export function parseAiToolResults(toolResults) {
+export function parseAiToolResults(toolResults: unknown): AiToolResult[] {
   if (!Array.isArray(toolResults) || toolResults.length > 1) {
     fail('INVALID_INPUT', 'At most one tool result is supported.');
   }
-  return toolResults.map((toolResult) => {
+  return toolResults.map((toolResult): AiToolResult => {
     const values = readExactObject(toolResult, ['toolName', 'result'], 'INVALID_INPUT', 'tool result');
     if (values.toolName !== 'get_current_game_snapshot') {
       fail('INVALID_INPUT', 'Unsupported tool result.');
     }
     const snapshot = parseGameSnapshot(values.result);
-    return { toolName: values.toolName, result: snapshot };
+    return { toolName: 'get_current_game_snapshot', result: snapshot };
   });
 }

@@ -201,3 +201,206 @@ The T001–T005 baseline evidence was reviewed before any implementation or depe
 T001–T005 are completed and reviewed. The baseline automated test gate passed in the ordinary local environment, the baseline frontend build passed, and the baseline manual gameplay verification passed. The constrained Codex `EPERM` run remains a documented execution-environment limitation. No Week 4 implementation or dependency installation occurred before this gate, and no Gemini or other live-provider call occurred. The baseline is sufficient to permit T007; this does not mean final Week 4 AI Hint acceptance has passed. The pair-work process limitation remains unresolved and separate from the technical gate.
 
 **T006 Phase 1 gate: PASS for permitting T007.**
+
+## T015 — migrated backend validation
+
+### Attempt 1 — strict TypeScript typecheck
+
+Command: `npm run typecheck`
+
+Underlying command: `tsc -p tsconfig.server.json --noEmit`
+
+Observed result: **FAIL**
+
+Exit status: `1`
+
+Compiler reported 3 errors in 2 files:
+
+1. `server/ai/orchestrator.ts:132:31` — `TS18049`: `provider` is possibly `null` or `undefined`.
+2. `server/ai/orchestrator.ts:175:39` — `TS2339`: `output` does not exist on `NormalizedProviderOutput` because the union also includes `NormalizedToolCallOutput`.
+3. `server/index.ts:58:3` — `TS2322`: `FakeProvider` was not assignable to `AiProvider` because the `toolDeclarations` parameter types differed (`ToolDeclaration[]` versus `ReadOnlyToolDeclaration[]`).
+
+These were strict TypeScript migration typing issues detected before runtime validation, not demonstrated application or runtime regressions. No test assertion or product behavior was changed to hide them. Narrow typing remediation was subsequently applied. At that point, Attempt 2 had not yet been run.
+
+`npm run build:server`, `npm test`, `npm run build`, and the `start:api` smoke test were not run after this failure. No provider or Gemini call occurred. At that point, T015 remained **IN PROGRESS / NOT PASS**.
+
+### Attempt 2 — strict TypeScript typecheck
+
+Command: `npm run typecheck`
+
+Underlying command: `tsc -p tsconfig.server.json --noEmit`
+
+Observed result: **PASS**
+
+Exit status: `0`
+
+All three strict migration typing issues observed in Attempt 1 were resolved by narrow typing remediation. No test assertion or runtime requirement was weakened, and no provider or Gemini call occurred. This established the successful typecheck portion of T015 before the later build, test, frontend, and smoke gates.
+
+### Gate 2 — server build
+
+Command: `npm run build:server`
+
+Underlying command: `tsc -p tsconfig.server.json`
+
+Observed result: **PASS**
+
+Exit status: `0`
+
+Emitted files later confirmed:
+
+- `dist-server/contracts.js`
+- `dist-server/index.js`
+- `dist-server/tools.js`
+- `dist-server/ai/contracts.js`
+- `dist-server/ai/fake-provider.js`
+- `dist-server/ai/orchestrator.js`
+
+The generated `dist-server` files did not appear in Git status, confirming the output remained ignored.
+
+### Gate 3 — full test suite
+
+Command: `npm test`
+
+Observed sequence: `npm run build:server` succeeded, followed by `node --test tests/*.test.js`.
+
+Observed result: **PASS**
+
+Exit status: `0`
+
+Summary:
+
+- tests: 77
+- pass: 77
+- fail: 0
+- cancelled: 0
+- skipped: 0
+- todo: 0
+- duration: `102.866083 ms`
+
+This validated the migrated emitted backend and preserved gameplay regression suite.
+
+### Gate 4 — frontend production build
+
+Command: `npm run build`
+
+Observed result: **PASS**
+
+Exit status: `0`
+
+Observed Vite result:
+
+- Vite 7.3.6
+- 5 modules transformed
+- `dist/index.html`: 0.77 kB, gzip 0.47 kB
+- `dist/assets/index-Buz8rRPq.css`: 0.46 kB, gzip 0.32 kB
+- `dist/assets/index-DLGhJ1Em.js`: 4.52 kB, gzip 2.11 kB
+- built in 63 ms
+
+### Gate 5 — emitted API loopback smoke test
+
+The already-built backend was started with `npm run start:api`. The observed log was `.env not found. Continuing without it.` followed by `Local API listening on http://127.0.0.1:3001`.
+
+A POST request was sent to `http://127.0.0.1:3001/api/ai` with `application/json` and the existing valid legacy request.
+
+Observed result: **PASS**
+
+- HTTP status: `200 OK`
+- JSON body: `{"answer":"Local fake provider response."}`
+- curl exit status: `0`
+
+The server process was terminated after the smoke test. No live provider or Gemini call occurred; the smoke used the existing fake-only composition.
+
+### T015 conclusion
+
+Strict TypeScript migration validation is **PASS**. The existing pre-final question/snapshot/answer behavior was preserved across typecheck, emitted backend build, the complete 77-test suite, frontend production build, and real loopback HTTP smoke test. **T015 is complete.** The final AI Hint contract has not yet begun.
+
+## T016 — legacy server-source removal verification
+
+The six migrated TypeScript server sources are the only tracked server sources:
+
+- `server/ai/contracts.ts`
+- `server/ai/fake-provider.ts`
+- `server/ai/orchestrator.ts`
+- `server/contracts.ts`
+- `server/index.ts`
+- `server/tools.ts`
+
+The six legacy JavaScript copies are physically absent, including `server/index.js`, `server/contracts.js`, `server/tools.js`, `server/ai/contracts.js`, `server/ai/orchestrator.js`, and `server/ai/fake-provider.js`. Internal `.js` relative specifiers remain intentional NodeNext ESM imports for emitted output, and no competing JavaScript server entry point remains.
+
+The server migration was staged specifically to verify `git ls-files server`; Git rename detection represented five migrations as renames and `server/tools.js` → `server/tools.ts` as delete plus add, with no duplicate source files. Both `git diff --check` and `git diff --cached --check` produced no output. No compiler, test, build, or provider command was run for T016.
+
+## T017 — Phase 2 behavior-preserving TypeScript gate
+
+### Strict typecheck
+
+Command: `npm run typecheck`
+
+Result: **PASS**; exit `0`.
+
+### Server build
+
+Command: `npm run build:server`
+
+Result: **PASS**; exit `0`.
+
+### Complete old-contract test suite
+
+Command: `npm test`
+
+`npm run build:server` succeeded first, followed by `node --test tests/*.test.js`.
+
+- tests: 77
+- pass: 77
+- fail: 0
+- cancelled: 0
+- skipped: 0
+- todo: 0
+- duration: `97.066542 ms`
+- `TEST_EXIT=0`
+
+This still validates the pre-final legacy question/snapshot/answer behavior, not the final AI Hint contract.
+
+### Frontend production build
+
+Command: `npm run build`
+
+- Vite 7.3.6
+- 5 modules transformed
+- `dist/index.html`: 0.77 kB, gzip 0.47 kB
+- `dist/assets/index-Buz8rRPq.css`: 0.46 kB, gzip 0.32 kB
+- `dist/assets/index-DLGhJ1Em.js`: 4.52 kB, gzip 2.11 kB
+- built in 45 ms
+- `FRONTEND_BUILD_EXIT=0`
+
+### W03 gameplay-source preservation
+
+Command:
+
+```text
+git diff 76f50304a9372b3c497692970975d99c2acea3a3 -- \
+src/main.js \
+src/game.js \
+tests/game.test.js
+```
+
+Observed result: no output. `src/main.js`, `src/game.js`, and `tests/game.test.js` are unchanged from the implementation baseline. This is a targeted preservation check and does not prove all repository files are unchanged.
+
+### Separate Git-state inspection
+
+Required views were inspected separately. Unstaged name-status showed only expected Phase 2 files: `.gitignore`, `docs/EVALS_W04.md`, `docs/EVIDENCE_W04.md`, `package-lock.json`, `package.json`, `specs/001-neon-breaker-ai-hint/tasks.md`, `tests/api.test.js`, `tests/contracts.test.js`, `tests/fake-provider.test.js`, `tests/orchestration.test.js`, and `tests/tools.test.js`.
+
+The staged server migration showed:
+
+- `server/ai/contracts.js` → `server/ai/contracts.ts`
+- `server/ai/fake-provider.js` → `server/ai/fake-provider.ts`
+- `server/ai/orchestrator.js` → `server/ai/orchestrator.ts`
+- `server/contracts.js` → `server/contracts.ts`
+- `server/index.js` → `server/index.ts`
+- `server/tools.js` deleted
+- `server/tools.ts` added
+
+Status also showed `tsconfig.server.json` untracked and pending Phase 2 staging, with no `src/main.js`, `src/game.js`, or `tests/game.test.js` modification. Both `git diff --check` and `git diff --cached --check` produced no output.
+
+### T017 conclusion
+
+**Phase 2 behavior-preserving TypeScript migration gate: PASS.** Strict typecheck, emitted server build, the complete legacy contract suite (77/77), frontend production build, targeted W03 gameplay-file preservation, and legacy JavaScript-source cleanup all passed. The final AI Hint contract has not begun. No live provider or Gemini call occurred in Phase 2. The pair-work process limitation remains separate and unresolved.

@@ -1,4 +1,4 @@
-import { createServer as createHttpServer } from 'node:http';
+import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createFakeProvider } from './ai/fake-provider.js';
@@ -15,18 +15,28 @@ const MAX_REQUEST_BODY_BYTES = 16 * 1024;
 
 class RequestBodyTooLargeError extends Error {}
 
-function writeJson(response, statusCode, body) {
+type OrchestrationOptions = NonNullable<Parameters<typeof runGameAssistant>[1]>;
+type Provider = NonNullable<OrchestrationOptions['provider']>;
+
+interface ApiServerOptions {
+  provider?: Provider;
+  providerFactory?: () => Provider;
+  toolExecutor?: OrchestrationOptions['toolExecutor'];
+  orchestrationOptions?: Omit<OrchestrationOptions, 'provider' | 'toolExecutor'>;
+}
+
+function writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
   response.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
   response.end(JSON.stringify(body));
 }
 
-function readRequestBody(request) {
+function readRequestBody(request: IncomingMessage): Promise<string> {
   return new Promise((resolveBody, rejectBody) => {
-    const chunks = [];
+    const chunks: Buffer[] = [];
     let size = 0;
     let tooLarge = false;
 
-    request.on('data', (chunk) => {
+    request.on('data', (chunk: Buffer) => {
       size += chunk.length;
       if (size > MAX_REQUEST_BODY_BYTES) {
         tooLarge = true;
@@ -44,7 +54,7 @@ function readRequestBody(request) {
   });
 }
 
-function createLocalFakeProvider() {
+function createLocalFakeProvider(): Provider {
   return createFakeProvider({
     outcomes: [{ type: 'final', output: { answer: 'Local fake provider response.' } }],
   });
@@ -55,11 +65,11 @@ export function createApiServer({
   providerFactory = createLocalFakeProvider,
   toolExecutor = invokeReadOnlyTool,
   orchestrationOptions = {},
-} = {}) {
-  return createHttpServer(async (request, response) => {
-    let pathname;
+}: ApiServerOptions = {}) {
+  return createHttpServer(async (request: IncomingMessage, response: ServerResponse) => {
+    let pathname: string;
     try {
-      pathname = new URL(request.url, 'http://localhost').pathname;
+      pathname = new URL(request.url ?? '', 'http://localhost').pathname;
     } catch {
       writeJson(response, 404, { error: { code: 'NOT_FOUND', message: 'Not found' } });
       return;
@@ -85,7 +95,7 @@ export function createApiServer({
     try {
       const body = await readRequestBody(request);
       validatedRequest = parseAiRequest(JSON.parse(body));
-    } catch (error) {
+    } catch (error: unknown) {
       if (response.destroyed || response.writableEnded) return;
       if (error instanceof RequestBodyTooLargeError) {
         writeJson(response, 413, { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large' } });
@@ -105,7 +115,7 @@ export function createApiServer({
         toolExecutor,
       });
       writeJson(response, 200, publicResponse);
-    } catch (error) {
+    } catch (error: unknown) {
       if (response.destroyed || response.writableEnded) return;
       if (error instanceof AiOrchestrationError) {
         writeJson(response, getAiOrchestrationHttpStatus(error), getAiOrchestrationErrorResponse(error));

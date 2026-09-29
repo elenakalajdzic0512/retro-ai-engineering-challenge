@@ -78,4 +78,83 @@ Future Week 4 evidence must:
 
 The following historical artifacts remain preserved and unchanged: `docs/EVIDENCE_003.md`, `docs/EVALS.md`, and existing Week 3 AI usage history. All SpecKit authoritative documents remain unchanged by this T005 evidence initialization.
 
-No `npm test`, `npm run build`, `npm run dev`, dependency installation, provider call or Gemini call was performed for T005. T006 and all later tasks remain NOT STARTED / NOT RUN.
+No `npm test`, `npm run build`, `npm run dev`, provider call or Gemini call was performed for T005. T006 was subsequently completed as the Phase 1 gate; T008 and all later tasks remain NOT STARTED / NOT RUN.
+
+## T007 — TypeScript dependency installation evidence
+
+The observed T007 installation was:
+
+```text
+npm install --save-dev typescript @types/node@24
+```
+
+Npm reported 4 packages added, 19 packages audited, and 0 vulnerabilities. The resolved versions recorded in `package-lock.json` are:
+
+| Package | Resolved version |
+| --- | --- |
+| `typescript` | `7.0.2` |
+| `@types/node` | `24.19.0` |
+| existing `vite` | `7.3.6` |
+
+`package.json` records `@types/node: ^24.19.0`, `typescript: ^7.0.2`, and preserves Vite at `^7.0.0`. The project Node baseline is `v24.21.0`; the Node types major version matches Node 24, and the installed TypeScript package metadata supports Node `>=16.20.0`. The installed TypeScript executable is therefore compatible with the current Node runtime. No new runner or framework was introduced.
+
+Npm also reported that the `esbuild@0.28.2` postinstall script and `fsevents@2.3.3` install script were not yet covered by `allowScripts`. No scripts were manually approved during T007. This warning will be observed through later build and test gates and is not treated as a failure unless a later gate demonstrates one.
+
+**T007 documentation/evidence: COMPLETE.** T008 and all later tasks remain NOT STARTED / NOT RUN. No tests, builds or provider calls were performed as part of this evidence update.
+
+## T008 — Backend TypeScript compiler configuration
+
+Created `tsconfig.server.json` for the planned backend migration with strict NodeNext/ES2022 settings, Node types, `server/` as the source root, `dist-server/` as the emitted output, and server-only TypeScript inclusion. Added `dist-server/` to `.gitignore` while preserving the existing environment-file rules.
+
+No backend source migration or TypeScript compilation was performed for T008. T009 and all later tasks remain NOT STARTED / NOT RUN.
+
+## T009 — Contracts module migration
+
+Migrated `server/contracts.js` to `server/contracts.ts` and removed the duplicate JavaScript source. The existing exported `ContractError`, `parseGameSnapshot`, `parseAiRequest`, `parsePublicAiResponse`, and `parseGetCurrentGameSnapshotArguments` APIs retain the old question/snapshot/answer behavior and validation semantics. Untrusted runtime values are modeled as `unknown` and narrowed through explicit runtime checks before use.
+
+The final Neon Breaker AI Hint four-field request and `{ hint, category }` response contract was not introduced in T009. No compilation, tests, builds, provider calls, or Gemini calls were performed. T010 and all later tasks remain NOT STARTED / NOT RUN.
+
+## T010 — Tool and provider-contract module migration
+
+Migrated `server/tools.js` to `server/tools.ts` and `server/ai/contracts.js` to `server/ai/contracts.ts`, removing the duplicate JavaScript sources. The original read-only `get_current_game_snapshot` tool, declarations, argument/context validation, structured cloning, and unsupported-tool behavior remain the only tool flow. The existing provider-neutral contracts, constants, normalized output structures, failure codes, retryability mapping, and legacy question/snapshot/answer semantics are preserved.
+
+Runtime-untrusted values are represented as `unknown` and narrowed through runtime validation. The internal `.js` import specifiers were retained for emitted NodeNext ESM compatibility. No final AI Hint contract was introduced. No compilation, tests, builds, provider calls, or Gemini calls were performed for T010. T011 and all later tasks remain NOT STARTED / NOT RUN.
+
+## T011 — Fake provider and orchestrator migration
+
+Migrated `server/ai/fake-provider.js` to `server/ai/fake-provider.ts` and `server/ai/orchestrator.js` to `server/ai/orchestrator.ts`, removing the duplicate JavaScript sources. Scripted fake outcomes, provider call recording, and injected `now`/`sleep`/`jitter` behavior are preserved. The migration intentionally retains the 5000 ms timeout, maximum two attempts, randomized 100–199 ms backoff, and one-tool-call policy; the later Phase 4 reliability policy is not introduced here.
+
+Runtime-untrusted errors and outcomes are represented as `unknown` and narrowed safely. Internal `.js` ESM import specifiers are preserved. No final AI Hint contract or final Phase 4 reliability policy was introduced. No compilation, tests, builds, provider calls, or Gemini calls were performed for T011. T012 and all later tasks remain NOT STARTED / NOT RUN.
+
+## T012 — HTTP entry-point migration
+
+Migrated `server/index.js` to `server/index.ts` and removed the duplicate JavaScript source. The existing `POST /api/ai` route, 16 KiB body limit, JSON requirement, safe HTTP errors, dependency injection, default local fake provider, and old answer contract are preserved. Node HTTP request/response values and dependency-injection options are strictly typed, while internal `.js` ESM import specifiers and the executable `127.0.0.1` entry-point behavior remain unchanged.
+
+The final AI Hint contract was not introduced. No compilation, tests, builds, dev-server runs, provider calls, or Gemini calls were performed for T012. T013 and all later tasks remain NOT STARTED / NOT RUN.
+
+## T013 — Backend scripts
+
+Added the planned server scripts while preserving the Vite scripts and `"type": "module"` setup:
+
+```text
+build:server = tsc -p tsconfig.server.json
+typecheck = tsc -p tsconfig.server.json --noEmit
+dev:api = node --env-file-if-exists=.env --watch dist-server/index.js
+start:api = node --env-file-if-exists=.env dist-server/index.js
+```
+
+The intended local backend flow is to run `npx tsc -p tsconfig.server.json --watch` in one terminal/process and `npm run dev:api` in a second. TypeScript watch emits server output into `dist-server/`, and Node `--watch` restarts when emitted files change. `start:api` runs the already-built server without Node watch. No script was executed for T013, so runtime success is not yet claimed. `package-lock.json` was not modified.
+
+T014 and all later tasks remain NOT STARTED / NOT RUN.
+
+## T015 — TypeScript validation, Attempt 1
+
+Command: `npm run typecheck`
+
+Result: **FAIL**, exit status `1`, with 3 compiler errors: two in `server/ai/orchestrator.ts` and one in `server/index.ts`. These were strict migration typing issues discovered before runtime validation, not demonstrated application or runtime regressions.
+
+No build, server test, frontend build, smoke test, provider call, or Gemini call was executed after the failed typecheck. T015 remains **IN PROGRESS / NOT PASS**.
+
+## T014 — Emitted backend test imports
+
+Backend-oriented JavaScript tests now import emitted modules from `dist-server/`. `tests/game.test.js` remains pointed at the unchanged `src/game.js` frontend module. Test bodies, names, fixtures, and assertions were not altered. The `npm test` script now builds the TypeScript backend first and then runs the explicit `tests/*.test.js` files, avoiding accidental or stale generated test discovery. No test, build, typecheck, compiler, or provider command was executed during T014. T015 and all later tasks remain NOT STARTED / NOT RUN.

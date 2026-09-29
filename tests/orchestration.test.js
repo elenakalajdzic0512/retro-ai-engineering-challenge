@@ -1,8 +1,8 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { createApiServer } from '../server/index.js';
-import { createFakeProvider } from '../server/ai/fake-provider.js';
-import { invokeReadOnlyTool } from '../server/tools.js';
+import { createApiServer } from '../dist-server/index.js';
+import { createFakeProvider } from '../dist-server/ai/fake-provider.js';
+import { invokeReadOnlyTool } from '../dist-server/tools.js';
 
 const validRequest = {
   question: 'How am I doing?',

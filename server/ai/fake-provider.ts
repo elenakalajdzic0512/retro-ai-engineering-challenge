@@ -1,16 +1,43 @@
 import { ContractError } from '../contracts.js';
-import { getReadOnlyToolDeclarations } from '../tools.js';
+import { getReadOnlyToolDeclarations, type ReadOnlyToolDeclaration } from '../tools.js';
 import {
   createAiFailure,
   normalizeProviderOutput,
   parseAiToolResults,
   parseAiProviderRequest,
+  type AiProviderRequest,
+  type AiProviderResult,
+  type AiToolResult,
 } from './contracts.js';
 
 const PROVIDER_ID = 'fake';
 const MODEL_ID = 'fake-deterministic-v1';
 
-function cloneDeclarations(declarations) {
+export interface FakeProviderCall {
+  provider: typeof PROVIDER_ID;
+  model: typeof MODEL_ID;
+  operation: AiProviderRequest['operation'];
+  input: AiProviderRequest['input'];
+  toolDeclarations: ReadOnlyToolDeclaration[];
+  toolResults: AiToolResult[];
+}
+
+export interface FakeProviderOptions {
+  outcomes?: readonly unknown[];
+}
+
+export interface FakeProvider {
+  provider: typeof PROVIDER_ID;
+  model: typeof MODEL_ID;
+  calls: FakeProviderCall[];
+  generate(
+    request: unknown,
+    toolDeclarations?: readonly ReadOnlyToolDeclaration[],
+    toolResults?: readonly unknown[],
+  ): Promise<AiProviderResult>;
+}
+
+function cloneDeclarations(declarations: readonly ReadOnlyToolDeclaration[]): ReadOnlyToolDeclaration[] {
   const expected = getReadOnlyToolDeclarations();
   if (JSON.stringify(declarations) !== JSON.stringify(expected)) {
     throw new ContractError('INVALID_INPUT', 'Unexpected tool declarations.');
@@ -18,15 +45,23 @@ function cloneDeclarations(declarations) {
   return structuredClone(expected);
 }
 
-export function createFakeProvider({ outcomes = [] } = {}) {
-  const scriptedOutcomes = structuredClone(outcomes);
-  const calls = [];
+function isFailureOutcome(value: unknown): value is { type: 'failure'; code: unknown } {
+  return value !== null && typeof value === 'object' && (value as Record<string, unknown>).type === 'failure';
+}
+
+export function createFakeProvider({ outcomes = [] }: FakeProviderOptions = {}): FakeProvider {
+  const scriptedOutcomes = structuredClone([...outcomes]);
+  const calls: FakeProviderCall[] = [];
 
   return {
     provider: PROVIDER_ID,
     model: MODEL_ID,
     calls,
-    async generate(request, toolDeclarations = getReadOnlyToolDeclarations(), toolResults = []) {
+    async generate(
+      request: unknown,
+      toolDeclarations = getReadOnlyToolDeclarations(),
+      toolResults: readonly unknown[] = [],
+    ): Promise<AiProviderResult> {
       const validatedRequest = parseAiProviderRequest(request);
       const declarations = cloneDeclarations(toolDeclarations);
       const validatedToolResults = parseAiToolResults(toolResults);
@@ -44,7 +79,7 @@ export function createFakeProvider({ outcomes = [] } = {}) {
         return createAiFailure('PROVIDER_UNAVAILABLE');
       }
 
-      if (scriptedOutcome?.type === 'failure') {
+      if (isFailureOutcome(scriptedOutcome)) {
         return createAiFailure(scriptedOutcome.code);
       }
 
@@ -55,7 +90,7 @@ export function createFakeProvider({ outcomes = [] } = {}) {
           model: MODEL_ID,
           output: normalizeProviderOutput(scriptedOutcome, declarations),
         };
-      } catch (error) {
+      } catch (error: unknown) {
         if (error instanceof ContractError && error.code === 'UNKNOWN_TOOL') {
           return createAiFailure('UNKNOWN_TOOL');
         }

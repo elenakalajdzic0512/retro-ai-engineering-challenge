@@ -1,7 +1,7 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { createApiServer } from '../server/index.js';
-import { parsePublicAiResponse } from '../server/contracts.js';
+import { createApiServer } from '../dist-server/index.js';
+import { parsePublicAiResponse } from '../dist-server/contracts.js';
 
 const validRequest = {
   question: 'How am I doing?',

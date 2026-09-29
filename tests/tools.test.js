@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ContractError } from '../server/contracts.js';
-import { invokeReadOnlyTool } from '../server/tools.js';
+import { ContractError } from '../dist-server/contracts.js';
+import { invokeReadOnlyTool } from '../dist-server/tools.js';
 
 const snapshot = { status: 'playing', score: 20, lives: 2, bricksRemaining: 38 };
 const context = { snapshot };

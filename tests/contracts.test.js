@@ -7,7 +7,7 @@ import {
   parseGameSnapshot,
   parseGetCurrentGameSnapshotArguments,
   parsePublicAiResponse,
-} from '../server/contracts.js';
+} from '../dist-server/contracts.js';
 
 const validSnapshot = { status: 'playing', score: 10, lives: 3, bricksRemaining: 39 };
 const validRequest = { question: '  How am I doing?  ', snapshot: validSnapshot };
