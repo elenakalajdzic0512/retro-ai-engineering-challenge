@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { parseAiProviderRequest, type AiProviderRequest } from './contracts.js';
+import { createAiFailure, parseAiProviderRequest, type AiProviderRequest } from './contracts.js';
 
 export const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
@@ -40,6 +40,12 @@ function extractText(response: unknown): string {
   return '';
 }
 
+function isConfigurationFailure(error: unknown): boolean {
+  if (error === null || typeof error !== 'object') return false;
+  const candidate = error as Record<string, unknown>;
+  return [candidate.status, candidate.statusCode, candidate.code].some((value) => value === 401 || value === 403);
+}
+
 export function createGeminiProvider({ apiKey, client }: GeminiProviderOptions = {}) {
   const activeClient: GeminiClient = client ?? new GoogleGenAI({ apiKey: apiKey ?? '' });
 
@@ -48,22 +54,27 @@ export function createGeminiProvider({ apiKey, client }: GeminiProviderOptions =
     model: GEMINI_MODEL,
     async generate(request: unknown, _toolDeclarations: readonly unknown[] = [], _toolResults: readonly unknown[] = [], options: { signal: AbortSignal }): Promise<unknown> {
       const validatedRequest = parseAiProviderRequest(request);
-      const response = await activeClient.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: buildPrompt(validatedRequest.input),
-        config: {
-          abortSignal: options.signal,
-          maxOutputTokens: validatedRequest.maxOutputTokens,
-          responseMimeType: 'application/json',
-          responseJsonSchema: RESPONSE_SCHEMA,
-        },
-      });
-      return {
-        ok: true,
-        provider: 'gemini',
-        model: GEMINI_MODEL,
-        output: { kind: 'final', output: extractText(response) },
-      };
+      try {
+        const response = await activeClient.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: buildPrompt(validatedRequest.input),
+          config: {
+            abortSignal: options.signal,
+            maxOutputTokens: validatedRequest.maxOutputTokens,
+            responseMimeType: 'application/json',
+            responseJsonSchema: RESPONSE_SCHEMA,
+          },
+        });
+        return {
+          ok: true,
+          provider: 'gemini',
+          model: GEMINI_MODEL,
+          output: { kind: 'final', output: extractText(response) },
+        };
+      } catch (error: unknown) {
+        if (isConfigurationFailure(error)) return createAiFailure('NOT_CONFIGURED');
+        throw error;
+      }
     },
   };
 }

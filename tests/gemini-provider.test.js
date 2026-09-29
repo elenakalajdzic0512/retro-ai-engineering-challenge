@@ -47,3 +47,20 @@ test('API key is absent from the provider result and captured request', async ()
   assert.doesNotMatch(JSON.stringify(result), /secret-sentinel/);
   assert.doesNotMatch(JSON.stringify(captured), /secret-sentinel/);
 });
+
+test('Gemini authentication and access failures are non-retryable NOT_CONFIGURED failures', async () => {
+  for (const status of [401, 403]) {
+    const client = {
+      models: {
+        async generateContent() {
+          const error = new Error('private SDK details and secret context');
+          error.status = status;
+          throw error;
+        },
+      },
+    };
+    const result = await createGeminiProvider({ client }).generate(request, [], [], { signal: new AbortController().signal });
+    assert.deepEqual(result, { ok: false, code: 'NOT_CONFIGURED', retryable: false });
+    assert.doesNotMatch(JSON.stringify(result), /private SDK details|secret context/);
+  }
+});
