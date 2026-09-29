@@ -11,7 +11,7 @@ import {
 import { ContractError, parseAiRequest } from './contracts.js';
 import { invokeReadOnlyTool } from './tools.js';
 
-const MAX_REQUEST_BODY_BYTES = 16 * 1024;
+const MAX_REQUEST_BODY_BYTES = 1_024;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -56,7 +56,7 @@ function readRequestBody(request: IncomingMessage): Promise<string> {
 
 function createLocalFakeProvider(): Provider {
   return createFakeProvider({
-    outcomes: [{ type: 'final', output: { answer: 'Local fake provider response.' } }],
+    outcomes: [{ type: 'final', output: '{"hint":"Keep the ball in play.","category":"general"}' }],
   });
 }
 

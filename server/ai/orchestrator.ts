@@ -1,4 +1,4 @@
-import { parseAiRequest, parsePublicAiResponse, type AiRequest, type PublicAiResponse } from '../contracts.js';
+import { ContractError, parseAiRequest, parsePublicAiResponse, type AiRequest, type PublicAiResponse } from '../contracts.js';
 import { getReadOnlyToolDeclarations, invokeReadOnlyTool, type ReadOnlyToolDeclaration } from '../tools.js';
 import {
   GAME_ASSISTANT_OPERATION,
@@ -95,6 +95,15 @@ function hasNamedProperty(value: unknown, property: string): value is Record<str
   return value !== null && typeof value === 'object' && property in value;
 }
 
+function parseFinalOutput(output: unknown): PublicAiResponse {
+  try {
+    return parsePublicAiResponse(output);
+  } catch (error: unknown) {
+    if (error instanceof ContractError) throw new AiOrchestrationError('MALFORMED_PROVIDER_OUTPUT');
+    throw error;
+  }
+}
+
 export class AiOrchestrationError extends Error {
   code: OrchestrationErrorCode;
 
@@ -156,7 +165,7 @@ export async function runGameAssistant(
   }
 
   let output = await generate();
-  if (output.kind === 'final') return parsePublicAiResponse(output.output);
+  if (output.kind === 'final') return parseFinalOutput(output.output);
   toolCalls += 1;
   if (toolCalls > MAX_TOOL_CALLS || totalAttempts >= MAX_TOTAL_ATTEMPTS) throw new AiOrchestrationError('TOOL_STEP_LIMIT');
 
@@ -174,7 +183,7 @@ export async function runGameAssistant(
     if (toolCalls > MAX_TOOL_CALLS) throw new AiOrchestrationError('TOOL_STEP_LIMIT');
     throw new AiOrchestrationError('TOOL_STEP_LIMIT');
   }
-  return parsePublicAiResponse(output.output);
+  return parseFinalOutput(output.output);
 }
 
 export function getAiOrchestrationErrorResponse(error: unknown): { error: { code: OrchestrationErrorCode; message: string } } {

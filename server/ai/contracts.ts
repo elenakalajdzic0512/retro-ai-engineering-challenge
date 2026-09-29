@@ -53,7 +53,7 @@ export interface ToolDeclaration {
 
 export interface NormalizedFinalOutput {
   kind: 'final';
-  output: PublicAiResponse;
+  output: unknown;
 }
 
 export interface NormalizedToolCallOutput {
@@ -126,8 +126,7 @@ export function parseAiProviderRequest(request: unknown): AiProviderRequest {
   if (values.operation !== GAME_ASSISTANT_OPERATION) {
     fail('INVALID_INPUT', `operation must be ${GAME_ASSISTANT_OPERATION}.`);
   }
-  const input = readExactObject(values.input, ['question', 'snapshot'], 'INVALID_INPUT', 'AI request input');
-  const validatedInput = parseAiRequest(input);
+  const validatedInput = parseAiRequest(values.input);
   if (
     typeof values.timeoutMs !== 'number' ||
     !Number.isInteger(values.timeoutMs) ||
@@ -192,7 +191,7 @@ function parseNormalizedProviderOutput(output: unknown, toolDeclarations: readon
   }
   if (kindDescriptor.value === 'final') {
     const values = readExactObject(output, ['kind', 'output'], 'MALFORMED_OUTPUT', 'normalized final output');
-    return { kind: 'final', output: parsePublicAiResponse(values.output) };
+    return { kind: 'final', output: values.output };
   }
   if (kindDescriptor.value === 'tool_call') {
     const values = readExactObject(
