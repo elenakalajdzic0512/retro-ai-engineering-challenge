@@ -162,7 +162,7 @@ export async function runGameAssistant(
 
   let toolResult: { toolName: 'get_current_game_snapshot'; result: unknown };
   try {
-    const value = toolExecutor(output.toolName, output.arguments, { snapshot: input.snapshot });
+    const value = toolExecutor(output.toolName, output.arguments, { snapshot: input });
     toolResult = { toolName: output.toolName, result: value };
   } catch {
     throw new AiOrchestrationError('TOOL_EXECUTION_FAILED');

@@ -1,9 +1,9 @@
 const GAME_STATUSES = new Set<GameStatus>(['ready', 'playing', 'won', 'lost']);
-const MAX_QUESTION_LENGTH = 500;
-const MAX_ANSWER_LENGTH = 2000;
 const MAX_SCORE = 400;
 const MAX_LIVES = 3;
 const MAX_BRICKS = 40;
+const MAX_HINT_CODE_POINTS = 240;
+const MAX_PROVIDER_OUTPUT_BYTES = 2_048;
 
 export type GameStatus = 'ready' | 'playing' | 'won' | 'lost';
 
@@ -14,13 +14,13 @@ export interface GameSnapshot {
   bricksRemaining: number;
 }
 
-export interface AiRequest {
-  question: string;
-  snapshot: GameSnapshot;
-}
+export type AiRequest = GameSnapshot;
+
+export type AiHintCategory = 'movement' | 'timing' | 'strategy' | 'general';
 
 export interface PublicAiResponse {
-  answer: string;
+  hint: string;
+  category: AiHintCategory;
 }
 
 export class ContractError extends Error {
@@ -95,23 +95,29 @@ export function parseGameSnapshot(snapshot: unknown): GameSnapshot {
 }
 
 export function parseAiRequest(request: unknown): AiRequest {
-  const values = readExactObject(request, ['question', 'snapshot'], 'INVALID_INPUT', 'request');
-  if (typeof values.question !== 'string') fail('INVALID_INPUT', 'request.question must be a string.');
-  const question = values.question.trim();
-  if (question.length === 0 || question.length > MAX_QUESTION_LENGTH) {
-    fail('INVALID_INPUT', `request.question must contain 1 to ${MAX_QUESTION_LENGTH} characters.`);
-  }
-  return { question, snapshot: parseGameSnapshot(values.snapshot) };
+  return parseGameSnapshot(request);
 }
 
 export function parsePublicAiResponse(response: unknown): PublicAiResponse {
-  const values = readExactObject(response, ['answer'], 'MALFORMED_OUTPUT', 'response');
-  if (typeof values.answer !== 'string') fail('MALFORMED_OUTPUT', 'response.answer must be a string.');
-  const answer = values.answer.trim();
-  if (answer.length === 0 || answer.length > MAX_ANSWER_LENGTH) {
-    fail('MALFORMED_OUTPUT', `response.answer must contain 1 to ${MAX_ANSWER_LENGTH} characters.`);
+  if (typeof response !== 'string' || Buffer.byteLength(response, 'utf8') > MAX_PROVIDER_OUTPUT_BYTES) {
+    fail('MALFORMED_OUTPUT', 'response must be valid JSON within the maximum size.');
   }
-  return { answer };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(response);
+  } catch {
+    fail('MALFORMED_OUTPUT', 'response must contain valid JSON.');
+  }
+  const values = readExactObject(parsed, ['hint', 'category'], 'MALFORMED_OUTPUT', 'response');
+  if (typeof values.hint !== 'string') fail('MALFORMED_OUTPUT', 'response.hint must be a string.');
+  const hint = values.hint.trim();
+  if (Array.from(hint).length === 0 || Array.from(hint).length > MAX_HINT_CODE_POINTS) {
+    fail('MALFORMED_OUTPUT', `response.hint must contain 1 to ${MAX_HINT_CODE_POINTS} Unicode code points.`);
+  }
+  if (typeof values.category !== 'string' || !['movement', 'timing', 'strategy', 'general'].includes(values.category)) {
+    fail('MALFORMED_OUTPUT', 'response.category is invalid.');
+  }
+  return { hint, category: values.category as AiHintCategory };
 }
 
 export function parseGetCurrentGameSnapshotArguments(args: unknown): Record<string, never> {
