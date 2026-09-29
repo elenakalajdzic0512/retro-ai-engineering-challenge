@@ -62,8 +62,14 @@ AI je korišćen za ubrzavanje analize, strukturisanje dokumentacije i predlagan
 
 AI assistance was used for SpecKit analysis and planning, controlled TypeScript migration, final-contract test-first work, deterministic fake-provider integration, Gemini adapter scaffolding with an injected stub client, frontend AI Hint integration, and evidence reconciliation. The intended result was a small explicit AI Hint flow with a browser/backend boundary and a server-controlled Gemini provider.
 
-Human decisions controlled the scope: no autonomous calls, no frame-loop integration, no fallback provider, no extra tools, no live Gemini call during this work, and no acceptance of unverified AI output as evidence. Elena reviewed the implementation changes, preserved the Week 3 game, ran the documented local gates, manually verified the browser/gameplay flow, and performed the secret-boundary checks.
+Human decisions controlled the scope: no autonomous calls, no frame-loop integration, no fallback provider, no extra tools, and no live Gemini call at that earlier implementation checkpoint. Elena reviewed the implementation changes, preserved the Week 3 game, ran the documented local gates, manually verified the browser/gameplay flow, and performed the secret-boundary checks.
 
 The contract work followed a test-first sequence: the focused final-contract tests first produced the recorded RED result, then passed in the recorded GREEN result. Fake-provider, backend, frontend-build, security-sentinel, and manual-browser results are kept distinct from live-provider evidence.
 
-Current limitations remain: limited live Gemini validation has not been run, and the planned final Isidora review/role swap, secret-boundary review, and joint confirmation that both members can explain the final flow are not evidenced. These are recorded as limitations rather than inferred from AI output or fabricated participation.
+At that earlier checkpoint, limited live Gemini validation had not been run. The planned final Isidora review/role swap, secret-boundary review, and joint confirmation that both members can explain the final flow remain unevidenced. These are recorded as limitations rather than inferred from AI output or fabricated participation.
+
+### Week 4 live-provider follow-up (2026-09-30)
+
+The live-provider troubleshooting and final validation were human-controlled. The initial 403 responses, unavailable billing tier, adapter schema correction, auth/access classification fix, local gates, and successful Gemini validations were recorded from observed results. AI assistance helped organize the evidence, while Elena controlled the provider/project decision, secret handling, request limit, browser verification, and PASS interpretation.
+
+The successful request used the fixed Gemini model and was followed by manual browser confirmation of the end-to-end flow. No API key or private provider payload was recorded. Live validation is now evidenced, while the final pair-review, role swap, and joint-understanding requirements remain unresolved.

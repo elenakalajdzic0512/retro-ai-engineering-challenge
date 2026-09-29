@@ -90,9 +90,19 @@ The initial planning checkpoint above remains historical evidence and is preserv
 - The single visible AI feature is the explicitly triggered Neon Breaker AI Hint.
 - The configured real provider is Google Gemini with fixed model `gemini-3.5-flash-lite`; the deterministic fake provider remains available for offline evaluation.
 - `GEMINI_API_KEY` is backend-only. `.env` variants are ignored, `.env.example` contains no secret, frontend calls remain relative, and the production bundle contained no `GEMINI_API_KEY`, `@google/genai`, or `gemini-3.5-flash-lite` reference. A non-secret sentinel build and scan passed.
-- TypeScript migration, contract tests, fake-provider integration, frontend integration, strict typecheck, server build, full 85-test suite, frontend build, and manual fake-provider browser flow have observed PASS evidence.
+- TypeScript migration, contract tests, fake-provider integration, frontend integration, strict typecheck, server build, the final 86-test local regression suite, frontend build, and manual fake-provider browser flow have observed PASS evidence. The earlier 85-test result remains a historical checkpoint only.
 
-The real Gemini adapter has only been exercised with an injected stub client. **Limited live Gemini validation is NOT RUN**, and no real key or provider response has been recorded. The planned pair-review, role-swap, secret-boundary review, and joint understanding confirmation also remain unresolved process requirements. These limitations are separate from the technical local gates and are not represented as complete.
+The real Gemini adapter was initially exercised with an injected stub client; the later limited live validation is recorded below. The planned pair-review, role-swap, secret-boundary review, and joint understanding confirmation remain unresolved process requirements. These limitations are separate from the technical local gates and are not represented as complete.
+
+## Limited live Gemini validation
+
+The first Gemini project/key permitted metadata lookup but returned HTTP 403 for direct minimal `generateContent`; a fresh key in the same context also returned 403, and Google AI Studio showed Billing Tier `Unavailable`. This was treated as external provider/project access troubleshooting. A new local project/key then produced `MINIMAL_GENERATION=PASS` and `HAS_TEXT=true`; no secret value was printed or committed.
+
+The adapter correction from `responseSchema` to `responseJsonSchema` was recorded in commit `e131b3c`. The corresponding stub assertion changed with it. The final auth/access correction is `c56f96c`: 401/403 SDK status/code values map to non-retryable `NOT_CONFIGURED`, without exposing raw details or changing public contracts. On Elena's Mac after `c56f96c`, `npm test` passed with 86/86 tests, 0 failures, and 0 skipped; that command runs `build:server` first, so backend TypeScript compilation also passed as part of the same command. Separately, the Codex sandbox recorded typecheck PASS, server build PASS, Gemini stub tests 5/5 PASS, frontend build PASS, and clean `git diff --check`; its full HTTP suite remained environment-limited by `127.0.0.1` `EPERM` listener failures.
+
+Troubleshooting included failed HTTP 403 `generateContent` attempts and a successful minimal SDK probe after switching project/key. One deliberate backend validation request used Google Gemini `gemini-3.5-flash-lite` with `status=ready`, `score=0`, `lives=3`, and `bricksRemaining=40`; it returned HTTP 200 and the runtime-validated response `{"hint":"Launch the ball to begin breaking the remaining forty bricks.","category":"general"}`. Separately, Elena manually confirmed **Ask AI for Hint** in the browser with the real Gemini backend. This is user-observed manual browser evidence, not an automated browser test. No exact transport-level total is asserted because application retry behavior may make it unavailable. The limited live provider demonstration is now PASS.
+
+The final Isidora review, role swap, secret-boundary review, and joint-understanding confirmation remain unresolved process requirements. The technical readiness result and process-compliance result remain separate.
 
 ### Week 4 contribution history
 

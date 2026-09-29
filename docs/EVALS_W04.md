@@ -331,14 +331,14 @@ Strict TypeScript migration validation is **PASS**. The existing pre-final quest
 ### Gemini adapter evidence
 
 - Gemini integration: `518d268` (`feat: add Gemini provider integration`). `@google/genai` resolved to `2.24.0`; the fixed model is `gemini-3.5-flash-lite`.
-- The adapter has been verified only with an injected stub client. Gemini stub tests passed 4/4, the relevant AI backend suite passed 64/64, and the full suite after integration passed 85/85. Strict typecheck and production build passed.
-- **Live Gemini validation: NOT RUN.** No real Gemini request, API key, or provider credit was used.
+- At the earlier adapter checkpoint, verification used only an injected stub client: Gemini stub tests passed 4/4, the relevant AI backend suite passed 64/64, and the full suite after integration passed 85/85. Strict typecheck and production build passed at that historical checkpoint.
+- At that earlier checkpoint, live Gemini validation was NOT RUN; no real Gemini request, API key, or provider credit was used then.
 
 ### Frontend and final local gate
 
 - Frontend integration: `1a0b261` (`feat: add AI Hint frontend integration`). The explicit Ask AI for Hint control sends only the four-field snapshot to relative `/api/ai`, shows loading/safe success/generic failure states, stays outside the frame/update loop, and does not intentionally mutate gameplay state.
 - Elena manually observed the deterministic fake-provider flow in the browser: category `general`, hint `Keep the ball in play.` This is fake-provider behavior, not Gemini quality evidence.
-- At `1a0b261`, the observed sequence `npm run typecheck`, `npm run build:server`, `npm test`, and `npm run build` completed with typecheck PASS, server build PASS, 85/85 tests passing, frontend build PASS, and `FINAL_LOCAL_GATE_EXIT=0`.
+- At the earlier `1a0b261` checkpoint, the observed sequence `npm run typecheck`, `npm run build:server`, `npm test`, and `npm run build` completed with typecheck PASS, server build PASS, 85/85 tests passing, frontend build PASS, and `FINAL_LOCAL_GATE_EXIT=0`.
 - Elena also manually confirmed game launch, paddle controls, scoring/life-loss/restart behavior, AI Hint operation, continued gameplay after the hint, and no intentional gameplay mutation from requesting a hint. This is user-observed manual verification, not an automated browser test.
 
 ### Assignment-Core checklist
@@ -364,10 +364,42 @@ Strict TypeScript migration validation is **PASS**. The existing pre-final quest
 | Provider failure/timeout test | PASS | Automated regression coverage |
 | Malformed output test | PASS | Automated runtime validation coverage |
 | Local evidence | PASS | Baseline, migration, contract, backend, frontend, security, and manual records |
-| Limited live provider demonstration | NOT YET COMPLETE | No live Gemini request has occurred |
+| Limited live provider demonstration | PASS | One deliberate real Gemini request and user-observed browser flow recorded below |
 | Final pair process / both members understand flow | NOT YET COMPLETE | No final Isidora review, role swap, secret-boundary review, or joint confirmation evidenced |
 
-The technical Core has substantial local PASS evidence, but the Week 4 assignment is not declared fully complete while live validation and the documented pair-process requirements remain outstanding.
+The technical Core has substantial local and live PASS evidence, but the Week 4 assignment is not declared fully process-complete while the documented pair-process requirements remain outstanding.
+
+## Live Gemini validation and troubleshooting
+
+### Provider access troubleshooting
+
+The original Gemini project/key allowed model metadata lookup, but a direct minimal `generateContent` request returned HTTP 403. A fresh key in the same problematic context also returned 403. Google AI Studio showed `Billing Tier: Unavailable`. This was treated as an external provider/project access problem, not as a successful live demonstration. A new project/API key was configured locally; its value was never printed or committed. A minimal direct SDK probe then succeeded with `MINIMAL_GENERATION=PASS` and `HAS_TEXT=true`.
+
+During troubleshooting, the Gemini adapter schema configuration was corrected from `responseSchema` to `responseJsonSchema`, with the existing stub assertion updated. Git history identifies the fix as `e131b3c fix: use Gemini JSON schema configuration`. After the fix on Elena's Mac, `npm run typecheck`, `npm run build:server`, `npm test` (85 tests, 85 pass, 0 fail, 0 skipped), and `npm run build` passed; `git diff --check` was clean. A sandbox Codex run retained HTTP `EPERM` listener failures, classified as environment-specific because the ordinary local Mac suite passed.
+
+### Deliberate limited live request
+
+| Field | Observed value |
+| --- | --- |
+| Provider | Google Gemini |
+| Model | `gemini-3.5-flash-lite` |
+| Deliberate backend snapshot | `status=ready`, `score=0`, `lives=3`, `bricksRemaining=40` |
+| Result | HTTP 200 OK |
+| Validated application response | `hint`: “Launch the ball to begin breaking the remaining forty bricks.”; `category`: `general` |
+| Provider mode | Real Gemini response, not deterministic fake |
+| Contract/relevance | Structured `{hint, category}` response; relevant to the supplied ready snapshot |
+
+The troubleshooting phase included failed HTTP 403 `generateContent` attempts and a successful minimal SDK probe after switching project/key. Separately, one deliberate successful Neon Breaker backend validation request returned HTTP 200 with the response above, and a separate user-observed browser E2E request with the real Gemini backend also succeeded. Transport-level call totals are not asserted because application retry behavior may make them unavailable. The limited live provider demonstration is PASS.
+
+### Live browser E2E
+
+With the real Gemini backend running, Elena manually used **Ask AI for Hint** in the browser and confirmed it worked. This is user-observed manual browser evidence, not an automated browser test. It demonstrates the live flow: browser → TypeScript backend → Gemini → runtime-validated response → UI.
+
+The limited live provider demonstration is **PASS**. The final Isidora review, role swap, and joint-understanding evidence remain unresolved process requirements, so the Week 4 assignment is not declared fully process-complete.
+
+### Final auth/access reliability correction
+
+Commit `c56f96c` fixes the Gemini auth/access classification gap: SDK status/code 401 and 403 map to the existing non-retryable `NOT_CONFIGURED` failure, raw SDK details are not exposed, other errors retain the existing transient/timeout path, and no public contract or fallback provider/model changed. After this fix on Elena's Mac, `npm test` passed 86/86 with 0 failures and 0 skipped tests; the command includes backend compilation. The Codex sandbox's HTTP `EPERM` failures remain environment-specific and are not treated as application failures.
 
 ## T016 — legacy server-source removal verification
 
