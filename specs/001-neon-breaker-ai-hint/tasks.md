@@ -4,8 +4,8 @@ description: "Dependency-ordered Week 4 Core implementation tasks for Neon Break
 
 # Tasks: Neon Breaker AI Hint
 
-**Branch**: `week4/integration`  
-**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [API contract](contracts/api.md), [provider contract and fixed instructions](contracts/provider.md), [quickstart.md](quickstart.md), and `.specify/memory/constitution.md` v1.0.0.  
+**Branch**: `week4/integration`
+**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [API contract](contracts/api.md), [provider contract and fixed instructions](contracts/provider.md), [quickstart.md](quickstart.md), and `.specify/memory/constitution.md` v1.0.0.
 **Status**: Task generation only. Every task below is unperformed and unchecked. Planning artifacts are existing context, not evidence that implementation, tests, security, manual play, live evaluation or review passed.
 
 ## Format and execution rules
