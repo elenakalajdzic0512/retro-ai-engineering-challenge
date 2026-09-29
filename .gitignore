@@ -1,6 +1,15 @@
 node_modules/
 dist/
+
+# Secrets and local environment
 .env
 .env.*
+!.env.example
+
 .DS_Store
 coverage/
+
+# Keep shared SpecKit skills, ignore other agent-local artifacts
+.agents/*
+!.agents/skills/
+!.agents/skills/**
