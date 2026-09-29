@@ -6,6 +6,9 @@ const context = canvas.getContext('2d');
 const score = document.querySelector('#score');
 const lives = document.querySelector('#lives');
 const status = document.querySelector('#status');
+const aiHintButton = document.querySelector('#ai-hint-button');
+const aiHintStatus = document.querySelector('#ai-hint-status');
+const aiHintResult = document.querySelector('#ai-hint-result');
 const game = createGame();
 const keys = new Set();
 const controls = ['ArrowLeft', 'ArrowRight', 'a', 'd', ' '];
@@ -15,6 +18,46 @@ const messages = {
   won: 'You win! Press Space for a fresh game.',
   lost: 'Game over. Press Space for a fresh game.',
 };
+
+const aiHintCategories = new Set(['movement', 'timing', 'strategy', 'general']);
+
+function isValidAiHintResponse(value) {
+  return value !== null
+    && typeof value === 'object'
+    && Object.getPrototypeOf(value) === Object.prototype
+    && typeof value.hint === 'string'
+    && value.hint.trim().length > 0
+    && aiHintCategories.has(value.category);
+}
+
+aiHintButton.addEventListener('click', async () => {
+  const snapshot = {
+    status: game.status,
+    score: game.score,
+    lives: game.lives,
+    bricksRemaining: game.bricks.filter((brick) => brick.alive).length,
+  };
+  aiHintButton.disabled = true;
+  aiHintStatus.textContent = 'Getting AI hint...';
+  aiHintResult.textContent = '';
+  try {
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(snapshot),
+    });
+    if (!response.ok) throw new Error('AI hint request failed.');
+    const result = await response.json();
+    if (!isValidAiHintResponse(result)) throw new Error('AI hint response was invalid.');
+    aiHintStatus.textContent = 'AI hint ready.';
+    aiHintResult.textContent = `${result.category}: ${result.hint.trim()}`;
+  } catch {
+    aiHintStatus.textContent = 'AI hint is unavailable. Please try again.';
+    aiHintResult.textContent = '';
+  } finally {
+    aiHintButton.disabled = false;
+  }
+});
 
 window.addEventListener('keydown', (event) => {
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;

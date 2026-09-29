@@ -7,3 +7,9 @@ h1 { color: #70f6ff; font-size: clamp(24px, 5vw, 36px); letter-spacing: 4px; }
 canvas { display: block; width: 100%; height: auto; border: 2px solid #526886; }
 #status { color: #ffe275; min-height: 2.5em; font-size: 16px; }
 .controls { color: #b2bfd3; line-height: 1.6; }
+.ai-hint { margin-top: 20px; padding: 16px; border: 1px solid #526886; background: #0b1224; }
+.ai-hint h2 { margin: 0 0 12px; color: #70f6ff; font-size: 18px; }
+.ai-hint button { padding: 8px 14px; border: 1px solid #70f6ff; color: #050812; background: #70f6ff; font: inherit; cursor: pointer; }
+.ai-hint button:disabled { opacity: 0.55; cursor: wait; }
+#ai-hint-status { min-height: 1.4em; color: #ffe275; }
+#ai-hint-result { min-height: 1.4em; color: #6de3b5; }
