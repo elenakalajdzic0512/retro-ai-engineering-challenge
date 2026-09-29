@@ -17,5 +17,8 @@
     "@types/node": "^24.19.0",
     "typescript": "^7.0.2",
     "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "^2.24.0"
   }
 }

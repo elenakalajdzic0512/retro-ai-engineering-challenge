@@ -2,6 +2,7 @@ import { createServer as createHttpServer, type IncomingMessage, type ServerResp
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createFakeProvider } from './ai/fake-provider.js';
+import { createGeminiProvider } from './ai/gemini-provider.js';
 import {
   AiOrchestrationError,
   getAiOrchestrationErrorResponse,
@@ -20,7 +21,7 @@ type Provider = NonNullable<OrchestrationOptions['provider']>;
 
 interface ApiServerOptions {
   provider?: Provider;
-  providerFactory?: () => Provider;
+  providerFactory?: () => Provider | null;
   toolExecutor?: OrchestrationOptions['toolExecutor'];
   orchestrationOptions?: Omit<OrchestrationOptions, 'provider' | 'toolExecutor'>;
 }
@@ -60,9 +61,19 @@ function createLocalFakeProvider(): Provider {
   });
 }
 
+function createConfiguredProvider(): Provider | null {
+  const providerName = process.env.AI_PROVIDER ?? 'fake';
+  if (providerName === 'fake') return createLocalFakeProvider();
+  if (providerName === 'gemini') {
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    return apiKey ? createGeminiProvider({ apiKey }) : null;
+  }
+  return null;
+}
+
 export function createApiServer({
   provider,
-  providerFactory = createLocalFakeProvider,
+  providerFactory = createConfiguredProvider,
   toolExecutor = invokeReadOnlyTool,
   orchestrationOptions = {},
 }: ApiServerOptions = {}) {
