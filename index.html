@@ -12,6 +12,12 @@
       <canvas id="game" width="800" height="600" aria-label="Neon Breaker playfield">This game requires Canvas support.</canvas>
       <p id="status" role="status"></p>
       <p class="controls">Move: ← → or A / D · Launch / restart: Space</p>
+      <section class="ai-hint" aria-labelledby="ai-hint-heading">
+        <h2 id="ai-hint-heading">AI Hint</h2>
+        <button id="ai-hint-button" type="button">Ask AI for Hint</button>
+        <p id="ai-hint-status" role="status" aria-live="polite"></p>
+        <p id="ai-hint-result" aria-live="polite"></p>
+      </section>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>
