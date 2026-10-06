@@ -1,5 +1,7 @@
 import './style.css';
 import { createGame, launch, update, WIDTH, HEIGHT } from './game.js';
+import { deriveTacticalSnapshot } from './tactical-snapshot.js';
+import { createTacticalCoachRequestController, renderTacticalCoachResult } from './tactical-ui.js';
 
 const canvas = document.querySelector('#game');
 const context = canvas.getContext('2d');
@@ -9,6 +11,11 @@ const status = document.querySelector('#status');
 const aiHintButton = document.querySelector('#ai-hint-button');
 const aiHintStatus = document.querySelector('#ai-hint-status');
 const aiHintResult = document.querySelector('#ai-hint-result');
+const tacticalForm = document.querySelector('#tactical-coach-form');
+const tacticalGoal = document.querySelector('#tactical-coach-goal');
+const tacticalButton = document.querySelector('#tactical-coach-button');
+const tacticalStatus = document.querySelector('#tactical-coach-status');
+const tacticalResult = document.querySelector('#tactical-coach-result');
 const game = createGame();
 const keys = new Set();
 const controls = ['ArrowLeft', 'ArrowRight', 'a', 'd', ' '];
@@ -59,12 +66,48 @@ aiHintButton.addEventListener('click', async () => {
   }
 });
 
+const tacticalCoach = createTacticalCoachRequestController({
+  button: tacticalButton,
+  status: tacticalStatus,
+  result: tacticalResult,
+  render: (result) => renderTacticalCoachResult(result, tacticalResult),
+  pageWindow: window,
+});
+
+tacticalForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (tacticalButton.disabled) return;
+  tacticalResult.replaceChildren();
+  const goal = tacticalGoal.value.trim();
+  if (!goal) {
+    tacticalStatus.textContent = 'Enter a goal to get a tactical plan.';
+    return;
+  }
+  if ((game.status !== 'ready' && game.status !== 'playing') || !game.bricks.some((brick) => brick.alive)) {
+    tacticalStatus.textContent = 'Tactical Coach is available while a level is in progress.';
+    return;
+  }
+  let state;
+  try { state = deriveTacticalSnapshot(game); }
+  catch {
+    tacticalStatus.textContent = 'Tactical Coach is unavailable. Please try again.';
+    return;
+  }
+  tacticalGoal.blur();
+  tacticalButton.blur();
+  void tacticalCoach.submit(goal, state);
+});
+
 window.addEventListener('keydown', (event) => {
+  if (event.target === tacticalGoal || event.target === tacticalButton) return;
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
   if (!controls.includes(key)) return;
   event.preventDefault();
   keys.add(key);
-  if (key === ' ' && !event.repeat) launch(game);
+  if (key === ' ' && !event.repeat) {
+    tacticalCoach.beforeGameLaunch(game.status);
+    launch(game);
+  }
 });
 window.addEventListener('keyup', (event) => {
   keys.delete(event.key.length === 1 ? event.key.toLowerCase() : event.key);
