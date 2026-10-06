@@ -1,7 +1,9 @@
 import type { TacticalRequest } from './contracts.js';
 import type { TacticalToolDeclaration, TacticalToolResult } from './tools.js';
 
-export type TacticalProviderFailureCode = 'provider_timeout' | 'provider_unavailable' | 'rate_limited';
+export type TacticalProviderFailureCode =
+  | 'provider_timeout' | 'provider_unavailable' | 'rate_limited'
+  | 'provider_rejected' | 'provider_not_configured';
 export type TacticalProviderOutcome =
   | { type: 'tool_call'; toolName: string; arguments: unknown }
   | { type: 'final'; output: unknown }

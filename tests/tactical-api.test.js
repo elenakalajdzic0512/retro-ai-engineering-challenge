@@ -115,6 +115,8 @@ test('Coach HTTP failures use fixed statuses and sanitized bodies', async () => 
     [[{ type: 'failure', code: 'provider_unavailable' }, { type: 'failure', code: 'provider_unavailable' }], 503, 'provider_unavailable'],
     [[{ type: 'failure', code: 'rate_limited' }, { type: 'failure', code: 'rate_limited' }], 429, 'rate_limited'],
     [[{ type: 'failure', code: 'provider_timeout' }, { type: 'failure', code: 'provider_timeout' }], 504, 'provider_timeout'],
+    [[{ type: 'failure', code: 'provider_rejected' }], 502, 'provider_rejected'],
+    [[{ type: 'failure', code: 'provider_not_configured' }], 503, 'provider_not_configured'],
     [[script()[0], { type: 'tool_call', toolName: 'evaluate_tactical_strategy', arguments: { ...candidate, route: 'portal' } }], 502, 'candidate_rejected'],
     [[script()[0], script()[1], { type: 'final', output: { ...final, strategy: 'safe' } }], 502, 'invalid_final_output'],
   ];
@@ -128,6 +130,12 @@ test('Coach HTTP failures use fixed statuses and sanitized bodies', async () => 
       assert.deepEqual(Object.keys(body), ['error']);
       assert.deepEqual(Object.keys(body.error), ['code', 'message']);
       assert.doesNotMatch(JSON.stringify(body), /stack|PRIVATE|targetZone|toolResults/);
+      if (code === 'provider_rejected' || code === 'provider_not_configured') {
+        assert.equal(provider.callCount, 1);
+        assert.equal(body.error.message, code === 'provider_rejected'
+          ? 'The AI provider could not complete this request.'
+          : 'The Tactical Coach provider is not configured.');
+      }
     });
   }
 });

@@ -47,6 +47,14 @@ for (const code of ['provider_timeout', 'provider_unavailable', 'rate_limited'])
   });
 }
 
+for (const code of ['provider_rejected', 'provider_not_configured']) {
+  test(`fake provider returns scripted ${code} failure`, async () => {
+    const fake = createTacticalFakeProvider({ outcomes: [{ type: 'failure', code }] });
+    assert.deepEqual(await fake.generate(providerCall()), { type: 'failure', code });
+    assert.equal(fake.callCount, 1);
+  });
+}
+
 test('fake outcomes are consumed in order and caller edits cannot rewrite the script', async () => {
   const script = [
     { type: 'tool_call', toolName: 'get_tactical_snapshot', arguments: {} },
@@ -267,6 +275,37 @@ test('a later transient failure after one retry does not get another retry', asy
   await failsCode(run, 'rate_limited');
   assert.equal(provider.callCount, 3);
 });
+
+for (const code of ['provider_rejected', 'provider_not_configured']) {
+  test(`${code} stops on the first attempt without tool execution or backoff`, async () => {
+    let toolCalls = 0;
+    let backoffs = 0;
+    const { provider, run } = fakeRun([{ type: 'failure', code }, snapshotProposal()], {
+      sleep: async () => { backoffs++; },
+      toolExecutor() { toolCalls++; throw new Error('must not execute'); },
+    });
+    await failsCode(run, code);
+    assert.equal(provider.callCount, 1);
+    assert.equal(toolCalls, 0);
+    assert.equal(backoffs, 0);
+  });
+
+  test(`${code} remains terminal after a previous transient retry`, async () => {
+    let toolCalls = 0;
+    let backoffs = 0;
+    const { provider, run } = fakeRun([
+      { type: 'failure', code: 'provider_unavailable' }, snapshotProposal(),
+      { type: 'failure', code }, evaluationProposal(),
+    ], {
+      sleep: async () => { backoffs++; },
+      toolExecutor(name, args, context) { toolCalls++; return invokeTacticalTool(name, args, context); },
+    });
+    await failsCode(run, code);
+    assert.equal(provider.callCount, 3);
+    assert.equal(toolCalls, 1);
+    assert.equal(backoffs, 1);
+  });
+}
 
 test('a nonsettling provider attempt is actually timed out and aborted', async () => {
   let time = 0;

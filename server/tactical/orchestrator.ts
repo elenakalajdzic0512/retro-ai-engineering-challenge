@@ -36,6 +36,7 @@ export type TacticalCoachErrorCode =
   | 'invalid_input' | 'unknown_tool' | 'forbidden_tool' | 'invalid_tool_arguments'
   | 'invalid_tool_result' | 'tool_failure' | 'tool_timeout'
   | 'provider_timeout' | 'provider_unavailable' | 'rate_limited'
+  | 'provider_rejected' | 'provider_not_configured'
   | 'malformed_model_output' | 'missing_required_evidence' | 'repeated_action'
   | 'step_limit' | 'tool_call_limit' | 'provider_call_budget' | 'deadline'
   | 'invalid_final_output' | 'candidate_rejected' | 'cancelled';
@@ -51,6 +52,8 @@ const PUBLIC_MESSAGES: Readonly<Record<TacticalCoachErrorCode, string>> = Object
   provider_timeout: 'Tactical Coach provider timed out.',
   provider_unavailable: 'Tactical Coach provider is unavailable.',
   rate_limited: 'Tactical Coach provider is rate limited.',
+  provider_rejected: 'The AI provider could not complete this request.',
+  provider_not_configured: 'The Tactical Coach provider is not configured.',
   malformed_model_output: 'Tactical Coach response is malformed.',
   missing_required_evidence: 'Tactical Coach did not gather required evidence.',
   repeated_action: 'Tactical Coach repeated an action.',
@@ -138,7 +141,8 @@ function parseProviderOutcome(value: unknown): TacticalProviderOutcome {
     }
     if (type.value === 'failure') {
       const data = exactObject(value, ['type', 'code']);
-      if (data.code !== 'provider_timeout' && data.code !== 'provider_unavailable' && data.code !== 'rate_limited') {
+      if (data.code !== 'provider_timeout' && data.code !== 'provider_unavailable' && data.code !== 'rate_limited' &&
+          data.code !== 'provider_rejected' && data.code !== 'provider_not_configured') {
         fail('malformed_model_output');
       }
       return { type: 'failure', code: data.code as TacticalProviderFailureCode };
@@ -147,6 +151,10 @@ function parseProviderOutcome(value: unknown): TacticalProviderOutcome {
   } catch {
     fail('malformed_model_output');
   }
+}
+
+function isRetryableProviderFailure(code: TacticalProviderFailureCode): boolean {
+  return code === 'provider_timeout' || code === 'provider_unavailable' || code === 'rate_limited';
 }
 
 function parseToolName(name: string): TacticalToolName {
@@ -345,6 +353,7 @@ export async function runTacticalCoach(request: unknown, options: RunTacticalCoa
         }
       }
       if (output.type !== 'failure') return output;
+      if (!isRetryableProviderFailure(output.code)) fail(output.code);
       if (retryUsed) fail(output.code);
       retryUsed = true;
       if (attempts.count >= MAX_PROVIDER_CALLS) fail('provider_call_budget');

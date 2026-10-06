@@ -89,6 +89,8 @@ A normal success consumes **3 logical agent steps, 3 provider attempts and 2 too
 | `provider_timeout` | Provider attempt times out after bounded retry. |
 | `provider_unavailable` | Provider unavailable after bounded retry. |
 | `rate_limited` | Provider rate limit after bounded retry. |
+| `provider_rejected` | Non-transient provider/model refusal or rejection; stop without retry. Fixed public message; HTTP 502. |
+| `provider_not_configured` | Required server-side provider configuration is missing or invalid; stop without retry. Fixed public message; HTTP 503. |
 | `malformed_model_output` | Provider envelope, tool proposal or JSON cannot be parsed safely. |
 | `missing_required_evidence` | Premature final or absent successful snapshot/evaluation. |
 | `repeated_action` | Repeated tool name/key before execution. |
@@ -100,7 +102,7 @@ A normal success consumes **3 logical agent steps, 3 provider attempts and 2 too
 | `candidate_rejected` | Valid deterministic evaluation rejects an empty target or unusable portal route. |
 | `cancelled` | Caller aborts run. |
 
-A fixed public code/message map yields sanitized errors; logs must not include raw provider payloads, stack traces, secrets or private prompts. Provider refusal/not configured may use additional fixed codes, without retry. A valid rejected candidate stops with `candidate_rejected` after tool 2. `invalid_tool_result` applies only to malformed evaluation output.
+A fixed public code/message map yields sanitized errors; logs must not include raw provider payloads, stack traces, secrets or private prompts. Only `provider_timeout`, `provider_unavailable` and `rate_limited` are transient retryable provider failures. `provider_rejected` and `provider_not_configured` are nonretryable and use fixed public messages. A valid rejected candidate stops with `candidate_rejected` after tool 2. `invalid_tool_result` applies only to malformed evaluation output.
 
 ## UI and evaluation
 

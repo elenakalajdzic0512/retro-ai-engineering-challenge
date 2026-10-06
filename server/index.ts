@@ -107,7 +107,8 @@ function createLocalTacticalFakeProvider(): TacticalProvider {
 function tacticalHttpStatus(code: TacticalCoachError['code']): number {
   if (code === 'invalid_input') return 400;
   if (code === 'rate_limited') return 429;
-  if (code === 'provider_unavailable') return 503;
+  if (code === 'provider_unavailable' || code === 'provider_not_configured') return 503;
+  if (code === 'provider_rejected') return 502;
   if (code === 'provider_timeout' || code === 'tool_timeout' || code === 'deadline') return 504;
   if (code === 'cancelled') return 499;
   return 502;
