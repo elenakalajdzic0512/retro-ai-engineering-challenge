@@ -75,7 +75,7 @@ test('initial Gemini request exposes goal and only the snapshot declaration, nev
   assert.equal(request.config.abortSignal, controller.signal);
   assert.deepEqual(request.config.automaticFunctionCalling, { disable: true });
   assert.equal(request.config.systemInstruction,
-    'You are Neon Breaker Tactical Coach. Follow the current server-provided tool or JSON-output instruction. Use only validated tool responses as arena evidence. Never claim an exact trajectory or future outcome. First call get_tactical_snapshot with exactly {}. Do not provide a plan yet.');
+    'You are Neon Breaker Tactical Coach. Follow the current server-provided tool or JSON-output instruction. Use only validated tool responses as arena evidence. Follow three stages in order: first request the snapshot, then propose one strategy evaluation candidate, and only after a validated evaluation response produce the final plan. Never claim an exact trajectory or future outcome. First call get_tactical_snapshot with exactly {}. Do not provide a plan yet.');
   assert.deepEqual(request.config.toolConfig.functionCallingConfig, {
     mode: 'ANY', allowedFunctionNames: ['get_tactical_snapshot'],
   });
@@ -144,6 +144,25 @@ test('final step sends both function responses and requests exact structured pla
   assert.equal(request.config.tools, undefined);
   assert.equal(request.config.toolConfig?.functionCallingConfig?.mode, 'NONE');
   assert.equal(request.config.responseMimeType, 'application/json');
+  const instruction = request.config.systemInstruction;
+  for (const rule of [
+    'final.targetZone = candidate.targetZone',
+    'final.strategy = candidate.style',
+    'final.paddleContact = candidate.paddleContact',
+    'final.route = candidate.route',
+    'exactly these top-level keys: summary, strategy, targetZone, paddleContact, route, actions, evidence; no extra keys',
+    'Evidence entries contain only {source,fact}; do not author value, confidence, success, completed, provider, model, explanation, or any extra field',
+    'at least one tactical_snapshot reference and at least one strategy_evaluation reference',
+    'unique by source + fact',
+    'tactical_snapshot facts: lives, bricksRemaining, bricksByZone.left, bricksByZone.center, bricksByZone.right, armoredByZone.left, armoredByZone.center, armoredByZone.right, ballDirection.horizontal, ballDirection.vertical, shield.zone, shield.direction, portalState; no others',
+    'strategy_evaluation facts: targetOpportunity, armoredTargets, riskLevel, paddleAligned, shieldInTargetZone, portalAvailable, routeUsable; no others',
+    'only facts actually present in the validated function responses',
+    'Do not invent evidence, infer new fact names from prose, or turn values into fact names',
+    'summary must be nonblank and at most 240 Unicode code points',
+    '1 to 3 actions, each nonblank and at most 160 Unicode code points',
+    '2 to 6 evidence references',
+    'Keep the normalized plan compact for the application 4096-byte limit',
+  ]) assert.ok(instruction.includes(rule), `final instruction missing: ${rule}`);
   const schema = request.config.responseJsonSchema;
   assert.deepEqual(Object.keys(schema.properties),
     ['summary', 'strategy', 'targetZone', 'paddleContact', 'route', 'actions', 'evidence']);
@@ -352,6 +371,22 @@ test('stubbed Gemini proposals complete through the authoritative orchestrator w
     { source: 'tactical_snapshot', fact: 'lives', value: 1 },
     { source: 'strategy_evaluation', fact: 'riskLevel', value: 'high' },
   ]);
+});
+
+test('orchestrator rejects a schema-shaped Gemini final that changes the evaluated candidate', async () => {
+  const sdk = stub([
+    functionReply('get_tactical_snapshot', {}, 'snapshot-call'),
+    functionReply('evaluate_tactical_strategy', candidate, 'evaluation-call'),
+    textReply(JSON.stringify({ ...plan, strategy: 'aggressive' })),
+  ]);
+  const provider = createTacticalCoachGeminiProvider({ client: sdk.client });
+  let tools = 0;
+  await assert.rejects(runTacticalCoach(input(), {
+    provider,
+    toolExecutor(name, args, context) { tools++; return invokeTacticalTool(name, args, context); },
+  }), (error) => error instanceof TacticalCoachError && error.code === 'invalid_final_output');
+  assert.equal(tools, 2);
+  assert.equal(sdk.requests.length, 3);
 });
 
 test('malformed Gemini tool output stops through the orchestrator without local tool execution', async () => {

@@ -5,10 +5,20 @@ import { getTacticalToolDeclarations, parseTacticalToolResult, type TacticalTool
 
 export const TACTICAL_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
-const SYSTEM_INSTRUCTION = 'You are Neon Breaker Tactical Coach. Follow the current server-provided tool or JSON-output instruction. Use only validated tool responses as arena evidence. Never claim an exact trajectory or future outcome.';
+const SYSTEM_INSTRUCTION = 'You are Neon Breaker Tactical Coach. Follow the current server-provided tool or JSON-output instruction. Use only validated tool responses as arena evidence. Follow three stages in order: first request the snapshot, then propose one strategy evaluation candidate, and only after a validated evaluation response produce the final plan. Never claim an exact trajectory or future outcome.';
 const SNAPSHOT_INSTRUCTION = 'First call get_tactical_snapshot with exactly {}. Do not provide a plan yet.';
 const EVALUATION_INSTRUCTION = 'Use the snapshot function result to choose exactly one targetZone, style, paddleContact and route. Call evaluate_tactical_strategy with only those four fields.';
-const FINAL_INSTRUCTION = 'Return only one JSON TacticalPlan. Keep the evaluated choices unchanged. Cite facts by source and fact name only, without authoring fact values.';
+const FINAL_INSTRUCTION = [
+  'Return only one JSON TacticalPlan with exactly these top-level keys: summary, strategy, targetZone, paddleContact, route, actions, evidence; no extra keys.',
+  'Preserve the exact accepted evaluated candidate: final.targetZone = candidate.targetZone; final.strategy = candidate.style; final.paddleContact = candidate.paddleContact; final.route = candidate.route. Do not revise the candidate.',
+  'Evidence entries contain only {source,fact}; do not author value, confidence, success, completed, provider, model, explanation, or any extra field. The application materializes evidence values.',
+  'Use exactly tactical_snapshot and strategy_evaluation as evidence sources, with at least one tactical_snapshot reference and at least one strategy_evaluation reference. Evidence references must be unique by source + fact.',
+  'tactical_snapshot facts: lives, bricksRemaining, bricksByZone.left, bricksByZone.center, bricksByZone.right, armoredByZone.left, armoredByZone.center, armoredByZone.right, ballDirection.horizontal, ballDirection.vertical, shield.zone, shield.direction, portalState; no others.',
+  'strategy_evaluation facts: targetOpportunity, armoredTargets, riskLevel, paddleAligned, shieldInTargetZone, portalAvailable, routeUsable; no others.',
+  'Cite only facts actually present in the validated function responses already provided. Do not invent evidence, infer new fact names from prose, or turn values into fact names.',
+  'The summary must be nonblank and at most 240 Unicode code points; provide 1 to 3 actions, each nonblank and at most 160 Unicode code points; provide 2 to 6 evidence references.',
+  'Keep the normalized plan compact for the application 4096-byte limit; the application validates the bound.',
+].join(' ');
 
 const PLAN_SCHEMA = {
   type: 'object',
