@@ -46,50 +46,50 @@ async function withTacticalMode(mode, action) {
   }
 }
 
-test('unset and explicit fake Tactical modes use the deterministic local provider', async () => {
-  for (const mode of [undefined, 'fake']) {
-    await withTacticalMode(mode, () => withServer({ tacticalGeminiProviderFactory() {
-      throw new Error('Gemini factory must not be selected');
-    } }, async (base) => {
-      const response = await post(base, validRequest());
-      assert.equal(response.status, 200);
-      const body = await response.json();
-      assert.equal(body.plan.summary, 'Clear the center with controlled bounces.');
-      assert.equal(body.evidence.length, 2);
-    }));
-  }
+test('explicit fake Tactical mode stays deterministic without Gemini work', async () => {
+  await withTacticalMode('fake', () => withServer({ tacticalGeminiProviderFactory() {
+    throw new Error('Gemini factory must not be selected');
+  } }, async (base) => {
+    const response = await post(base, validRequest());
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.plan.summary, 'Clear the center with controlled bounces.');
+    assert.equal(body.evidence.length, 2);
+  }));
 });
 
-test('Gemini Tactical mode selects the injected factory and makes a fresh provider per request', async () => {
-  const instances = [];
-  await withTacticalMode('gemini', () => withServer({ tacticalGeminiProviderFactory() {
-    const id = instances.length + 1;
-    const requests = [];
-    const client = { models: { async generateContent(request) {
-      requests.push(request);
-      const part = requests.length === 1
-        ? { functionCall: { name: 'get_tactical_snapshot', args: {}, id: `snapshot-${id}` } }
-        : requests.length === 2
-          ? { functionCall: { name: 'evaluate_tactical_strategy', args: candidate, id: `evaluation-${id}` } }
-          : { text: JSON.stringify(final) };
-      return { candidates: [{ content: { role: 'model', parts: [part] } }] };
-    } } };
-    const provider = createTacticalCoachGeminiProvider({ client });
-    instances.push({ provider, requests });
-    return provider;
-  } }, async (base) => {
-    for (let run = 0; run < 2; run++) {
-      const response = await post(base, validRequest());
-      assert.equal(response.status, 200);
-      assert.deepEqual((await response.json()).plan, final);
+test('unset and explicit Gemini Tactical modes select fresh stubbed Gemini adapters per request', async () => {
+  for (const mode of [undefined, 'gemini']) {
+    const instances = [];
+    await withTacticalMode(mode, () => withServer({ tacticalGeminiProviderFactory() {
+      const id = instances.length + 1;
+      const requests = [];
+      const client = { models: { async generateContent(request) {
+        requests.push(request);
+        const part = requests.length === 1
+          ? { functionCall: { name: 'get_tactical_snapshot', args: {}, id: `snapshot-${id}` } }
+          : requests.length === 2
+            ? { functionCall: { name: 'evaluate_tactical_strategy', args: candidate, id: `evaluation-${id}` } }
+            : { text: JSON.stringify(final) };
+        return { candidates: [{ content: { role: 'model', parts: [part] } }] };
+      } } };
+      const provider = createTacticalCoachGeminiProvider({ client });
+      instances.push({ provider, requests });
+      return provider;
+    } }, async (base) => {
+      for (let run = 0; run < 2; run++) {
+        const response = await post(base, validRequest());
+        assert.equal(response.status, 200);
+        assert.deepEqual((await response.json()).plan, final);
+      }
+    }));
+    assert.equal(instances.length, 2);
+    assert.notEqual(instances[0].provider, instances[1].provider);
+    assert.deepEqual(instances.map(({ requests }) => requests.length), [3, 3]);
+    for (const { requests } of instances) {
+      assert.equal(requests[0].model, 'gemini-3.5-flash-lite');
+      assert.deepEqual(requests[0].contents, [{ role: 'user', parts: [{ text: validRequest().goal }] }]);
     }
-  }));
-  assert.equal(instances.length, 2);
-  assert.notEqual(instances[0].provider, instances[1].provider);
-  assert.deepEqual(instances.map(({ requests }) => requests.length), [3, 3]);
-  for (const { requests } of instances) {
-    assert.equal(requests[0].model, 'gemini-3.5-flash-lite');
-    assert.deepEqual(requests[0].contents, [{ role: 'user', parts: [{ text: validRequest().goal }] }]);
   }
 });
 
@@ -110,6 +110,18 @@ test('unknown Tactical mode fails safely before Gemini factory or network work',
 
 test('Gemini Tactical mode with an explicitly empty key returns provider_not_configured offline', async () => {
   await withTacticalMode('gemini', () => withServer({ tacticalGeminiProviderFactory() {
+    return createTacticalCoachGeminiProvider({ apiKey: '' });
+  } }, async (base) => {
+    const response = await post(base, validRequest());
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), {
+      error: { code: 'provider_not_configured', message: 'The Tactical Coach provider is not configured.' },
+    });
+  }));
+});
+
+test('unset Tactical mode with missing Gemini configuration does not fall back to fake', async () => {
+  await withTacticalMode(undefined, () => withServer({ tacticalGeminiProviderFactory() {
     return createTacticalCoachGeminiProvider({ apiKey: '' });
   } }, async (base) => {
     const response = await post(base, validRequest());
@@ -239,7 +251,7 @@ test('media, JSON, schema and oversized body fail before any Coach provider or t
 });
 
 test('Week 5 accepts a padded 4096-byte JSON body while Week 4 keeps its 1024-byte limit', async () => {
-  await withServer({}, async (base) => {
+  await withServer({ tacticalProviderFactory: () => createTacticalFakeProvider({ outcomes: script() }) }, async (base) => {
     const tactical = JSON.stringify(validRequest());
     assert.ok(Buffer.byteLength(tactical) < 4096);
     const exact = tactical + ' '.repeat(4096 - Buffer.byteLength(tactical));

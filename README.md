@@ -87,7 +87,7 @@ npm ci
 
 The reviewed Week 04 submission completed `npm ci` with **0 reported vulnerabilities**.
 
-### Run with the local fake provider
+### Run Week 4 Hint with the local fake provider
 
 Build the TypeScript backend:
 
@@ -122,6 +122,8 @@ The frontend uses the relative endpoint:
 
 which Vite proxies to the local backend.
 
+`AI_PROVIDER=fake` configures Week 4 Hint. Tactical Coach has an independent provider setting and normally uses Gemini; use the explicit offline mode below to make both features deterministic.
+
 ### Run with Gemini
 
 Create a local `.env` file:
@@ -155,19 +157,26 @@ The Gemini API key remains available only to the backend process.
 
 ### Run Tactical Coach from the game
 
-Build the backend with `npm run build:server`, then start one API mode from the repository root. For deterministic local play with both Week 4 Hint and Week 5 Tactical Coach using fake providers:
+For normal use, ensure the local backend `.env` has `GEMINI_API_KEY` configured. Build the backend when needed, then start the normal API and frontend from the repository root in separate terminals:
+
+```bash
+npm run build:server
+npm run start:api
+```
+
+```bash
+npm run dev
+```
+
+Open the game and use **Run Tactical Coach**. Unset `TACTICAL_AI_PROVIDER` selects the real Gemini Tactical provider; `npm run dev:api` has the same default. Week 4 Hint keeps its separate `AI_PROVIDER` behavior, which defaults to fake. The API scripts load `.env` server-side with Node's `--env-file-if-exists=.env`; the key never belongs in browser or Vite code. If the key is missing, Coach returns a sanitized configuration error and does not switch to fake.
+
+For deterministic offline/testing use with both features fake, explicitly start the API with:
 
 ```bash
 AI_PROVIDER=fake TACTICAL_AI_PROVIDER=fake npm run start:api
 ```
 
-To use the real Gemini Tactical Coach while keeping Week 4 Hint fake:
-
-```bash
-AI_PROVIDER=fake TACTICAL_AI_PROVIDER=gemini npm run start:api
-```
-
-In a second terminal, run `npm run dev` and use **Run Tactical Coach** in the normal game. The existing API scripts load the local `.env` with Node's `--env-file-if-exists=.env`; Gemini mode requires the server-side `GEMINI_API_KEY` there. Never put the key in browser code. `TACTICAL_AI_PROVIDER` defaults to `fake` when unset; an unknown value or a missing Gemini key returns a sanitized configuration error. Provider selection is server-only and independent of Week 4's `AI_PROVIDER`.
+An explicit `TACTICAL_AI_PROVIDER=gemini` also selects the real Tactical provider. Unknown modes return a sanitized configuration error. Provider selection remains server-only.
 
 ## Test and Build Commands
 

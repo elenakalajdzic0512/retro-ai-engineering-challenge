@@ -107,7 +107,7 @@ function createLocalTacticalFakeProvider(): TacticalProvider {
 }
 
 function createConfiguredTacticalProviderFactory(geminiFactory: () => TacticalProvider): () => TacticalProvider {
-  const mode = process.env.TACTICAL_AI_PROVIDER ?? 'fake';
+  const mode = process.env.TACTICAL_AI_PROVIDER ?? 'gemini';
   if (mode === 'fake') return createLocalTacticalFakeProvider;
   if (mode === 'gemini') return geminiFactory;
   return () => ({ async generate() { return { type: 'failure', code: 'provider_not_configured' }; } });
