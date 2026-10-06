@@ -92,6 +92,14 @@ function draw() {
     context.arc(bumper.x, bumper.y, bumper.radius - 5, 0, Math.PI * 2);
     context.fill();
   }
+  for (const portal of game.portals) {
+    for (const [inset, color] of [[0, '#ff4dff'], [4, '#7a1cff'], [8, '#120024']]) {
+      context.fillStyle = color;
+      context.beginPath();
+      context.arc(portal.x, portal.y, portal.radius - inset, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
   context.fillStyle = '#70f6ff';
   context.fillRect(game.paddle.x, game.paddle.y, game.paddle.width, game.paddle.height);
   context.fillStyle = '#ffffff';

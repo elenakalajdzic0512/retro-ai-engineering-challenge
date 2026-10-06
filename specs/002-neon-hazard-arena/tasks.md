@@ -2,13 +2,13 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [eval matrix](../../docs/EVALS_HAZARD_ARENA.md).
 **Branch**: `week5/neon-hazard-arena`
-**Status**: Checkpoints 1–3 are implemented and verified; checkpoints 4–6 are not executed. Checkpoint 2 is `0b235f8`; checkpoint 3 is the commit containing this updated record.
+**Status**: Checkpoints 1–4 are implemented and verified; checkpoints 5–6 are not executed. Checkpoint 2 is `0b235f8`; checkpoint 3 is `1999735`; checkpoint 4 is the commit containing this updated record.
 
 ## Setup and Foundation
 
 No new application, dependencies or backend foundations are needed. Existing `src/game.js`, `src/main.js`, `tests/game.test.js` and `package.json` were inspected. Before each future checkpoint, check the branch/status and prior commit, review the current relevant code/tests, and record concrete expected fixtures in `docs/EVALS_HAZARD_ARENA.md` before implementing.
 
-Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. Unchecked tasks remain future implementation work; only the verified checkpoint 3 is included in this commit.
+Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. Unchecked tasks remain future implementation work; only the verified checkpoint 4 is included in this commit.
 
 ## Checkpoint 1 — Armored Bricks (US1, P1)
 
@@ -44,13 +44,13 @@ For every valid descending paddle contact, the left third sets `vx = -240`, the 
 
 ## Checkpoint 4 — Portal Pair (US4, P4)
 
-**Depends on**: T015. **Goal/independent test**: Exactly one bidirectional pair without loops; H15–H19.
+**Depends on**: T015. **Goal/independent test**: Exactly one bidirectional pair without loops; H15–H19. **Status**: COMPLETE — 120/120 tests, typecheck/build/diff check PASS and Elena + Isidora report manual smoke PASS.
 
-- [ ] T016 [US4] Define two fixed portal geometries, links, safe exits, velocity rule, cooldown duration/separation lockout and contact priority in `specs/002-neon-hazard-arena/plan.md`; record H15–H19 expectations in `docs/EVALS_HAZARD_ARENA.md`.
-- [ ] T017 [US4] Add both-direction, immediate/repeated-overlap, lockout-expiry/re-entry, safe-exit/bounded-velocity, no score/life/brick mutation, miss/reset and restart tests in `tests/game.test.js`.
-- [ ] T018 [US4] Implement exactly one linked pair and simulation-time lockout in `src/game.js`; render distinct linked portals in `src/main.js`; add no backend or AI fields.
-- [ ] T019 [US4] Run all checkpoint gates and manual both-direction/anti-loop/layout/Hint smoke; record actual results in `docs/EVALS_HAZARD_ARENA.md`.
-- [ ] T020 [US4] Review `src/game.js`, `src/main.js`, `tests/game.test.js` and related evidence; create one clean Portal Pair checkpoint commit before the shield.
+- [x] T016 [US4] Record approved A (100,390) ↔ B (700,390), radius 20, inclusive circle trigger, exact velocity preservation, normalized exit with `1e-6` pixel clearance (+X at zero speed), 0.15-second simulation-time cooldown without a leave-overlap latch, miss/reset clearing, fresh restart objects and after-bumper/before-miss priority in `specs/002-neon-hazard-arena/plan.md`; record H15–H19 expectations in `docs/EVALS_HAZARD_ARENA.md`.
+- [x] T017 [US4] Add both-direction, immediate/repeated-overlap, lockout-expiry/re-entry, safe-exit/bounded-velocity, no score/life/brick mutation, miss/reset and restart tests in `tests/game.test.js`.
+- [x] T018 [US4] Implement exactly one linked pair and simulation-time lockout in `src/game.js`; render distinct linked portals in `src/main.js`; add no backend or AI fields.
+- [x] T019 [US4] Run all checkpoint gates and manual both-direction/anti-loop/layout/Hint smoke; record actual results in `docs/EVALS_HAZARD_ARENA.md`.
+- [x] T020 [US4] Review `src/game.js`, `src/main.js`, `tests/game.test.js` and related evidence; checkpoint commit is the commit containing this record, `feat: add portal pair`. No shield implementation or push.
 
 ## Checkpoint 5 — Moving Shield Gate (US5, P5)
 
@@ -78,4 +78,4 @@ For every valid descending paddle contact, the left third sets `vx = -240`, the 
 
 US1 is the completed smallest playable increment; US2 is now also implemented and verified. Each later story has isolated fixtures but follows the preceding verified commit. All five are required for final Core Hazard Arena. Tasks execute serially because mechanics share the same engine, renderer and test file; there are no safe independent implementation tracks here, so no `[P]` tasks are assigned. A partner may review a fixed diff while the driver prepares observations, but join before edits, gate runs or commits.
 
-Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. This checkpoint commits Neon Bumpers runtime changes with aligned documentation/evidence under explicit user authorization; no push is authorized.
+Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. This checkpoint commits Portal Pair runtime changes with aligned documentation/evidence under explicit user authorization; no push is authorized.

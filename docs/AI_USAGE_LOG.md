@@ -115,3 +115,15 @@ The successful request used the fixed Gemini model and was followed by manual br
 **Observed evidence**: 108/108 tests PASS (108 total, 0 failed, 0 skipped), typecheck PASS, build PASS, `git diff --check` PASS, human manual smoke PASS. Required automated gates were rerun before the checkpoint commit and passed; detailed evidence, including a resolved approval-service interruption, is in `docs/EVALS_HAZARD_ARENA.md`.
 
 **Decision**: Mark checkpoint 3 complete and create exactly one user-authorized commit, `feat: add neon bumpers`, containing this record and the verified runtime/tests/evidence. Portal Pair, Moving Shield Gate and Tactical Coach remain unimplemented. W04 contracts remain unchanged. No push is authorized or performed.
+
+## 2026-10-06 — Checkpoint 4: Portal Pair
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the approved Hazard Arena specification and existing physics; implemented the linked portal pair, deterministic inclusive circle trigger, exact velocity-preserving teleportation, normalized exit separation with a deterministic +X zero-speed fallback, and 0.15-second simulation-time cooldown. Added twelve focused tests covering both directions, cooldown blocking/expiry, tangency/near misses, exit direction, invariants, fallback behavior, miss reset and restart restoration. Existing tests were retained unchanged. Codex executed automated verification and aligned portal documentation with the approved exit separation plus cooldown rule, replacing the earlier leave-overlap planning requirement.
+
+**Human/team contribution**: Elena + Isidora report reviewing the resulting behavior and manually verifying A → B and B → A teleportation, preserved apparent direction/speed, no ping-pong/sticking/jitter, later re-entry, unchanged score/lives/bricks, previous armored-brick/directional-paddle/bumper mechanics, miss/restart/win/loss, portal restoration and continued Week 4 Ask AI for Hint functionality. Human manual verification is distinct from AI/Codex-assisted implementation and automated testing.
+
+**Observed evidence**: 120/120 tests PASS (120 total, 0 failed, 0 skipped), typecheck PASS, build PASS, `git diff --check` PASS; human manual browser smoke PASS. See the checkpoint 4 record in `docs/EVALS_HAZARD_ARENA.md` for exact rules and evidence.
+
+**Decision**: Mark checkpoint 4 complete and create exactly one user-authorized commit, `feat: add portal pair`, containing the verified runtime/tests and documentation/evidence. Moving Shield Gate and Tactical Coach remain unimplemented; checkpoint 6 full-arena regression remains pending. Week 4 AI contracts/specs remain unchanged. No push is authorized or performed.

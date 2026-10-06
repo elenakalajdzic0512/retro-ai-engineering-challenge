@@ -108,3 +108,27 @@ Every checkpoint also requires `git diff --check` PASS, reviewed scope, and one 
 **Human attribution**: Elena + Isidora working together on one development environment reviewed the implementation and manually verified all three bumpers, direct/glancing rebounds, no sticking/jitter, playable layout, no score/life side effects, indestructibility, directional paddle, armored/normal bricks, scoring/misses/win/loss/restart and continued W04 Hint functionality. These are user-reported human observations, separate from Codex's implementation and automated tests.
 
 **Remaining scope/limitations**: H15–H23 (Portal Pair / Moving Shield Gate) remain PLANNED / NOT RUN. Tactical Coach is unimplemented. Full-arena acceptance is not claimed. Bumpers use existing discrete physics substeps, not swept collision detection; manual playability evidence is not a proof for every possible trajectory.
+
+## 2026-10-06 — Checkpoint 4: Portal Pair
+
+**Revision scope**: Base `1999735c57821b55c52c4e905c1c4b1bb4cc6851` plus the reviewed Portal Pair changes in `src/game.js`, `src/main.js`, `tests/game.test.js` and this checkpoint's documentation. The resulting checkpoint is the commit containing this record, `feat: add portal pair`. Earlier checkpoint observations remain historical; the full-arena column still awaits checkpoint 6.
+
+**Approved layout and rules**: Each game/restart creates fresh objects A `{ id: "a", pairId: "b", x: 100, y: 390, radius: 20 }` and B `{ id: "b", pairId: "a", x: 700, y: 390, radius: 20 }`. Inclusive circle detection uses distance ≤ combined radii. Teleport preserves both velocity components exactly and places the ball at destination center + normalized velocity × (combined radii + `1e-6` pixels); zero speed uses +X. Cooldown starts at zero, becomes 0.15 seconds after teleport, and decreases by each playing substep's simulation `dt` before movement, clamped at zero. No wall-clock timer or leave-overlap latch exists. Positive cooldown blocks both portals; at most one teleport occurs per substep after bumpers and before miss handling. Miss/ball reset clears cooldown; full restart restores the approved pair and zero cooldown.
+
+| ID | Observed checkpoint 4 evidence | Status |
+| --- | --- | --- |
+| H15 | A → B fixture verifies exact velocity, right/up exit and position outside B's trigger. Layout/fresh-object tests pass. Exact tangency at ±28 pixels activates; just-outside ±28.0001 does not. Humans verified A → B and two correctly rendered purple portals. | PASS |
+| H16 | B → A fixture verifies the same placement and velocity rule. Negative-horizontal/positive-vertical fixture verifies the opposite exit direction. Humans verified B → A. | PASS |
+| H17 | Next-substep movement does not re-teleport; both triggers are blocked during cooldown. Simulation-time expiry reaches zero and allows later reuse. Stationary exit remains separated after expiry. Humans observed no ping-pong, sticking or jitter and verified later re-entry. | PASS |
+| H18 | `vx=190`, `vy=-280` and opposite-sign components are preserved exactly. Normalized exit comparisons use absolute tolerance `1e-9`; zero-speed fallback exits at (728.000001,390) with finite state and unchanged zero velocity. Humans verified consistent apparent direction/speed. | PASS |
+| H19 | Transfer after normal-brick destruction and armor damage preserves score, lives, status, paddle, all brick states/durability, bumpers and portal layout. Grid remains 40; alive count remains 39. Humans confirmed no score/life/brick side effects. | PASS |
+| H24–H26 | Prior armor, directional paddle, bumper, score ceiling, miss/life, win/loss and restart regressions pass. New won/lost restart fixtures restore fresh portal objects and zero cooldown; miss clears cooldown while preserving progress. Ready/won/lost states freeze portal activation/cooldown. Humans verified prior mechanics, misses, restart, win/loss and portal restoration. | PASS for checkpoint 4 |
+| H27 | Existing W04 automated tests pass; Elena + Isidora report Ask AI for Hint remains functional. Codex made no new live-provider call. | PASS for checkpoint 4 |
+| H28 | `npm test`: 120 total, 120 passed, 0 failed, 0 skipped. Twelve portal tests added; all existing tests retained unchanged. | PASS |
+| H29 | `npm run typecheck`: PASS, exit 0; existing server TypeScript scope. | PASS |
+| H30 | `npm run build`: PASS, exit 0. | PASS |
+| H31 | Elena + Isidora report manual browser smoke PASS for the Portal Pair checkpoint. | PASS for checkpoint 4 |
+
+`git diff --check`: PASS. Automated verification is Codex-executed; the manual observations above are reported by Elena + Isidora working together on one development environment. No runtime edits were made during documentation alignment.
+
+**Remaining scope**: H20–H23 (Moving Shield Gate) remain PLANNED / NOT RUN. Checkpoint 6 full-arena regression and Tactical Coach remain unimplemented/unexecuted. Portals use the existing discrete substeps, not swept collision detection. This checkpoint does not claim final full-arena acceptance or new W04 provider evidence.

@@ -4,7 +4,7 @@
 
 ## Summary
 
-Extend the existing Canvas game in six serial checkpoints, preserving W03 regressions and W04 Hint. Armor is complete at `0f88c3e`; Directional Paddle Bounce is implemented and verified in checkpoint 2. The remaining three mechanics are planned. Checkpoint 2 includes only the approved engine/test changes and their documentation; no dependency, backend or AI contract changes.
+Extend the existing Canvas game in six serial checkpoints, preserving W03 regressions and W04 Hint. Armor is complete at `0f88c3e`; Directional Paddle Bounce is implemented and verified in checkpoint 2. Neon Bumpers is verified at `1999735`; Portal Pair is implemented and verified at checkpoint 4. Moving Shield Gate and full-arena regression remain planned. Checkpoint 2 includes only the approved engine/test changes and their documentation; no dependency, backend or AI contract changes.
 
 ## Technical Context
 
@@ -27,7 +27,7 @@ The current constitution explicitly governs Week 4. Its no-gameplay-redesign sco
 | Evidence (IX) | Armor results are historical observed/user-reported evidence; future evaluations remain NOT RUN. |
 | Human accountability (X) | Elena + Isidora report working together in one environment now. Do not infer past W04 role swaps or claim unresolved historical pair-review gates are closed. Record actual future reviewer/driver roles when performed. |
 
-Pre-design and post-design assessment: the documentation respects these boundaries. Checkpoint 2 automated gates pass and Elena + Isidora report manual smoke PASS. Checkpoints 3–6 remain unexecuted.
+Pre-design and post-design assessment: the documentation respects these boundaries. Checkpoint 2 automated gates pass and Elena + Isidora report manual smoke PASS. Checkpoint 3 evidence is recorded in the eval matrix; checkpoint 4 automated and human manual gates pass. Checkpoints 5–6 remain unexecuted.
 
 ## Project Structure
 
@@ -54,7 +54,7 @@ No new `contracts/` is needed. Research, state design and validation guidance ar
 2. **Completed armor**: Each brick has `kind` and `hitsRemaining`; collision decrements durability, awarding 10 only at zero. Restart already recreates the grid. Colors are `#b8c4d9` fresh and `#78859d` damaged; normal row colors are unchanged.
 3. **Implemented directional paddle**: For every valid descending paddle contact, the left third sets `vx = -240`, the center third sets `vx = 0`, and the right third sets `vx = +240`; `vy = -abs(previous vy)` in all zones. Exact 1/3 and 2/3 boundaries belong to center. Each contact replaces horizontal velocity from its current zone, with no accumulated spin. Vertical magnitude is preserved; total ball speed is not preserved across zones. The engine compares world-space contact x directly with `paddle.x + paddle.width / 3` and `paddle.x + 2 * paddle.width / 3` to avoid normalization rounding at exact boundaries. Small valid edge overlaps take the nearest side zone. Preserve paddle movement at 460 px/s and existing descending-contact/separation guards. These fixed values intentionally provide deterministic behavior, bounded speed, simple player control and testability, and a tactical aiming action a later Week 5 coach can recommend; no coach or AI contract change is implemented here.
 4. **Planned bumpers**: Store fixed geometry separately from bricks. Prefer a small circle layout with normal-vector reflection and separation after contact. Define radius/count/coordinates and tangent/overlap policy before tests. Reflect only valid incoming contacts and maintain bounded velocity. Layout must leave brick access and return paths open.
-5. **Planned portals**: Store exactly two linked geometries separately from bricks plus ball re-entry lockout. Prefer preserving velocity magnitude and direction with a deterministic exit offset. Define exit clearance and duration before tests; combine finite simulation-time cooldown with leaving portal overlap before reactivation. Never place an exit in a wall, brick, bumper, paddle or possible shield sweep.
+5. **Implemented portals**: Fresh `game.portals` objects are A `{ id: "a", pairId: "b", x: 100, y: 390, radius: 20 }` and B `{ id: "b", pairId: "a", x: 700, y: 390, radius: 20 }`. Trigger when center distance ≤ combined radii, including exact tangency. Preserve `vx`/`vy` exactly; place the ball at destination center + normalized current velocity × (combined radii + `1e-6` pixels), using +X for zero speed. `portalCooldown` starts at zero, becomes 0.15 seconds on teleport, and decreases by each playing substep’s simulation `dt` before movement, clamped at zero. Positive cooldown blocks both portals; no wall-clock timer or leave-overlap latch is used. Exit separation plus cooldown prevent immediate loops. Resolve at most one teleport after walls/paddle/bricks/win check/bumpers and before miss handling. Miss/ball reset clears cooldown; full restart recreates both objects and zero cooldown. Purple layered circles use `#ff4dff`, `#7a1cff`, `#120024` without labels. Current exits clear the arena and existing colliders; the future shield must preserve that clearance.
 6. **Planned shield**: Store one rectangle with travel bounds, position and direction or phase. Prefer horizontal constant-speed movement with reflected endpoints; account for overshoot. Reflect the ball at the current position without adding shield speed to ball speed. Define the movement/collision order before tests.
 7. **Shared lifecycle**: Initialize hazard state in `createGame()`. Update movement/timers only in playing; freeze other states. Preserve positions/progress after a miss, clear lockout for the reset ball; full restart reconstructs all state. No hazard can write score, brick durability or lives directly.
 8. **Collision integration**: Retain existing walls/paddle/bricks behavior except the approved paddle change. Define deterministic priority for mixed portal/solid contacts before integrating each mechanic, and resolve overlap without repeat-hit loops. Add combined fixtures instead of relying solely on isolated tests.
@@ -68,7 +68,7 @@ Paddle tuning is resolved above. Remaining hazard layout/tuning choices are deli
 | 1 | Armored Bricks; H1–H6 plus regression | Implemented/verified, committed `0f88c3e` |
 | 2 | Directional Paddle; H7–H10 | Implemented/verified — 99/99 tests; typecheck/build/manual smoke PASS |
 | 3 | Neon Bumpers; H11–H14 | PLANNED / NOT RUN |
-| 4 | Portal Pair; H15–H19 | PLANNED / NOT RUN |
+| 4 | Portal Pair; H15–H19 | COMPLETE — 120/120 tests; typecheck/build/diff check/manual smoke PASS |
 | 5 | Moving Shield Gate; H20–H23 | PLANNED / NOT RUN |
 | 6 | Full Hazard Arena regression; H1–H31 | PLANNED / NOT RUN |
 

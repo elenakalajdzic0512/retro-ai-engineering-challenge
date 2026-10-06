@@ -522,3 +522,172 @@ test('won and lost restarts restore fresh approved bumper layouts', () => {
     assert.deepEqual(game, playing());
   }
 });
+
+const EXPECTED_PORTALS = [
+  { id: 'a', pairId: 'b', x: 100, y: 390, radius: 20 },
+  { id: 'b', pairId: 'a', x: 700, y: 390, radius: 20 },
+];
+
+function enterPortal(game, index = 0, vx = 190, vy = -280, offsetX = 0) {
+  const portal = game.portals[index];
+  const dt = 1 / 240;
+  Object.assign(game.ball, {
+    x: portal.x + offsetX - vx * dt, y: portal.y - vy * dt, vx, vy,
+  });
+  update(game, 0, dt);
+}
+
+test('fresh games have exactly two approved linked portals and zero cooldown', () => {
+  const game = createGame();
+  const other = createGame();
+  assert.deepEqual(game.portals, EXPECTED_PORTALS);
+  assert.equal(game.portalCooldown, 0);
+  assert.notEqual(game.portals, other.portals);
+  game.portals.forEach((portal, index) => assert.notEqual(portal, other.portals[index]));
+  game.portals[0].x = 0;
+  assert.deepEqual(other.portals, EXPECTED_PORTALS);
+  assert.deepEqual(createGame().portals, EXPECTED_PORTALS);
+});
+
+for (const [source, target] of [[0, 1], [1, 0]]) {
+  test(`portal ${source === 0 ? 'A -> B' : 'B -> A'} preserves velocity and exits right/up outside the trigger`, () => {
+    const game = playing();
+    const destination = game.portals[target];
+    enterPortal(game, source);
+    assert.equal(game.ball.vx, 190);
+    assert.equal(game.ball.vy, -280);
+    assert.ok(game.ball.x > destination.x);
+    assert.ok(game.ball.y < destination.y);
+    const distance = destination.radius + game.ball.radius + 1e-6;
+    const speed = Math.hypot(190, -280);
+    assertClose(game.ball.x, destination.x + 190 / speed * distance);
+    assertClose(game.ball.y, destination.y - 280 / speed * distance);
+    assert.ok(Math.hypot(game.ball.x - destination.x, game.ball.y - destination.y) > 28);
+    assert.equal(game.portalCooldown, 0.15);
+  });
+}
+
+test('portal exit follows negative horizontal and positive vertical velocity too', () => {
+  const game = playing();
+  enterPortal(game, 0, -190, 280);
+  assert.ok(game.ball.x < game.portals[1].x);
+  assert.ok(game.ball.y > game.portals[1].y);
+  assert.equal(game.ball.vx, -190);
+  assert.equal(game.ball.vy, 280);
+});
+
+test('portal cooldown prevents immediate ping-pong and blocks both triggers', () => {
+  const game = playing();
+  enterPortal(game);
+  const ball = { ...game.ball };
+  update(game, 0, 1 / 240);
+  assertClose(game.ball.x, ball.x + ball.vx / 240);
+  assertClose(game.ball.y, ball.y + ball.vy / 240);
+  assertClose(game.portalCooldown, 0.15 - 1 / 240);
+  for (const index of [0, 1]) {
+    const before = game.portalCooldown;
+    enterPortal(game, index, 0, 0);
+    assert.equal(game.ball.x, game.portals[index].x);
+    assert.equal(game.ball.y, game.portals[index].y);
+    assertClose(game.portalCooldown, before - 1 / 240);
+  }
+});
+
+test('portal cooldown expires using simulation time and allows later entry', () => {
+  const game = playing();
+  enterPortal(game);
+  Object.assign(game.ball, { x: 400, y: 250, vx: 0, vy: 0 });
+  update(game, 0, 0.1);
+  assertClose(game.portalCooldown, 0.05);
+  update(game, 0, 0.06);
+  assert.equal(game.portalCooldown, 0);
+  enterPortal(game, 1);
+  assert.ok(game.ball.x > 100 && game.ball.x < 128);
+  assert.equal(game.portalCooldown, 0.15);
+});
+
+test('zero-velocity portal entry uses a finite deterministic positive-X exit', () => {
+  const game = playing();
+  enterPortal(game, 0, 0, 0);
+  assertClose(game.ball.x, 728.000001);
+  assert.equal(game.ball.y, 390);
+  assert.equal(game.ball.vx, 0);
+  assert.equal(game.ball.vy, 0);
+  const ball = { ...game.ball };
+  update(game, 0, 0.1);
+  update(game, 0, 0.1);
+  assert.deepEqual(game.ball, ball); // Exit separation prevents re-entry even after expiry.
+  assert.equal(game.portalCooldown, 0);
+});
+
+test('portal trigger includes exact tangency but excludes a near miss', () => {
+  for (const offset of [-28, 28, -28.0001, 28.0001]) {
+    const game = playing();
+    enterPortal(game, 0, 0, 0, offset);
+    if (Math.abs(offset) === 28) {
+      assertClose(game.ball.x, 728.000001);
+      assert.equal(game.portalCooldown, 0.15);
+    } else {
+      assertClose(game.ball.x, 100 + offset);
+      assert.equal(game.portalCooldown, 0);
+    }
+  }
+});
+
+test('teleport preserves score lives status paddle bricks bumpers and portal layout', () => {
+  const game = playing();
+  hitBrick(game, game.bricks[0]);
+  hitBrick(game, game.bricks[2]);
+  const before = structuredClone(game);
+  enterPortal(game);
+  for (const field of ['score', 'lives', 'status', 'paddle', 'bricks', 'bumpers', 'portals']) {
+    assert.deepEqual(game[field], before[field]);
+  }
+  assert.equal(game.bricks.length, 40);
+  assert.equal(game.bricks.filter((brick) => brick.alive).length, 39);
+  assert.equal(game.bricks[2].hitsRemaining, 1);
+});
+
+test('won and lost restarts restore fresh portals and clear an active cooldown', () => {
+  for (const status of ['won', 'lost']) {
+    const game = playing();
+    enterPortal(game);
+    assert.equal(game.portalCooldown, 0.15);
+    const oldPortals = game.portals;
+    oldPortals[0].pairId = 'changed';
+    oldPortals.pop();
+    game.status = status;
+    launch(game);
+    assert.deepEqual(game.portals, EXPECTED_PORTALS);
+    assert.notEqual(game.portals, oldPortals);
+    assert.notEqual(game.portals[0], oldPortals[0]);
+    assert.equal(game.portalCooldown, 0);
+    assert.deepEqual(game, playing());
+  }
+});
+
+test('a miss clears portal cooldown while preserving layout and gameplay progress', () => {
+  const game = playing();
+  hitBrick(game, game.bricks[0]);
+  enterPortal(game);
+  Object.assign(game.ball, { x: 20, y: 580, vx: 0, vy: 280 });
+  update(game, 0, 1 / 240);
+  assert.equal(game.portalCooldown, 0);
+  assert.equal(game.status, 'ready');
+  assert.equal(game.lives, 2);
+  assert.equal(game.score, 10);
+  assert.deepEqual(game.portals, EXPECTED_PORTALS);
+});
+
+test('portal cooldown and activation stay frozen outside playing', () => {
+  for (const status of ['ready', 'won', 'lost']) {
+    const game = createGame();
+    game.status = status;
+    game.portalCooldown = 0.1;
+    Object.assign(game.ball, { x: 100, y: 390, vx: 0, vy: 0 });
+    update(game, 0, 0.1);
+    assert.equal(game.portalCooldown, 0.1);
+    assert.equal(game.ball.y, 390);
+    assert.equal(game.status, status);
+  }
+});

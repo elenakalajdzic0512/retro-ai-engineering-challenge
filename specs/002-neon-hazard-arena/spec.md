@@ -2,7 +2,7 @@
 
 **Feature Branch**: `week5/neon-hazard-arena`
 **Created**: 2026-10-06
-**Status**: Locked gameplay scope; Armored Bricks and Directional Paddle Bounce implemented and verified; remaining mechanics planned.
+**Status**: Locked gameplay scope; Checkpoints 1–4 implemented and verified; Moving Shield Gate and full-arena regression remain planned.
 **Input**: Extend the continuing W03/W04 Neon Breaker project before the Week 5 bounded Tactical Planner. This artifact formalizes gameplay only; it does not implement or authorize an agent.
 
 ## Goal
@@ -65,9 +65,9 @@ As a player, I can route the ball through exactly one linked portal pair.
 
 **Acceptance Scenarios**:
 
-1. Given an unlocked ball entering either portal, it exits through the paired portal in a safe position with a valid, bounded, deterministic velocity.
-2. Given a just-teleported ball, destination overlap or immediate re-entry cannot trigger an endless A/B loop. Lockout eventually permits a later deliberate entry after safe separation.
-3. Teleportation directly changes neither score, lives, brick count nor durability; portals do not count toward winning.
+1. Each fresh game creates independent portals A (`id: a`, `pairId: b`, center (100,390)) and B (`id: b`, `pairId: a`, center (700,390)), both radius 20. With cooldown zero, center distance ≤ portal radius + ball radius activates either portal, including exact tangency; just-outside contacts do not activate.
+2. Teleport preserves `vx` and `vy` exactly. Exit position is destination center + normalized current velocity × (destination radius + ball radius + `1e-6` pixels); zero speed uses +X. A successful teleport sets `portalCooldown = 0.15` seconds. Each playing substep first decrements cooldown by simulation `dt`, clamped at zero; no wall-clock timer is used. While positive, both portals are blocked. Exit separation and cooldown prevent immediate loops; no additional leave-overlap latch is used. At most one teleport occurs per substep, after bumpers and before miss handling.
+3. Teleportation directly changes neither score, lives, status, paddle, bumpers, brick count nor durability; portals do not count toward winning. Miss/ball reset clears cooldown. Full restart restores fresh approved portal objects and cooldown zero. Portals render as purple layered circles without labels.
 
 ### User Story 5 — Time shots around the shield (Priority: P5)
 
@@ -102,7 +102,7 @@ As a player, I can anticipate one predictably moving shield and time trajectorie
 - **FR-003 — Armor**: Apply only the eight US1 indices; normal bricks start alive with one hit and armored bricks with two. Award score only on destruction and reflect each valid hit. Fresh/damaged armor is visually distinct; normal row colors remain unchanged.
 - **FR-004 — Directional paddle**: Use US2's fixed -240/0/+240 horizontal velocities, center-inclusive third boundaries and `vy = -abs(previous vy)`, without accumulating spin or changing paddle speed or controls.
 - **FR-005 — Bumpers**: Add a small fixed layout of indestructible, visually distinct bumpers that reflect deterministically and leave the level completable.
-- **FR-006 — Portals**: Add exactly two linked portals with bidirectional transfer, a safe deterministic velocity rule, safe exits, and finite cooldown/lockout preventing immediate loops.
+- **FR-006 — Portals**: Add exactly two linked portals with bidirectional transfer, exact velocity preservation, the US4 safe exit rule, and a 0.15-second simulation-time cooldown preventing immediate loops.
 - **FR-007 — Shield**: Add exactly one defensive barrier moving predictably within fixed bounds and reflecting from its current position. Movement depends only on game state and simulation time steps.
 - **FR-008 — Hazard isolation**: Bumpers, portals and shield are not bricks, never award score, never directly change lives or damage bricks, and never enter the win condition. Subsequent ordinary ball/brick collisions and misses still apply normally.
 - **FR-009 — Reset**: Full restart restores all original brick/hazard state, transient lockout, score, lives, paddle and ball. Losing a life preserves earned progress and returns to ready as before.
@@ -128,8 +128,8 @@ As a player, I can anticipate one predictably moving shield and time trajectorie
 
 ## Assumptions and Scope Boundaries
 
-- Armored Bricks was verified at checkpoint `0f88c3e6b50fa2160b283754413b3ee8e2ba9015`. The 92-test/typecheck/build results were observed before commit; manual smoke and functioning Hint were reported by the human team. Directional Paddle Bounce is also implemented and verified: 99/99 tests, typecheck/build and human-reported manual smoke PASS; see the dated checkpoint 2 record in the eval matrix. Bumpers, portals and shield remain planned.
-- Paddle thirds, boundary ties and fixed velocities are now defined in US2. Bumper count/coordinates, portal geometry/velocity rule/cooldown duration and shield dimensions/path/speed remain checkpoint design decisions. Define them and their expected fixtures before changing runtime code; do not introduce randomness or additional mechanic types.
+- Armored Bricks was verified at checkpoint `0f88c3e6b50fa2160b283754413b3ee8e2ba9015`. The 92-test/typecheck/build results were observed before commit; manual smoke and functioning Hint were reported by the human team. Directional Paddle Bounce is also implemented and verified: 99/99 tests, typecheck/build and human-reported manual smoke PASS; see the dated checkpoint 2 record in the eval matrix. Neon Bumpers is verified at `1999735`; Portal Pair is verified at checkpoint 4 with 120/120 tests, typecheck/build/diff check and human-reported manual smoke PASS. Shield and full-arena regression remain planned.
+- Paddle thirds, boundary ties and fixed velocities are now defined in US2. Portal geometry, velocity preservation, exit placement and cooldown are defined in US4. Bumper layout is recorded in the checkpoint 3 evidence; shield dimensions/path/speed remain checkpoint design decisions. Define them and their expected fixtures before changing runtime code; do not introduce randomness or additional mechanic types.
 - New hazard motion runs during playing and freezes during ready/won/lost. On a miss, preserve hazard positions and clear portal lockout for the reset ball; full restart restores initial hazard state. These are explicit planning defaults for later tests.
 - Week 3 one-hit rules describe the historical baseline. Armor and directional bounce are the only approved changes to those existing collision semantics; other regressions remain protected.
 - Out of scope: multi-ball, weapons, enemies, bosses, power-ups, score multipliers, extra levels, procedural generation, arbitrary physics randomness, AI-controlled paddle, automatic AI gameplay, new authentication/backend requirements, and implementing the Week 5 agent.

@@ -2,6 +2,7 @@ export const WIDTH = 800;
 export const HEIGHT = 600;
 const PADDLE_SPEED = 460;
 const PADDLE_BOUNCE_HORIZONTAL_SPEED = 240;
+const PORTAL_COOLDOWN_SECONDS = 0.15;
 const STEP = 1 / 240;
 const ARMORED_BRICK_INDICES = new Set([2, 5, 10, 13, 18, 21, 26, 29]);
 
@@ -28,6 +29,7 @@ export function validateGameConfig(config) {
 }
 
 function resetBall(game) {
+  game.portalCooldown = 0;
   game.paddle = { x: 345, y: 552, width: 110, height: 14 };
   game.ball = { x: 400, y: 543, radius: 8, vx: 190, vy: -280 };
 }
@@ -40,9 +42,16 @@ function createBumpers() {
   ];
 }
 
+function createPortals() {
+  return [
+    { id: 'a', pairId: 'b', x: 100, y: 390, radius: 20 },
+    { id: 'b', pairId: 'a', x: 700, y: 390, radius: 20 },
+  ];
+}
+
 export function createGame(config = DEFAULT_GAME_CONFIG) {
   const { lives, brickRows, brickColumns } = validateGameConfig(config);
-  const game = { score: 0, lives, status: 'ready', bricks: [], bumpers: createBumpers() };
+  const game = { score: 0, lives, status: 'ready', bricks: [], bumpers: createBumpers(), portals: createPortals() };
   for (let row = 0; row < brickRows; row++) {
     for (let column = 0; column < brickColumns; column++) {
       const armored = ARMORED_BRICK_INDICES.has(row * brickColumns + column);
@@ -89,6 +98,24 @@ function resolveBumperCollision(ball, bumper) {
   return true;
 }
 
+function resolvePortalTeleport(game) {
+  if (game.portalCooldown > 0) return;
+  const { ball, portals } = game;
+  for (const portal of portals) {
+    // Touching the circle trigger (including exact tangency) activates the portal.
+    if (Math.hypot(ball.x - portal.x, ball.y - portal.y) > portal.radius + ball.radius) continue;
+    const destination = portals.find((item) => item.id === portal.pairId);
+    const speed = Math.hypot(ball.vx, ball.vy);
+    const dx = speed > 0 ? ball.vx / speed : 1;
+    const dy = speed > 0 ? ball.vy / speed : 0;
+    const exitDistance = destination.radius + ball.radius + 1e-6;
+    ball.x = destination.x + dx * exitDistance;
+    ball.y = destination.y + dy * exitDistance;
+    game.portalCooldown = PORTAL_COOLDOWN_SECONDS;
+    return; // At most one teleport per physics substep; velocity is untouched.
+  }
+}
+
 function step(game, direction, dt) {
   const { paddle, ball } = game;
   paddle.x = Math.max(0, Math.min(WIDTH - paddle.width, paddle.x + direction * PADDLE_SPEED * dt));
@@ -96,6 +123,7 @@ function step(game, direction, dt) {
     ball.x = paddle.x + paddle.width / 2;
     return;
   }
+  game.portalCooldown = Math.max(0, game.portalCooldown - dt);
   const previousX = ball.x;
   const previousY = ball.y;
   ball.x += ball.vx * dt;
@@ -144,6 +172,7 @@ function step(game, direction, dt) {
   for (const bumper of game.bumpers) {
     if (resolveBumperCollision(ball, bumper)) break;
   }
+  resolvePortalTeleport(game);
   if (ball.y - ball.radius > paddle.y + paddle.height) {
     game.lives -= 1;
     resetBall(game);
