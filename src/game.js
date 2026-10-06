@@ -32,9 +32,17 @@ function resetBall(game) {
   game.ball = { x: 400, y: 543, radius: 8, vx: 190, vy: -280 };
 }
 
+function createBumpers() {
+  return [
+    { id: 'left', x: 210, y: 310, radius: 24 },
+    { id: 'right', x: 590, y: 310, radius: 24 },
+    { id: 'center', x: 400, y: 405, radius: 24 },
+  ];
+}
+
 export function createGame(config = DEFAULT_GAME_CONFIG) {
   const { lives, brickRows, brickColumns } = validateGameConfig(config);
-  const game = { score: 0, lives, status: 'ready', bricks: [] };
+  const game = { score: 0, lives, status: 'ready', bricks: [], bumpers: createBumpers() };
   for (let row = 0; row < brickRows; row++) {
     for (let column = 0; column < brickColumns; column++) {
       const armored = ARMORED_BRICK_INDICES.has(row * brickColumns + column);
@@ -57,6 +65,28 @@ function overlaps(ball, rect) {
   const x = Math.max(rect.x, Math.min(ball.x, rect.x + rect.width));
   const y = Math.max(rect.y, Math.min(ball.y, rect.y + rect.height));
   return (ball.x - x) ** 2 + (ball.y - y) ** 2 <= ball.radius ** 2;
+}
+
+function resolveBumperCollision(ball, bumper) {
+  const dx = ball.x - bumper.x;
+  const dy = ball.y - bumper.y;
+  const distance = Math.hypot(dx, dy);
+  const contactDistance = ball.radius + bumper.radius;
+  if (distance > contactDistance) return false;
+
+  // At coincident centers, oppose velocity; a stationary ball separates to the right.
+  const speed = Math.hypot(ball.vx, ball.vy);
+  const nx = distance > 0 ? dx / distance : speed > 0 ? -ball.vx / speed : 1;
+  const ny = distance > 0 ? dy / distance : speed > 0 ? -ball.vy / speed : 0;
+  const inwardSpeed = ball.vx * nx + ball.vy * ny;
+  if (inwardSpeed < 0) {
+    ball.vx -= 2 * inwardSpeed * nx;
+    ball.vy -= 2 * inwardSpeed * ny;
+  }
+  const separation = contactDistance + 1e-6;
+  ball.x = bumper.x + nx * separation;
+  ball.y = bumper.y + ny * separation;
+  return true;
 }
 
 function step(game, direction, dt) {
@@ -111,6 +141,9 @@ function step(game, direction, dt) {
     break;
   }
   if (game.status === 'won') return;
+  for (const bumper of game.bumpers) {
+    if (resolveBumperCollision(ball, bumper)) break;
+  }
   if (ball.y - ball.radius > paddle.y + paddle.height) {
     game.lives -= 1;
     resetBall(game);

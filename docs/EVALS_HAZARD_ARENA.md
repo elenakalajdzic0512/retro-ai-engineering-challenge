@@ -11,7 +11,7 @@ Armored Bricks is implemented at `0f88c3e6b50fa2160b283754413b3ee8e2ba9015` (`fe
 
 Elena + Isidora, working together on one development environment, report **manual browser smoke PASS** and **Week 4 Ask AI for Hint functional**. These human-reported observations are distinct from Codex's automated results. No new browser session or provider request was performed during this documentation task, and detailed new per-request Hint evidence is not inferred.
 
-The armor entries below formalize previously executed verification; they are not claims that this document preceded the armor implementation. At the armor checkpoint, expectations for mechanics 2–5 were prospective. Bumpers, portals and shield have no observed PASS; checkpoint 2 results are recorded separately below. The final column is a separate future full-arena evaluation, so an armor-stage PASS cannot imply the complete Hazard Arena already passes.
+The armor entries below formalize previously executed verification; they are not claims that this document preceded the armor implementation. At the armor checkpoint, expectations for mechanics 2–5 were prospective. At the armor checkpoint, bumpers, portals and shield had no observed PASS; checkpoint 2 and 3 results are recorded separately below. The final column is a separate future full-arena evaluation, so an armor-stage PASS cannot imply the complete Hazard Arena already passes.
 
 ## Evaluation Matrix
 
@@ -80,3 +80,31 @@ Every checkpoint also requires `git diff --check` PASS, reviewed scope, and one 
 **Human verification attribution**: Elena + Isidora working together on one development environment reviewed behavior, tested left/center/right aiming, no sticking or uncontrolled acceleration, normal/armored bricks, scoring/lives/restart/win/loss and W04 Hint. These are user-reported human observations, distinct from Codex's automated checks.
 
 **Not executed**: H11–H23 (Bumpers/Portals/Shield) remain PLANNED / NOT RUN. Combined full-arena acceptance remains PLANNED / NOT RUN; checkpoint 2 PASS does not imply future mechanics exist.
+
+
+## 2026-10-06 — Checkpoint 3: Neon Bumpers
+
+**Revision scope**: Base `0b235f827382b820ba4a96d4039c35cbd3d0dc71` plus the reviewed bumper changes in `src/game.js`, `src/main.js`, `tests/game.test.js` and this checkpoint's documentation. The resulting checkpoint is the commit containing this record, `feat: add neon bumpers`. Earlier armor/directional-paddle results above remain historical; the full-arena column still awaits checkpoint 6.
+
+**Exact layout**: Three fresh state objects per game/restart: `{ id: "left", x: 210, y: 310, radius: 24 }`, `{ id: "right", x: 590, y: 310, radius: 24 }`, `{ id: "center", x: 400, y: 405, radius: 24 }`. Coordinates are centers. Canvas draws cyan `#00f5ff` rings with dark `#081b33` cores.
+
+**Collision evidence**: Circle-circle contact uses distance ≤ combined radii; inward velocity reflects by `v - 2 * dot(v,n) * n`. Tests verify a non-axis-aligned normal (0.6,0.8) maps incoming (-200,100) to (-152,164). Speed/vector comparisons use absolute tolerance `1e-9` for floating-point rounding. Separation places the ball at combined radii plus `1e-6` pixels; outward motion is not reflected. Coincident centers use opposite velocity, or a rightward normal for a stationary ball, without NaN/Infinity. At most one bumper contact is resolved per substep, after brick/win handling and before miss handling. No counters, bricks, paddle or lifecycle are directly changed by the resolver.
+
+| ID | Observed checkpoint 3 evidence | Status |
+| --- | --- | --- |
+| H11 | Direct contacts on all three bumpers, angled reflection/speed preservation, finite separation, moving-away rejection, tangent/near-miss and zero-distance fallback tests pass. Humans verified natural direct/glancing rebounds with no observed sticking/jitter. | PASS |
+| H12 | 60 controlled contacts leave every bumper unchanged; fresh-game and won/lost restart tests restore independent objects and exact layout. Humans confirmed indestructibility and restart restoration. | PASS |
+| H13 | Contact after existing brick progress leaves score and lives unchanged. Humans observed no bumper score or life side effects. | PASS |
+| H14 | Collision leaves all brick states/durability and total count unchanged (40); surviving count remains 39 in the progress fixture. Existing all-brick win/400-point tests pass with bumpers present. | PASS |
+| H24–H26 | Existing armor/normal/directional-paddle, miss/life, win/loss and restart regressions pass; humans confirmed these behaviors and bumper restoration. Portal/shield state remains untested. | PASS for checkpoint 3 |
+| H27 | Existing W04 automated tests pass; humans report Ask AI for Hint remains functional. Codex made no new live-provider call. | PASS for checkpoint 3 |
+| H28 | `npm test`: 108 total, 108 passed, 0 failed, 0 skipped. Nine bumper tests added; existing tests unchanged. | PASS |
+| H29 | `npm run typecheck`: PASS, exit 0; existing server TypeScript scope. | PASS |
+| H30 | `npm run build`: PASS, exit 0. | PASS |
+| H31 | Elena + Isidora report manual browser smoke PASS: all three bumpers render correctly and the layout remains playable with access to bricks. | PASS for checkpoint 3 |
+
+`git diff --check`: PASS. The pre-commit rerun passed: 108 total, 108 passed, 0 failed, 0 skipped; typecheck exit 0; build exit 0 (5 modules, 49 ms). The first test invocation was not executed because automatic approval review hit a usage limit; the authorized retry succeeded. No new runtime edits were made during evidence alignment.
+
+**Human attribution**: Elena + Isidora working together on one development environment reviewed the implementation and manually verified all three bumpers, direct/glancing rebounds, no sticking/jitter, playable layout, no score/life side effects, indestructibility, directional paddle, armored/normal bricks, scoring/misses/win/loss/restart and continued W04 Hint functionality. These are user-reported human observations, separate from Codex's implementation and automated tests.
+
+**Remaining scope/limitations**: H15–H23 (Portal Pair / Moving Shield Gate) remain PLANNED / NOT RUN. Tactical Coach is unimplemented. Full-arena acceptance is not claimed. Bumpers use existing discrete physics substeps, not swept collision detection; manual playability evidence is not a proof for every possible trajectory.

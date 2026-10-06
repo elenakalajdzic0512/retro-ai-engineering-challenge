@@ -102,3 +102,16 @@ The successful request used the fixed Gemini model and was followed by manual br
 **Observed evidence**: 99 total / 99 passed / 0 failed / 0 skipped; typecheck PASS; build PASS; `git diff --check` PASS; human manual smoke PASS. Codex reran the required automated gates before the combined runtime/documentation checkpoint commit; all passed with the same 99/99 result. See `docs/EVALS_HAZARD_ARENA.md` for scope and test details.
 
 **Decision**: Fixed horizontal velocities provide deterministic, bounded, testable aiming that a later Week 5 coach can recommend. The team authorized one checkpoint commit, `feat: add directional paddle bounce`, containing these verified changes and this record. No push, new AI contract, Bumper, Portal or Shield implementation is included. Earlier Week 3/4 and armor entries remain historical records.
+
+
+## 2026-10-06 — Checkpoint 3: Neon Bumpers
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the approved Hazard Arena specification and current physics implementation; implemented three deterministic circular bumpers, circle-circle detection, normal-vector reflection and anti-sticking separation. Added nine focused automated tests for layout/object independence, direct/angled reflection and speed preservation, state invariants, indestructibility, moving-away rejection, tangent/near-miss behavior, zero-distance fallback and restart. Existing tests were preserved unchanged. Codex executed automated verification and updated checkpoint evidence/status without adding further gameplay mechanics.
+
+**Human/team contribution**: Elena + Isidora report reviewing the implementation; manually verifying all three bumpers and direct/glancing bounce behavior; observing no sticking/jitter; confirming playable layout and brick access, indestructibility, no score/life side effects, armored/normal bricks and directional paddle, scoring/misses/restart/win/loss, and functioning Week 4 Ask AI for Hint. These human observations are distinct from AI-assisted implementation/testing.
+
+**Observed evidence**: 108/108 tests PASS (108 total, 0 failed, 0 skipped), typecheck PASS, build PASS, `git diff --check` PASS, human manual smoke PASS. Required automated gates were rerun before the checkpoint commit and passed; detailed evidence, including a resolved approval-service interruption, is in `docs/EVALS_HAZARD_ARENA.md`.
+
+**Decision**: Mark checkpoint 3 complete and create exactly one user-authorized commit, `feat: add neon bumpers`, containing this record and the verified runtime/tests/evidence. Portal Pair, Moving Shield Gate and Tactical Coach remain unimplemented. W04 contracts remain unchanged. No push is authorized or performed.

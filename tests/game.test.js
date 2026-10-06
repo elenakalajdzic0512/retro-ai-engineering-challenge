@@ -374,3 +374,151 @@ test('last brick wins immediately, freezes, and can restart', () => {
   launch(game);
   assert.deepEqual(game, playing());
 });
+
+const EXPECTED_BUMPERS = [
+  { id: 'left', x: 210, y: 310, radius: 24 },
+  { id: 'right', x: 590, y: 310, radius: 24 },
+  { id: 'center', x: 400, y: 405, radius: 24 },
+];
+
+// Place the ball at a controlled contact point after one movement substep.
+function bumperContact(game, bumper, offsetX, offsetY, vx, vy) {
+  const dt = 1 / 240;
+  Object.assign(game.ball, {
+    x: bumper.x + offsetX - vx * dt,
+    y: bumper.y + offsetY - vy * dt,
+    vx, vy,
+  });
+  update(game, 0, dt);
+}
+
+function assertClose(actual, expected) {
+  // Reflection normalization introduces only floating-point rounding error.
+  assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
+}
+
+test('fresh games contain exactly the approved three bumpers with independent objects', () => {
+  const game = createGame();
+  const other = createGame();
+  assert.deepEqual(game.bumpers, EXPECTED_BUMPERS);
+  assert.equal(game.bricks.length, 40);
+  assert.notEqual(game.bumpers, other.bumpers);
+  game.bumpers.forEach((bumper, index) => assert.notEqual(bumper, other.bumpers[index]));
+  game.bumpers[0].x = 0;
+  assert.deepEqual(other.bumpers, EXPECTED_BUMPERS);
+  assert.deepEqual(createGame().bumpers, EXPECTED_BUMPERS);
+});
+
+test('direct collisions on every bumper reflect away and separate the ball', () => {
+  for (let index = 0; index < 3; index++) {
+    const game = playing();
+    const bumper = game.bumpers[index];
+    bumperContact(game, bumper, -32, 0, 240, 0);
+    assert.equal(game.ball.vx, -240);
+    assert.equal(game.ball.vy, 0);
+    assert.ok(Number.isFinite(game.ball.vx) && Number.isFinite(game.ball.vy));
+    assert.ok(Math.hypot(game.ball.x - bumper.x, game.ball.y - bumper.y) >= 32);
+    const separatedX = game.ball.x;
+    update(game, 0, 0.01);
+    assert.ok(game.ball.x < separatedX);
+    assert.equal(game.ball.vx, -240);
+  }
+});
+
+test('angled bumper reflection follows the surface normal and preserves speed', () => {
+  const game = playing();
+  const bumper = game.bumpers[0];
+  // Normal (0.6, 0.8), incoming (-200, 100): dot=-40, outgoing=(-152, 164).
+  bumperContact(game, bumper, 18.6, 24.8, -200, 100);
+  assertClose(game.ball.vx, -152);
+  assertClose(game.ball.vy, 164);
+  assertClose(Math.hypot(game.ball.vx, game.ball.vy), Math.hypot(-200, 100));
+  assert.ok(game.ball.vx * 0.6 + game.ball.vy * 0.8 > 0);
+  assert.ok(Math.hypot(game.ball.x - bumper.x, game.ball.y - bumper.y) >= 32);
+});
+
+test('bumper contact preserves score lives status paddle and all brick state', () => {
+  const game = playing();
+  hitBrick(game, game.bricks[0]);
+  hitBrick(game, game.bricks[2]);
+  const before = structuredClone(game);
+  bumperContact(game, game.bumpers[0], 0, -32, 0, 280);
+  assert.equal(game.ball.vy, -280);
+  for (const field of ['score', 'lives', 'status', 'paddle', 'bricks', 'bumpers']) {
+    assert.deepEqual(game[field], before[field]);
+  }
+  assert.equal(game.bricks.length, 40);
+  assert.equal(game.bricks.filter((brick) => brick.alive).length, 39);
+});
+
+test('repeated bumper impacts preserve speed and leave all bumpers indestructible', () => {
+  const game = playing();
+  for (let hit = 0; hit < 60; hit++) {
+    const bumper = game.bumpers[hit % 3];
+    // Same normal, tangential speed 100 and inward normal speed 240.
+    bumperContact(game, bumper, 18.6, 24.8, -224, -132);
+    assertClose(game.ball.vx, 64);
+    assertClose(game.ball.vy, 252);
+    assertClose(Math.hypot(game.ball.vx, game.ball.vy), 260);
+    assert.deepEqual(game.bumpers, EXPECTED_BUMPERS);
+  }
+  assert.equal(game.score, 0);
+  assert.equal(game.lives, 3);
+});
+
+test('overlapping balls moving away are separated without reflection or jitter', () => {
+  const game = playing();
+  const bumper = game.bumpers[0];
+  bumperContact(game, bumper, -31, 0, -240, 0);
+  assert.equal(game.ball.vx, -240);
+  assert.equal(game.ball.vy, 0);
+  assert.ok(bumper.x - game.ball.x >= 32);
+  for (let step = 0; step < 10; step++) {
+    const x = game.ball.x;
+    update(game, 0, 1 / 240);
+    assert.equal(game.ball.vx, -240);
+    assert.ok(game.ball.x < x);
+  }
+});
+
+test('tangent bumper contact and a near miss leave velocity unchanged', () => {
+  for (const offsetX of [32, 32.01]) {
+    const game = playing();
+    const bumper = game.bumpers[0];
+    bumperContact(game, bumper, offsetX, 0, 0, 240);
+    assert.equal(game.ball.vx, 0);
+    assert.equal(game.ball.vy, 240);
+    if (offsetX > 32) assertClose(game.ball.x, bumper.x + offsetX);
+  }
+});
+
+test('coincident bumper centers have a deterministic finite fallback even at zero speed', () => {
+  for (const [vx, vy] of [[240, 0], [0, 0]]) {
+    const game = playing();
+    const bumper = game.bumpers[0];
+    bumperContact(game, bumper, 0, 0, vx, vy);
+    for (const field of ['x', 'y', 'vx', 'vy']) assert.ok(Number.isFinite(game.ball[field]));
+    assertClose(game.ball.vx, vx === 0 ? 0 : -vx);
+    assertClose(game.ball.vy, 0);
+    assertClose(Math.hypot(game.ball.vx, game.ball.vy), Math.hypot(vx, vy));
+    assert.ok(Math.hypot(game.ball.x - bumper.x, game.ball.y - bumper.y) >= 32);
+    const repeated = playing();
+    bumperContact(repeated, repeated.bumpers[0], 0, 0, vx, vy);
+    assert.deepEqual(repeated.ball, game.ball);
+  }
+});
+
+test('won and lost restarts restore fresh approved bumper layouts', () => {
+  for (const status of ['won', 'lost']) {
+    const game = playing();
+    const oldBumpers = game.bumpers;
+    oldBumpers[0].radius = 1;
+    oldBumpers.pop();
+    game.status = status;
+    launch(game);
+    assert.deepEqual(game.bumpers, EXPECTED_BUMPERS);
+    assert.notEqual(game.bumpers, oldBumpers);
+    assert.notEqual(game.bumpers[0], oldBumpers[0]);
+    assert.deepEqual(game, playing());
+  }
+});

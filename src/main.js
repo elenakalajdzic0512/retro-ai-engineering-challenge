@@ -82,6 +82,16 @@ function draw() {
       : colors[Math.floor(index / 8)];
     context.fillRect(brick.x, brick.y, brick.width, brick.height);
   });
+  for (const bumper of game.bumpers) {
+    context.fillStyle = '#00f5ff';
+    context.beginPath();
+    context.arc(bumper.x, bumper.y, bumper.radius, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#081b33';
+    context.beginPath();
+    context.arc(bumper.x, bumper.y, bumper.radius - 5, 0, Math.PI * 2);
+    context.fill();
+  }
   context.fillStyle = '#70f6ff';
   context.fillRect(game.paddle.x, game.paddle.y, game.paddle.width, game.paddle.height);
   context.fillStyle = '#ffffff';
