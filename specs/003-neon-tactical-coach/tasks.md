@@ -2,7 +2,7 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts](contracts/), [quickstart.md](quickstart.md).
 **Branch**: `week5/neon-tactical-coach`
-**Status**: W05 Checkpoint 1 deterministic Core implemented and verified (T001–T009). Tools, fake provider, agent orchestration, Gemini adapter, endpoint and UI remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
+**Status**: W05 Checkpoint 1 deterministic Core (T001–T009) and Checkpoint 2 two-tool boundary and fake provider primitive (T010–T012) implemented and verified. Active bounded agent orchestration, Gemini adapter, endpoint and UI remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
 **Tests**: Required by FR-012 and the user; fake-first and regression are gates, not optional examples.
 
 ## Phase 1 — Contract foundation
@@ -22,9 +22,9 @@
 
 ## Phase 3 — Tools and fake provider
 
-- [ ] T010 [US1] Add failing allowlist tests in new `tests/tactical-tools.test.js` for exact two names, `{}` snapshot arguments, bounded candidate arguments, frozen/copy results, forbidden/unknown rejection and invalid-result rejection before forwarding.
-- [ ] T011 [US1] Implement `server/tactical/tools.ts` with only the two specified tools and request-scoped validated context; no ability to mutate canonical gameplay.
-- [ ] T012 [US3] Add a scriptable fake provider in new `server/tactical/fake-provider.ts` and fixtures in `tests/tactical-orchestrator.test.js`; prove zero key and zero network calls.
+- [x] T010 [US1] Add failing allowlist tests in new `tests/tactical-tools.test.js` for exact two names, `{}` snapshot arguments, bounded candidate arguments, frozen/copy results, forbidden/unknown rejection and invalid-result rejection before forwarding.
+- [x] T011 [US1] Implement `server/tactical/tools.ts` with only the two specified tools and request-scoped validated context; no ability to mutate canonical gameplay.
+- [x] T012 [US3] Add a scriptable fake provider in new `server/tactical/fake-provider.ts` and fixtures in `tests/tactical-orchestrator.test.js`; prove zero key and zero network calls.
 
 ## Phase 4 — Bounded state machine and final plan
 
@@ -54,4 +54,4 @@
 
 ## Dependencies and execution strategy
 
-`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T009 are complete after the reviewed deterministic Core checkpoint; T010 onward remain pending. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
+`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T012 are complete after the reviewed deterministic Core and tool/fake-provider checkpoints; T013 onward remain pending. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
