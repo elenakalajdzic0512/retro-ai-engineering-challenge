@@ -45,6 +45,117 @@ function playing() {
   return game;
 }
 
+// Approach from above for one physics step; cleared earlier rows cannot interfere.
+function hitBrick(game, brick) {
+  Object.assign(game.ball, {
+    x: brick.x + brick.width / 2, y: brick.y - game.ball.radius - 1, vx: 0, vy: 280,
+  });
+  update(game, 0, 1 / 240);
+}
+
+test('initial layout has exactly eight approved armored bricks and 32 normal bricks', () => {
+  const game = createGame();
+  const armoredIndices = [2, 5, 10, 13, 18, 21, 26, 29];
+  assert.equal(game.bricks.length, 40);
+  assert.deepEqual(game.bricks.flatMap((brick, index) => brick.kind === 'armored' ? [index] : []), armoredIndices);
+  assert.equal(game.bricks.filter((brick) => brick.kind === 'normal').length, 32);
+  game.bricks.forEach((brick, index) => {
+    assert.equal(brick.alive, true);
+    assert.equal(brick.hitsRemaining, armoredIndices.includes(index) ? 2 : 1);
+  });
+  assert.equal(game.bricks[32].kind, 'normal');
+});
+
+test('armored brick reflects both hits and awards ten points only on destruction', () => {
+  const game = playing();
+  const brick = game.bricks[2];
+  hitBrick(game, brick);
+  assert.equal(brick.alive, true);
+  assert.equal(brick.hitsRemaining, 1);
+  assert.equal(game.score, 0);
+  assert.equal(game.ball.vy, -280);
+  update(game, 0, 0.01);
+  assert.equal(brick.hitsRemaining, 1);
+  hitBrick(game, brick);
+  assert.equal(brick.alive, false);
+  assert.equal(brick.hitsRemaining, 0);
+  assert.equal(game.score, 10);
+  assert.equal(game.ball.vy, -280);
+  hitBrick(game, brick);
+  assert.equal(brick.hitsRemaining, 0);
+  assert.equal(game.score, 10);
+});
+
+test('normal brick reaches zero hits and awards ten points on its first collision', () => {
+  const game = playing();
+  const brick = game.bricks[0];
+  assert.equal(brick.kind, 'normal');
+  assert.equal(brick.hitsRemaining, 1);
+  hitBrick(game, brick);
+  assert.equal(brick.hitsRemaining, 0);
+  assert.equal(brick.alive, false);
+  assert.equal(game.score, 10);
+});
+
+test('destroying all 40 bricks through 48 hits scores exactly 400 with no repeat rewards', () => {
+  const game = playing();
+  let hits = 0;
+  game.bricks.forEach((brick, index) => {
+    const requiredHits = brick.kind === 'armored' ? 2 : 1;
+    for (let hit = 1; hit <= requiredHits; hit++) {
+      hitBrick(game, brick);
+      hits++;
+      assert.equal(game.score, index * 10 + (hit === requiredHits ? 10 : 0));
+    }
+    assert.equal(brick.alive, false);
+    assert.equal(brick.hitsRemaining, 0);
+    hitBrick(game, brick);
+    assert.equal(game.score, (index + 1) * 10);
+  });
+  assert.equal(hits, 48);
+  assert.equal(game.score, 400);
+  assert.equal(game.status, 'won');
+});
+
+test('last armored brick must be destroyed before winning and restarting', () => {
+  const game = playing();
+  game.bricks.forEach((brick, index) => {
+    if (index !== 2) {
+      brick.alive = false;
+      brick.hitsRemaining = 0;
+    }
+  });
+  game.score = 390;
+  hitBrick(game, game.bricks[2]);
+  assert.equal(game.status, 'playing');
+  assert.equal(game.score, 390);
+  hitBrick(game, game.bricks[2]);
+  assert.equal(game.status, 'won');
+  assert.equal(game.score, 400);
+  launch(game);
+  assert.deepEqual(game, playing());
+});
+
+test('restart after losing restores damaged and destroyed armored bricks', () => {
+  const game = playing();
+  hitBrick(game, game.bricks[2]);
+  hitBrick(game, game.bricks[5]);
+  hitBrick(game, game.bricks[5]);
+  assert.equal(game.bricks[2].hitsRemaining, 1);
+  assert.equal(game.bricks[5].alive, false);
+  assert.equal(game.score, 10);
+  game.lives = 1;
+  Object.assign(game.ball, { x: 20, y: 580, vx: 0, vy: 280 });
+  update(game, 0, 0.01);
+  assert.equal(game.status, 'lost');
+  launch(game);
+  assert.deepEqual(game, playing());
+  for (const brick of game.bricks.filter((item) => item.kind === 'armored')) {
+    assert.equal(brick.alive, true);
+    assert.equal(brick.hitsRemaining, 2);
+  }
+});
+
 test('ready paddle movement is equal at 60 and 120 FPS before and at the boundary', () => {
   for (const [seconds, expectedDistance] of [[0.5, 230], [1, 345]]) {
     const distances = [60, 120].map((fps) => {

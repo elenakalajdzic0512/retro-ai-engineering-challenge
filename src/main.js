@@ -77,7 +77,9 @@ function draw() {
   const colors = ['#ff5c9d', '#ff9270', '#ffe275', '#6de3b5', '#63cdff'];
   game.bricks.forEach((brick, index) => {
     if (!brick.alive) return;
-    context.fillStyle = colors[Math.floor(index / 8)];
+    context.fillStyle = brick.kind === 'armored'
+      ? (brick.hitsRemaining === 2 ? '#b8c4d9' : '#78859d')
+      : colors[Math.floor(index / 8)];
     context.fillRect(brick.x, brick.y, brick.width, brick.height);
   });
   context.fillStyle = '#70f6ff';

@@ -2,6 +2,7 @@ export const WIDTH = 800;
 export const HEIGHT = 600;
 const PADDLE_SPEED = 460;
 const STEP = 1 / 240;
+const ARMORED_BRICK_INDICES = new Set([2, 5, 10, 13, 18, 21, 26, 29]);
 
 export const DEFAULT_GAME_CONFIG = Object.freeze({ lives: 3, brickRows: 5, brickColumns: 8 });
 
@@ -35,7 +36,11 @@ export function createGame(config = DEFAULT_GAME_CONFIG) {
   const game = { score: 0, lives, status: 'ready', bricks: [] };
   for (let row = 0; row < brickRows; row++) {
     for (let column = 0; column < brickColumns; column++) {
-      game.bricks.push({ x: 44 + column * 90, y: 64 + row * 30, width: 82, height: 22, alive: true });
+      const armored = ARMORED_BRICK_INDICES.has(row * brickColumns + column);
+      game.bricks.push({
+        x: 44 + column * 90, y: 64 + row * 30, width: 82, height: 22, alive: true,
+        kind: armored ? 'armored' : 'normal', hitsRemaining: armored ? 2 : 1,
+      });
     }
   }
   resetBall(game);
@@ -81,8 +86,11 @@ function step(game, direction, dt) {
   }
   for (const brick of game.bricks) {
     if (!brick.alive || !overlaps(ball, brick)) continue;
-    brick.alive = false;
-    game.score += 10;
+    brick.hitsRemaining -= 1;
+    if (brick.hitsRemaining === 0) {
+      brick.alive = false;
+      game.score += 10;
+    }
     if (previousX + ball.radius <= brick.x || previousX - ball.radius >= brick.x + brick.width) {
       ball.vx *= -1;
       ball.x = previousX;
