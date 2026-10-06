@@ -79,3 +79,59 @@ export function parseTacticalCoachResponse(value) {
   if (new TextEncoder().encode(JSON.stringify(result)).length > 4096) invalid();
   return result;
 }
+
+export function createTacticalCoachRequestController({
+  button, status, result, render, pageWindow, fetchRequest = fetch,
+}) {
+  let active = null;
+  let generation = 0;
+
+  function cancel() {
+    generation++;
+    const previous = active;
+    active = null;
+    previous?.controller.abort();
+    result.replaceChildren();
+    status.textContent = '';
+    button.disabled = false;
+  }
+
+  async function submit(goal, state) {
+    cancel();
+    const current = { id: ++generation, controller: new AbortController() };
+    active = current;
+    const isCurrent = () => active === current && generation === current.id && !current.controller.signal.aborted;
+    button.disabled = true;
+    status.textContent = 'Analyzing arena...';
+    try {
+      const response = await fetchRequest('/api/tactical-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal, state }),
+        signal: current.controller.signal,
+      });
+      if (!isCurrent()) return;
+      if (!response.ok) throw new Error('Tactical Coach request failed.');
+      const parsed = parseTacticalCoachResponse(await response.json());
+      if (!isCurrent()) return;
+      render(parsed);
+      status.textContent = 'Tactical plan ready.';
+    } catch {
+      if (!isCurrent()) return;
+      result.replaceChildren();
+      status.textContent = 'Tactical Coach is unavailable. Please try again.';
+    } finally {
+      if (isCurrent()) {
+        active = null;
+        button.disabled = false;
+      }
+    }
+  }
+
+  function beforeGameLaunch(gameStatus) {
+    if (gameStatus === 'won' || gameStatus === 'lost') cancel();
+  }
+
+  pageWindow.addEventListener('pagehide', cancel);
+  return { submit, cancel, beforeGameLaunch };
+}

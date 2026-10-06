@@ -1,6 +1,6 @@
 # Quickstart and evaluation guide: Neon Tactical Coach
 
-The endpoint, UI, bounded orchestrator and separate Gemini adapter have been implemented. The sequence below records the design and verification gates; final real-Gemini browser acceptance remains pending.
+The endpoint, UI, bounded orchestrator and separate Gemini adapter have been implemented. T028 real-Gemini browser acceptance is complete; T029 final reconciliation remains pending. The sequence below records the design and verification gates.
 
 ## Normal runtime modes
 
@@ -49,4 +49,4 @@ The browser sends only `{goal,state}` and cannot select a provider. Each Gemini 
 | Success and every failure path | Canonical game snapshot unchanged. |
 | Existing Week 4 Hint and Hazard Arena suite | Remain green; no new Week 5 fields in Week 4 request. |
 
-Keep expected fixture outputs in `docs/AGENT_EVALS.md` before the corresponding checks. Record fake, live and human evidence separately in `docs/EVIDENCE_W05.md`. The Week 5 UI should have a goal field and **Run Tactical Coach** control with bounded stages: “Analyzing arena…”, “Evaluating strategy…”, “Preparing tactical plan…”. Display only validated plan fields and server-materialized fact labels/values. Retain the distinct Week 4 **Ask AI for Hint** control.
+Keep expected fixture outputs in `docs/AGENT_EVALS.md` before the corresponding checks. Record fake, live and human evidence separately in `docs/EVIDENCE_W05.md`. The Week 5 UI has a goal field and **Run Tactical Coach** control. It shows one generic “Analyzing arena…” status while the single-response HTTP request is pending; the browser cannot observe the three bounded server agent stages and must not simulate their progress. Display only validated plan fields and server-materialized fact labels/values. Retain the distinct Week 4 **Ask AI for Hint** control. On full game restart or page leave/reload, abort and invalidate a pending Coach request so its eventual result cannot render into a new game.

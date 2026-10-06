@@ -1,7 +1,7 @@
 import './style.css';
 import { createGame, launch, update, WIDTH, HEIGHT } from './game.js';
 import { deriveTacticalSnapshot } from './tactical-snapshot.js';
-import { parseTacticalCoachResponse } from './tactical-ui.js';
+import { createTacticalCoachRequestController } from './tactical-ui.js';
 
 const canvas = document.querySelector('#game');
 const context = canvas.getContext('2d');
@@ -91,7 +91,15 @@ function renderTacticalCoach(result) {
   tacticalResult.append(facts);
 }
 
-tacticalForm.addEventListener('submit', async (event) => {
+const tacticalCoach = createTacticalCoachRequestController({
+  button: tacticalButton,
+  status: tacticalStatus,
+  result: tacticalResult,
+  render: renderTacticalCoach,
+  pageWindow: window,
+});
+
+tacticalForm.addEventListener('submit', (event) => {
   event.preventDefault();
   if (tacticalButton.disabled) return;
   tacticalResult.replaceChildren();
@@ -110,26 +118,9 @@ tacticalForm.addEventListener('submit', async (event) => {
     tacticalStatus.textContent = 'Tactical Coach is unavailable. Please try again.';
     return;
   }
-  tacticalButton.disabled = true;
   tacticalGoal.blur();
   tacticalButton.blur();
-  tacticalStatus.textContent = 'Analyzing arena...';
-  try {
-    const response = await fetch('/api/tactical-coach', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goal, state }),
-    });
-    if (!response.ok) throw new Error('Tactical Coach request failed.');
-    const result = parseTacticalCoachResponse(await response.json());
-    renderTacticalCoach(result);
-    tacticalStatus.textContent = 'Tactical plan ready.';
-  } catch {
-    tacticalResult.replaceChildren();
-    tacticalStatus.textContent = 'Tactical Coach is unavailable. Please try again.';
-  } finally {
-    tacticalButton.disabled = false;
-  }
+  void tacticalCoach.submit(goal, state);
 });
 
 window.addEventListener('keydown', (event) => {
@@ -138,7 +129,10 @@ window.addEventListener('keydown', (event) => {
   if (!controls.includes(key)) return;
   event.preventDefault();
   keys.add(key);
-  if (key === ' ' && !event.repeat) launch(game);
+  if (key === ' ' && !event.repeat) {
+    tacticalCoach.beforeGameLaunch(game.status);
+    launch(game);
+  }
 });
 window.addEventListener('keyup', (event) => {
   keys.delete(event.key.length === 1 ? event.key.toLowerCase() : event.key);

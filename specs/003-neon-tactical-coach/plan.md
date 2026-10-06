@@ -4,14 +4,14 @@
 
 ## Summary
 
-Add a separate, advisory Week 5 Tactical Coach to the accepted Hazard Arena game. A player enters a goal; the application validates a bounded browser-reported tactical state, directs exactly three successful model steps through two allowlisted tools, evaluates one candidate deterministically, validates a structured final plan and displays it without changing the game. The runtime is implemented; final real-Gemini browser acceptance remains pending.
+Add a separate, advisory Week 5 Tactical Coach to the accepted Hazard Arena game. A player enters a goal; the application validates a bounded browser-reported tactical state, directs exactly three successful model steps through two allowlisted tools, evaluates one candidate deterministically, validates a structured final plan and displays it without changing the game. The runtime and T028 real-Gemini browser acceptance are complete; T029 final reconciliation remains pending.
 
 ## Technical Context
 
 - **Language/platform**: Existing browser JavaScript/Canvas/Vite and server TypeScript/Node. The game state lives in the browser.
 - **Dependencies**: Existing `@google/genai` stack; Week 5 needs a separate `createTacticalCoachGeminiProvider` (or equivalent) adapter. The Week 4 adapter stays behaviorally unchanged. No new dependency is selected in this design.
 - **Storage**: None. One request-scoped state machine; no conversation persistence or game mutation.
-- **Testing**: Existing `node:test` suite with fake provider and injected clock/sleeper. Week 4/Hazard Arena baseline is 133 passing tests at `8e0aa82`; future Week 5 results are NOT RUN.
+- **Testing**: Existing `node:test` suite with fake provider and injected clock/sleeper. Week 4/Hazard Arena baseline is 133 passing tests at `8e0aa82`; actual Week 5 results are recorded in `docs/AGENT_EVALS.md`.
 - **Scale**: One goal, one bounded snapshot, one candidate, one evaluation, one final plan. No batch, multi-agent, open-ended tool loop or long-horizon simulator.
 - **Performance/bounds**: 5 s per provider attempt, 22 s total, three logical steps, two tool calls, four provider attempts including one global retry. Tool result ≤8192 bytes.
 
@@ -112,7 +112,9 @@ A fixed public code/message map yields sanitized errors; logs must not include r
 
 ## UI and evaluation
 
-Add a separate **AI Tactical Coach** region with a goal text field, **Run Tactical Coach** button, progress stages (“Analyzing arena…”, “Evaluating strategy…”, “Preparing tactical plan…”), validated summary/strategy/zone/contact/route/actions and server-materialized evidence. Disable duplicate submission while a run is active; support cancellation when leaving/restarting the view. On error show one fixed safe message and leave gameplay usable. Retain the Week 4 Hint section and request contract. No raw tool calls, hidden prompts, provider messages or chain-of-thought in UI.
+Add a separate **AI Tactical Coach** region with a goal text field, **Run Tactical Coach** button, one generic pending status (“Analyzing arena…”) while the HTTP request is active, validated summary/strategy/zone/contact/route/actions and server-materialized evidence. Disable duplicate submission while a run is active; abort and invalidate a pending request on full game restart or page leave/reload. An obsolete response must not render, and UI-initiated cancellation must not appear as a provider failure. On actual request failure show one fixed safe message and leave gameplay usable. Retain the Week 4 Hint section and request contract. No raw tool calls, hidden prompts, provider messages or chain-of-thought in UI.
+
+The initial UI plan also named “Evaluating strategy…” and “Preparing tactical plan…” as successive browser progress labels. Final reconciliation found that the existing single-response HTTP contract exposes no intermediate server-stage events, so showing those labels in sequence would infer or time-simulate unobserved progress. The browser therefore keeps one truthful pending status. The real `NEED_SNAPSHOT → NEED_EVALUATION → NEED_FINAL` agent stages and all server bounds remain unchanged; stage-specific browser progress would require a future explicit progress-event contract.
 
 The [quickstart](quickstart.md) defines the fake-first matrix. Record expected outcomes before tests; run focused contract/evaluator/orchestrator/API/UI checks, then full `npm test`, typecheck and production build. Include game-state equality before/after coaching and Week 4/Hazard Arena regression. Only after local gates pass, confirm the selected server-controlled model/SDK's tool/final capabilities with official documentation, conduct a limited live check, then a pair-reviewed manual demo. Never make live provider checks part of the deterministic suite.
 

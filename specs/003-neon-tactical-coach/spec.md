@@ -2,7 +2,7 @@
 
 **Feature Branch**: `week5/neon-tactical-coach`
 **Created**: 2026-10-06
-**Status**: Runtime integration implemented; final real-Gemini browser acceptance pending
+**Status**: Runtime integration and T028 real-Gemini browser acceptance complete; T029 final reconciliation pending
 **Input**: Build a bounded, advisory tactical planner for the completed Neon Breaker: Hazard Arena without changing gameplay or Week 4 Hint.
 
 ## User Scenarios & Testing
