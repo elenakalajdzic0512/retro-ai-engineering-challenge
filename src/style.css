@@ -28,11 +28,7 @@ canvas { display: block; width: 100%; height: auto; border: 2px solid #526886; }
 .coach-badge { padding: 5px 9px; border: 1px solid #bb80e9; color: #eef5ff; background: #24143d; }
 .coach-actions { margin: 4px 0 16px; padding-left: 28px; }
 .coach-actions li { padding: 3px 0 3px 4px; }
-.coach-evidence { margin: 4px 0 0; }
-.coach-evidence-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 7px 0; border-bottom: 1px solid #463358; }
-.coach-evidence-row dt, .coach-evidence-row dd { margin: 0; min-width: 0; }
-.coach-evidence-row dd { color: #eef5ff; text-align: right; }
-@media (max-width: 480px) {
-  .coach-evidence-row { grid-template-columns: 1fr; gap: 2px; }
-  .coach-evidence-row dd { text-align: left; }
-}
+.coach-evidence { margin: 4px 0 0; padding-left: 22px; }
+.coach-evidence-row { padding: 5px 0 5px 3px; }
+.coach-evidence-row::marker { color: #d6a8ff; }
+.coach-evidence-secondary { margin-top: 2px; color: #b2bfd3; font-size: 0.93em; }

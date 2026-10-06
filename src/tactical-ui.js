@@ -44,7 +44,15 @@ const displayValues = new Set([
   'neutral', 'available', 'cooldown',
 ]);
 
-export function formatTacticalEvidenceLabel(fact) {
+export function formatTacticalEvidenceLabel(fact, plan) {
+  if (fact === `bricksByZone.${plan?.targetZone}`) return 'Bricks in target zone';
+  if (fact === `armoredByZone.${plan?.targetZone}`) return 'Armored bricks in target zone';
+  if (plan && fact === 'armoredTargets') return 'Armored targets in zone';
+  if (fact === 'routeUsable' && (plan?.route === 'direct' || plan?.route === 'portal')) {
+    return `${plan.route === 'direct' ? 'Direct' : 'Portal'} route usable`;
+  }
+  if (plan && fact === 'paddleAligned') return 'Paddle aligned with target';
+  if (plan && fact === 'riskLevel') return 'Tactical risk';
   if (Object.hasOwn(evidenceLabels, fact)) return evidenceLabels[fact];
   const readable = String(fact).replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[._-]+/g, ' ').trim().toLowerCase();
@@ -57,6 +65,57 @@ export function formatTacticalEvidenceValue(value) {
     return value[0].toUpperCase() + value.slice(1);
   }
   return String(value);
+}
+
+function counted(count, singular, plural, ending) {
+  const phrase = count === 1 ? ending.replace(/^remain\b/, 'remains') : ending;
+  return `${count} ${count === 1 ? singular : plural} ${phrase}.`;
+}
+
+export function explainTacticalEvidence(item, plan) {
+  const { fact, value } = item;
+  if (fact === 'targetOpportunity') return counted(value, 'target', 'targets', 'remain in the chosen zone');
+  if (fact === `bricksByZone.${plan?.targetZone}`) return counted(value, 'brick', 'bricks', 'remain in the target zone');
+  if (fact === 'armoredTargets') return counted(value, 'armored target', 'armored targets', 'remain in the chosen zone');
+  if (fact === `armoredByZone.${plan?.targetZone}`) return counted(value, 'armored brick', 'armored bricks', 'remain in the target zone');
+  if (fact === 'routeUsable' && (plan?.route === 'direct' || plan?.route === 'portal')) {
+    return `The ${plan.route} route is ${value ? 'currently usable' : 'not currently usable'}.`;
+  }
+  if (fact === 'paddleAligned') {
+    return `The planned paddle contact ${value ? 'matches' : 'does not match'} the target zone.`;
+  }
+  if (fact === 'riskLevel') return `Tactical risk is ${value}.`;
+  if (fact === 'portalAvailable') return `The portal is ${value ? 'available' : 'not currently available'}.`;
+  if (fact === 'portalState' && value === 'available') return 'The portal is available.';
+  if (fact === 'portalState' && value === 'cooldown') return 'The portal is on cooldown.';
+  if (fact === 'shieldInTargetZone') return `The shield is ${value ? 'in' : 'outside'} the target zone.`;
+  if (fact === 'shield.zone') return `The shield is in the ${value} zone.`;
+  if (fact === 'lives') return counted(value, 'life', 'lives', 'remain');
+  if (fact === 'bricksRemaining') return counted(value, 'brick', 'bricks', 'remain overall');
+  return `${formatTacticalEvidenceLabel(fact, plan)} — ${formatTacticalEvidenceValue(value)}`;
+}
+
+function evidencePriority(fact, plan) {
+  if (fact === 'targetOpportunity') return 0;
+  if (fact === `bricksByZone.${plan.targetZone}`) return 1;
+  if (fact === 'armoredTargets') return 2;
+  if (fact === `armoredByZone.${plan.targetZone}`) return 3;
+  if (fact === 'routeUsable') return 4;
+  if (fact === 'paddleAligned') return 5;
+  if (fact === 'riskLevel') return 6;
+  if (plan.route === 'portal' && fact === 'portalAvailable') return 7;
+  if (plan.route === 'portal' && fact === 'portalState') return 8;
+  if (fact === 'shieldInTargetZone') return 9;
+  if (fact === 'shield.zone') return 10;
+  if (fact === 'lives') return 11;
+  if (fact === 'bricksRemaining') return 30;
+  return 20;
+}
+
+function evidenceForDisplay(evidence, plan) {
+  return evidence.map((item, index) => ({ item, index }))
+    .sort((a, b) => evidencePriority(a.item.fact, plan) - evidencePriority(b.item.fact, plan) || a.index - b.index)
+    .map(({ item }) => item);
 }
 
 function appendText(doc, parent, tag, value, className = '') {
@@ -91,14 +150,11 @@ export function renderTacticalCoachResult({ plan, evidence }, container, doc = d
   container.append(actions);
 
   appendText(doc, container, 'h3', 'Why this plan');
-  const facts = doc.createElement('dl');
+  const facts = doc.createElement('ul');
   facts.className = 'coach-evidence';
-  for (const item of evidence) {
-    const row = doc.createElement('div');
-    row.className = 'coach-evidence-row';
-    appendText(doc, row, 'dt', formatTacticalEvidenceLabel(item.fact));
-    appendText(doc, row, 'dd', formatTacticalEvidenceValue(item.value));
-    facts.append(row);
+  for (const [index, item] of evidenceForDisplay(evidence, plan).entries()) {
+    appendText(doc, facts, 'li', explainTacticalEvidence(item, plan),
+      index < 4 ? 'coach-evidence-row' : 'coach-evidence-row coach-evidence-secondary');
   }
   container.append(facts);
 }

@@ -104,7 +104,7 @@ test('Coach result renders a player recommendation, plan badges, ordered actions
   ];
   const root = element('div');
   tacticalUi.renderTacticalCoachResult(parseTacticalCoachResponse(input), root, { createElement: element });
-  assert.deepEqual(root.children.map((item) => item.tagName), ['h3', 'p', 'div', 'h3', 'ol', 'h3', 'dl']);
+  assert.deepEqual(root.children.map((item) => item.tagName), ['h3', 'p', 'div', 'h3', 'ol', 'h3', 'ul']);
   assert.equal(root.children[0].textContent, 'Recommended move');
   assert.equal(root.children[1].textContent, input.plan.summary);
   assert.deepEqual(root.children[2].children.map((item) => item.textContent), [
@@ -113,8 +113,10 @@ test('Coach result renders a player recommendation, plan badges, ordered actions
   assert.equal(root.children[3].textContent, 'What to do next');
   assert.deepEqual(root.children[4].children.map((item) => item.textContent), input.plan.actions);
   assert.equal(root.children[5].textContent, 'Why this plan');
-  assert.deepEqual(root.children[6].children.map((item) => item.children.map((cell) => cell.textContent)), [
-    ['Bricks in center', '10'], ['Route usable', 'Yes'], ['Paddle aligned', 'Yes'],
+  assert.deepEqual(root.children[6].children.map((item) => item.textContent), [
+    '10 bricks remain in the target zone.',
+    'The direct route is currently usable.',
+    'The planned paddle contact matches the target zone.',
   ]);
   assert.doesNotMatch(visibleText(root), /tactical_snapshot|strategy_evaluation|bricksByZone\.center/);
   assert.deepEqual(input.evidence[0], { source: 'tactical_snapshot', fact: 'bricksByZone.center', value: 10 });
@@ -137,10 +139,10 @@ test('Coach renderer supports different strategies, zones, routes and variable v
     { source: 'strategy_evaluation', fact: 'targetOpportunity' },
   ];
   input.evidence = [
-    { ...input.plan.evidence[0], value: 'cooldown' },
+    { ...input.plan.evidence[0], value: 'available' },
     { ...input.plan.evidence[1], value: 'up' },
     { ...input.plan.evidence[2], value: 'high' },
-    { ...input.plan.evidence[3], value: false },
+    { ...input.plan.evidence[3], value: true },
     { ...input.plan.evidence[4], value: false },
     { ...input.plan.evidence[5], value: 7 },
   ];
@@ -151,10 +153,15 @@ test('Coach renderer supports different strategies, zones, routes and variable v
   ]);
   assert.equal(root.children[1].textContent, input.plan.summary);
   assert.deepEqual(root.children[4].children.map((item) => item.textContent), input.plan.actions);
-  assert.deepEqual(root.children[6].children.map((item) => item.children.map((cell) => cell.textContent)), [
-    ['Portal status', 'Cooldown'], ['Ball moving vertically', 'Up'], ['Risk level', 'High'],
-    ['Route usable', 'No'], ['Paddle aligned', 'No'], ['Targets in chosen zone', '7'],
+  assert.deepEqual(root.children[6].children.map((item) => item.textContent), [
+    '7 targets remain in the chosen zone.',
+    'The portal route is currently usable.',
+    'The planned paddle contact does not match the target zone.',
+    'Tactical risk is high.',
+    'The portal is available.',
+    'Ball moving vertically — Up',
   ]);
+  assert.equal(root.children[6].children.filter((item) => item.className.includes('coach-evidence-secondary')).length, 2);
 });
 
 test('Coach renderer keeps a one-action, two-fact balanced plan concise', () => {
@@ -176,9 +183,64 @@ test('Coach renderer keeps a one-action, two-fact balanced plan concise', () => 
     'Balanced approach', 'Target left', 'Right paddle contact', 'Direct route',
   ]);
   assert.deepEqual(root.children[4].children.map((item) => item.textContent), input.plan.actions);
-  assert.deepEqual(root.children[6].children.map((item) => item.children.map((cell) => cell.textContent)), [
-    ['Bricks on left', '5'], ['Shield in target zone', 'No'],
+  assert.deepEqual(root.children[6].children.map((item) => item.textContent), [
+    '5 bricks remain in the target zone.', 'The shield is outside the target zone.',
   ]);
+});
+
+test('display ordering favors chosen-zone evidence and keeps every validated fact unchanged', () => {
+  const input = response();
+  input.plan.evidence = [
+    { source: 'tactical_snapshot', fact: 'bricksRemaining' },
+    { source: 'tactical_snapshot', fact: 'bricksByZone.left' },
+    { source: 'strategy_evaluation', fact: 'paddleAligned' },
+    { source: 'strategy_evaluation', fact: 'routeUsable' },
+    { source: 'strategy_evaluation', fact: 'targetOpportunity' },
+    { source: 'strategy_evaluation', fact: 'riskLevel' },
+  ];
+  input.evidence = [
+    { ...input.plan.evidence[0], value: 40 },
+    { ...input.plan.evidence[1], value: 15 },
+    { ...input.plan.evidence[2], value: true },
+    { ...input.plan.evidence[3], value: true },
+    { ...input.plan.evidence[4], value: 10 },
+    { ...input.plan.evidence[5], value: 'low' },
+  ];
+  const parsed = parseTacticalCoachResponse(input);
+  const original = structuredClone(parsed);
+  const root = element('div');
+  tacticalUi.renderTacticalCoachResult(parsed, root, { createElement: element });
+  assert.equal(root.children[1].textContent, original.plan.summary);
+  assert.deepEqual(root.children[4].children.map((item) => item.textContent), original.plan.actions);
+  assert.deepEqual(root.children[6].children.map((item) => item.textContent), [
+    '10 targets remain in the chosen zone.',
+    'The direct route is currently usable.',
+    'The planned paddle contact matches the target zone.',
+    'Tactical risk is low.',
+    'Bricks on left — 15',
+    '40 bricks remain overall.',
+  ]);
+  assert.deepEqual(parsed, original);
+  assert.equal(root.children[6].children.length, parsed.evidence.length);
+  assert.doesNotMatch(visibleText(root), /tactical_snapshot|strategy_evaluation|bricksRemaining|targetOpportunity|routeUsable/);
+});
+
+test('contextual explanations cover armor, portal, route and boolean alternatives', () => {
+  const explain = tacticalUi.explainTacticalEvidence;
+  const plan = { targetZone: 'right', route: 'portal' };
+  assert.equal(explain({ fact: 'armoredTargets', value: 4 }, plan), '4 armored targets remain in the chosen zone.');
+  assert.equal(explain({ fact: 'armoredByZone.right', value: 4 }, plan), '4 armored bricks remain in the target zone.');
+  assert.equal(explain({ fact: 'routeUsable', value: false }, plan), 'The portal route is not currently usable.');
+  assert.equal(explain({ fact: 'paddleAligned', value: false }, plan), 'The planned paddle contact does not match the target zone.');
+  assert.equal(explain({ fact: 'riskLevel', value: 'medium' }, plan), 'Tactical risk is medium.');
+  assert.equal(explain({ fact: 'portalAvailable', value: true }, plan), 'The portal is available.');
+  assert.equal(explain({ fact: 'portalAvailable', value: false }, plan), 'The portal is not currently available.');
+  assert.equal(explain({ fact: 'portalState', value: 'cooldown' }, plan), 'The portal is on cooldown.');
+  assert.equal(explain({ fact: 'shieldInTargetZone', value: true }, plan), 'The shield is in the target zone.');
+  assert.equal(explain({ fact: 'futureMetric.extraCount', value: 3 }, plan), 'Future metric extra count — 3');
+  assert.equal(tacticalUi.formatTacticalEvidenceLabel('bricksByZone.right', plan), 'Bricks in target zone');
+  assert.equal(tacticalUi.formatTacticalEvidenceLabel('routeUsable', plan), 'Portal route usable');
+  assert.equal(tacticalUi.formatTacticalEvidenceLabel('paddleAligned', plan), 'Paddle aligned with target');
 });
 
 test('every current evidence fact has an explicit player label and unknown facts fall back safely', () => {
