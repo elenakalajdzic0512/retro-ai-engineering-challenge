@@ -3,6 +3,10 @@ export const HEIGHT = 600;
 const PADDLE_SPEED = 460;
 const PADDLE_BOUNCE_HORIZONTAL_SPEED = 240;
 const PORTAL_COOLDOWN_SECONDS = 0.15;
+const SHIELD_MIN_X = 170;
+const SHIELD_MAX_X = 450;
+const SHIELD_SPEED = 110;
+const SHIELD_SEPARATION_EPSILON = 0.000001;
 const STEP = 1 / 240;
 const ARMORED_BRICK_INDICES = new Set([2, 5, 10, 13, 18, 21, 26, 29]);
 
@@ -30,6 +34,7 @@ export function validateGameConfig(config) {
 
 function resetBall(game) {
   game.portalCooldown = 0;
+  game.shieldContact = false;
   game.paddle = { x: 345, y: 552, width: 110, height: 14 };
   game.ball = { x: 400, y: 543, radius: 8, vx: 190, vy: -280 };
 }
@@ -49,9 +54,77 @@ function createPortals() {
   ];
 }
 
+function createShield() {
+  return { x: 310, y: 250, width: 180, height: 12, vx: SHIELD_SPEED };
+}
+
+function moveShield(shield, dt) {
+  const nextX = shield.x + shield.vx * dt;
+  if (nextX >= SHIELD_MAX_X) {
+    shield.x = SHIELD_MAX_X - (nextX - SHIELD_MAX_X);
+    shield.vx = -SHIELD_SPEED;
+  } else if (nextX <= SHIELD_MIN_X) {
+    shield.x = SHIELD_MIN_X + (SHIELD_MIN_X - nextX);
+    shield.vx = SHIELD_SPEED;
+  } else {
+    shield.x = nextX;
+  }
+  // A substep travels at most 110/240 pixels, far less than the travel range.
+  shield.x = Math.max(SHIELD_MIN_X, Math.min(SHIELD_MAX_X, shield.x));
+}
+
+function resolveShieldCollision(game) {
+  const { ball, shield } = game;
+  let closestX = Math.max(shield.x, Math.min(ball.x, shield.x + shield.width));
+  let closestY = Math.max(shield.y, Math.min(ball.y, shield.y + shield.height));
+  const dx = ball.x - closestX;
+  const dy = ball.y - closestY;
+  if (dx * dx + dy * dy > ball.radius * ball.radius) {
+    game.shieldContact = false;
+    return;
+  }
+  const distance = Math.hypot(dx, dy);
+  const relativeX = ball.vx - shield.vx;
+  let nx;
+  let ny;
+  if (distance > 0) {
+    nx = dx / distance;
+    ny = dy / distance;
+  } else {
+    // Nearest face; ties favor the face most opposed to relative motion.
+    // Remaining ties use this stable order, with upward first at zero motion.
+    const faces = [
+      { depth: ball.y - shield.y, nx: 0, ny: -1 },
+      { depth: shield.y + shield.height - ball.y, nx: 0, ny: 1 },
+      { depth: ball.x - shield.x, nx: -1, ny: 0 },
+      { depth: shield.x + shield.width - ball.x, nx: 1, ny: 0 },
+    ];
+    let face = faces[0];
+    for (const candidate of faces.slice(1)) {
+      if (candidate.depth < face.depth || (candidate.depth === face.depth &&
+          relativeX * candidate.nx + ball.vy * candidate.ny < relativeX * face.nx + ball.vy * face.ny)) {
+        face = candidate;
+      }
+    }
+    ({ nx, ny } = face);
+    closestX = ball.x + nx * face.depth;
+    closestY = ball.y + ny * face.depth;
+  }
+  if (!game.shieldContact && relativeX * nx + ball.vy * ny < 0) {
+    // Relative motion gates contact; actual ball velocity reflects without momentum transfer.
+    const dot = ball.vx * nx + ball.vy * ny;
+    ball.vx -= 2 * dot * nx;
+    ball.vy -= 2 * dot * ny;
+  }
+  // A moving end can overtake a slow ball again next step: reflect once per contact.
+  game.shieldContact = true;
+  ball.x = closestX + nx * (ball.radius + SHIELD_SEPARATION_EPSILON);
+  ball.y = closestY + ny * (ball.radius + SHIELD_SEPARATION_EPSILON);
+}
+
 export function createGame(config = DEFAULT_GAME_CONFIG) {
   const { lives, brickRows, brickColumns } = validateGameConfig(config);
-  const game = { score: 0, lives, status: 'ready', bricks: [], bumpers: createBumpers(), portals: createPortals() };
+  const game = { score: 0, lives, status: 'ready', bricks: [], bumpers: createBumpers(), portals: createPortals(), shield: createShield() };
   for (let row = 0; row < brickRows; row++) {
     for (let column = 0; column < brickColumns; column++) {
       const armored = ARMORED_BRICK_INDICES.has(row * brickColumns + column);
@@ -123,6 +196,7 @@ function step(game, direction, dt) {
     ball.x = paddle.x + paddle.width / 2;
     return;
   }
+  moveShield(game.shield, dt);
   game.portalCooldown = Math.max(0, game.portalCooldown - dt);
   const previousX = ball.x;
   const previousY = ball.y;
@@ -169,6 +243,7 @@ function step(game, direction, dt) {
     break;
   }
   if (game.status === 'won') return;
+  resolveShieldCollision(game);
   for (const bumper of game.bumpers) {
     if (resolveBumperCollision(ball, bumper)) break;
   }

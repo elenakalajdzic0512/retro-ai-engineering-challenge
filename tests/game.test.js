@@ -691,3 +691,213 @@ test('portal cooldown and activation stay frozen outside playing', () => {
     assert.equal(game.status, status);
   }
 });
+
+const EXPECTED_SHIELD = { x: 310, y: 250, width: 180, height: 12, vx: 110 };
+
+function shieldContact(game, offsetX, offsetY, vx, vy) {
+  const dt = 1 / 240;
+  // Fixtures use the shield's position after this substep's movement.
+  Object.assign(game.ball, {
+    x: game.shield.x + game.shield.vx * dt + offsetX - vx * dt,
+    y: game.shield.y + offsetY - vy * dt, vx, vy,
+  });
+  update(game, 0, dt);
+}
+
+function assertOutsideShield(game) {
+  const { ball, shield } = game;
+  const x = Math.max(shield.x, Math.min(ball.x, shield.x + shield.width));
+  const y = Math.max(shield.y, Math.min(ball.y, shield.y + shield.height));
+  assert.ok(Math.hypot(ball.x - x, ball.y - y) > ball.radius);
+  for (const field of ['x', 'y', 'vx', 'vy']) assert.ok(Number.isFinite(ball[field]));
+}
+
+test('fresh games create the exact independent shield state', () => {
+  const game = createGame();
+  const other = createGame();
+  assert.deepEqual(game.shield, EXPECTED_SHIELD);
+  assert.notEqual(game.shield, other.shield);
+  game.shield.x = 170;
+  assert.deepEqual(other.shield, EXPECTED_SHIELD);
+});
+
+test('shield moves by simulation time with equivalent 60 and 120 FPS results', () => {
+  const states = [];
+  for (const fps of [60, 120]) {
+    const game = playing();
+    Object.assign(game.ball, { x: 30, y: 350, vx: 0, vy: 0 });
+    update(game, 0, 0.1);
+    assertClose(game.shield.x, 321);
+    for (let i = 0; i < fps * 8; i++) update(game, 0, 1 / fps);
+    states.push(game.shield);
+  }
+  assertClose(states[0].x, states[1].x);
+  assert.equal(states[0].vx, states[1].vx);
+});
+
+test('shield reflects overshoot and exact endpoints at both travel bounds', () => {
+  for (const [x, vx, expectedX, expectedVx] of [
+    [449.9, 110, 450 - (110 / 240 - 0.1), -110],
+    [170.1, -110, 170 + (110 / 240 - 0.1), 110],
+    [450 - 110 / 240, 110, 450, -110],
+    [170 + 110 / 240, -110, 170, 110],
+  ]) {
+    const game = playing();
+    Object.assign(game.shield, { x, vx });
+    update(game, 0, 1 / 240);
+    assertClose(game.shield.x, expectedX);
+    assert.equal(game.shield.vx, expectedVx);
+  }
+});
+
+test('shield stays bounded through repeated cycles and capped large frames', () => {
+  const game = playing();
+  Object.assign(game.ball, { x: 30, y: 350, vx: 0, vy: 0 });
+  for (let i = 0; i < 7200; i++) {
+    update(game, 0, 1 / 240);
+    assert.ok(game.shield.x >= 170 && game.shield.x <= 450);
+    assert.equal(Math.abs(game.shield.vx), 110);
+  }
+  const other = structuredClone(game);
+  update(game, 0, 10);
+  update(other, 0, 0.1);
+  assert.deepEqual(game.shield, other.shield);
+});
+
+test('shield freezes in ready won and lost states', () => {
+  for (const status of ['ready', 'won', 'lost']) {
+    const game = createGame();
+    game.status = status;
+    update(game, 1, 0.1);
+    assert.deepEqual(game.shield, EXPECTED_SHIELD);
+  }
+});
+
+test('a miss preserves shield position and direction for freeze and relaunch', () => {
+  const game = playing();
+  Object.assign(game.shield, { x: 380, vx: -110 });
+  Object.assign(game.ball, { x: 20, y: 580, vx: 0, vy: 280 });
+  update(game, 0, 0.1);
+  assert.equal(game.status, 'ready');
+  assert.equal(game.lives, 2);
+  assertClose(game.shield.x, 380 - 110 / 240);
+  assert.equal(game.shield.vx, -110);
+  const shield = { ...game.shield };
+  update(game, 0, 0.1);
+  assert.deepEqual(game.shield, shield);
+  launch(game);
+  update(game, 0, 1 / 240);
+  assertClose(game.shield.x, shield.x - 110 / 240);
+});
+
+test('shield top bottom and both ends reflect and separate without speed gain', () => {
+  for (const [x, y, vx, vy, outX, outY] of [
+    [90, -7, 190, 280, 190, -280], [90, 19, 190, -280, 190, 280],
+    [-7, 6, 240, 0, -240, 0], [187, 6, -240, 0, 240, 0],
+  ]) {
+    const game = playing();
+    shieldContact(game, x, y, vx, vy);
+    assertClose(game.ball.vx, outX);
+    assertClose(game.ball.vy, outY);
+    assertClose(Math.hypot(game.ball.vx, game.ball.vy), Math.hypot(vx, vy));
+    assertOutsideShield(game);
+  }
+});
+
+test('shield corner uses its angled normal and preserves actual ball speed', () => {
+  const game = playing();
+  // Bottom-right corner normal (0.6,0.8), dot(actual velocity,normal)=-40.
+  shieldContact(game, 184.2, 17.6, -200, 100);
+  assertClose(game.ball.vx, -152);
+  assertClose(game.ball.vy, 164);
+  assertClose(Math.hypot(game.ball.vx, game.ball.vy), Math.hypot(-200, 100));
+  assertOutsideShield(game);
+});
+
+test('shield uses relative approach and rejects separating overlap without jitter', () => {
+  const game = playing();
+  // Ball points right into the left face, but the shield moves away faster.
+  shieldContact(game, -7, 6, 50, 0);
+  assert.equal(game.ball.vx, 50);
+  assertOutsideShield(game);
+  for (let i = 0; i < 10; i++) {
+    update(game, 0, 1 / 240);
+    assert.equal(game.ball.vx, 50);
+    assertOutsideShield(game);
+  }
+  const approaching = playing();
+  // The moving right face catches a slower rightward ball: relative approach < 0.
+  shieldContact(approaching, 187, 6, 50, 0);
+  assert.equal(approaching.ball.vx, -50);
+  assertOutsideShield(approaching);
+  for (let i = 0; i < 10; i++) {
+    update(approaching, 0, 1 / 240);
+    assert.equal(approaching.ball.vx, -50);
+    assertOutsideShield(approaching);
+  }
+  Object.assign(approaching.ball, { x: 30, y: 350, vx: 0, vy: 0 });
+  update(approaching, 0, 1 / 240);
+  assert.equal(approaching.shieldContact, false);
+  shieldContact(approaching, 187, 6, -240, 0);
+  assert.equal(approaching.ball.vx, 240);
+});
+
+test('shield internal and boundary fallback contacts are finite and deterministic', () => {
+  for (const [x, y, vx, vy, expectedVy] of [
+    [90, 2, 0, 280, -280], [90, 10, 0, -280, 280],
+    [90, 6, 110, 0, 0], [90, 6, 0, -280, 280], [90, 0, 0, 280, -280],
+    [90, 6, 0, 0, 0],
+  ]) {
+    const game = playing();
+    const repeat = playing();
+    shieldContact(game, x, y, vx, vy);
+    shieldContact(repeat, x, y, vx, vy);
+    assert.deepEqual(game, repeat);
+    assertClose(game.ball.vy, expectedVy);
+    assertClose(Math.hypot(game.ball.vx, game.ball.vy), Math.hypot(vx, vy));
+    assertOutsideShield(game);
+  }
+});
+
+test('shield inclusive tangency reflects while a just-outside near miss does not', () => {
+  for (const y of [-8, -8.0001]) {
+    const game = playing();
+    shieldContact(game, 90, y, 0, 280);
+    assert.equal(game.ball.vy, y === -8 ? -280 : 280);
+  }
+});
+
+test('repeated shield contacts preserve gameplay state and shield integrity', () => {
+  const game = playing();
+  hitBrick(game, game.bricks[0]);
+  hitBrick(game, game.bricks[2]);
+  const before = structuredClone(game);
+  for (let i = 0; i < 60; i++) {
+    Object.assign(game.ball, { x: 30, y: 350, vx: 0, vy: 0 });
+    update(game, 0, 1 / 240);
+    shieldContact(game, 90, -7, 190, 280);
+    assertClose(Math.hypot(game.ball.vx, game.ball.vy), Math.hypot(190, 280));
+    assertOutsideShield(game);
+  }
+  for (const field of ['score', 'lives', 'status', 'bricks', 'paddle', 'bumpers', 'portals']) {
+    assert.deepEqual(game[field], before[field]);
+  }
+  assert.deepEqual(game.shield, { ...EXPECTED_SHIELD, x: game.shield.x });
+  assertClose(game.shield.x, before.shield.x + 110 * 120 / 240);
+  assert.equal(game.bricks.length, 40);
+  assert.equal(game.bricks[2].hitsRemaining, 1);
+});
+
+test('won and lost restarts recreate exact initial shield state', () => {
+  for (const status of ['won', 'lost']) {
+    const game = playing();
+    update(game, 0, 0.1);
+    const oldShield = game.shield;
+    Object.assign(oldShield, { x: 170, vx: -110, height: 99 });
+    game.status = status;
+    launch(game);
+    assert.deepEqual(game.shield, EXPECTED_SHIELD);
+    assert.notEqual(game.shield, oldShield);
+    assert.deepEqual(game, playing());
+  }
+});

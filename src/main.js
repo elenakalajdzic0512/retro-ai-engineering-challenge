@@ -100,6 +100,14 @@ function draw() {
       context.fill();
     }
   }
+  const { shield } = game;
+  context.fillStyle = '#39ff14';
+  context.fillRect(shield.x, shield.y, shield.width, shield.height);
+  context.fillStyle = '#0b2a0b';
+  context.fillRect(shield.x + 3, shield.y + 3, shield.width - 6, shield.height - 6);
+  context.strokeStyle = '#d5ffcc';
+  context.lineWidth = 1;
+  context.strokeRect(shield.x + 0.5, shield.y + 0.5, shield.width - 1, shield.height - 1);
   context.fillStyle = '#70f6ff';
   context.fillRect(game.paddle.x, game.paddle.y, game.paddle.width, game.paddle.height);
   context.fillStyle = '#ffffff';

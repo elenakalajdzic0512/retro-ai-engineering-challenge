@@ -127,3 +127,15 @@ The successful request used the fixed Gemini model and was followed by manual br
 **Observed evidence**: 120/120 tests PASS (120 total, 0 failed, 0 skipped), typecheck PASS, build PASS, `git diff --check` PASS; human manual browser smoke PASS. See the checkpoint 4 record in `docs/EVALS_HAZARD_ARENA.md` for exact rules and evidence.
 
 **Decision**: Mark checkpoint 4 complete and create exactly one user-authorized commit, `feat: add portal pair`, containing the verified runtime/tests and documentation/evidence. Moving Shield Gate and Tactical Coach remain unimplemented; checkpoint 6 full-arena regression remains pending. Week 4 AI contracts/specs remain unchanged. No push is authorized or performed.
+
+## 2026-10-06 — Checkpoint 5: Moving Shield Gate
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the approved Hazard Arena specification and current physics; implemented deterministic shield movement, bounded overshoot reversal, circle-versus-rectangle collision handling, relative-motion approach detection, speed-preserving reflection and separation. Testing exposed repeated velocity flipping during persistent contact with a moving shield end. Codex introduced the bounded `shieldContact` latch to prevent repeated reflections until separation or ball reset, and added thirteen focused automated tests for movement, bounds, frame-rate equivalence, collision/fallback/tangency, continuous contact, invariants, miss/relaunch and restart. Codex executed automated verification and aligned the shield documentation, including the latch's anti-jitter purpose.
+
+**Human/team contribution**: Elena + Isidora report reviewing the implementation and manually verifying shield movement and boundary reversals, direct/angled collision behavior, specifically checking for sticking, jitter and repeated velocity flipping, and observing no unwanted speed increase. They verified life-loss preservation/relaunch, full restart, unaffected score/lives/bricks, all previous Hazard Arena mechanics, miss/win/loss/restart, and continued Week 4 Ask AI for Hint functionality. These manual observations are distinct from AI-assisted implementation and automated testing.
+
+**Observed evidence**: 133/133 tests PASS (133 total, 0 failed, 0 skipped); typecheck PASS; build PASS; `git diff --check` PASS; human manual browser smoke PASS. Detailed checkpoint evidence is recorded in `docs/EVALS_HAZARD_ARENA.md`.
+
+**Decision**: Mark checkpoint 5 complete and create one user-authorized commit, `feat: add moving shield gate`, with its runtime/tests and documentation/evidence. Checkpoint 6 remains pending; Tactical Coach is unimplemented; Week 4 AI contracts/specs are unchanged. No push is authorized or performed.

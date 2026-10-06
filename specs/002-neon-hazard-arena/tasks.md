@@ -2,13 +2,13 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [eval matrix](../../docs/EVALS_HAZARD_ARENA.md).
 **Branch**: `week5/neon-hazard-arena`
-**Status**: Checkpoints 1–4 are implemented and verified; checkpoints 5–6 are not executed. Checkpoint 2 is `0b235f8`; checkpoint 3 is `1999735`; checkpoint 4 is the commit containing this updated record.
+**Status**: Checkpoints 1–5 are implemented and verified; checkpoint 6 remains pending. Checkpoint 2 is `0b235f8`; checkpoint 3 is `1999735`; checkpoint 4 is `dcdf6f1`; checkpoint 5 is the commit containing this updated record.
 
 ## Setup and Foundation
 
 No new application, dependencies or backend foundations are needed. Existing `src/game.js`, `src/main.js`, `tests/game.test.js` and `package.json` were inspected. Before each future checkpoint, check the branch/status and prior commit, review the current relevant code/tests, and record concrete expected fixtures in `docs/EVALS_HAZARD_ARENA.md` before implementing.
 
-Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. Unchecked tasks remain future implementation work; only the verified checkpoint 4 is included in this commit.
+Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. Unchecked tasks remain future implementation work; only the verified checkpoint 5 is included in this commit.
 
 ## Checkpoint 1 — Armored Bricks (US1, P1)
 
@@ -54,13 +54,13 @@ For every valid descending paddle contact, the left third sets `vx = -240`, the 
 
 ## Checkpoint 5 — Moving Shield Gate (US5, P5)
 
-**Depends on**: T020. **Goal/independent test**: One predictable bounded moving reflector; H20–H23.
+**Depends on**: T020. **Goal/independent test**: One predictable bounded moving reflector; H20–H23. **Status**: COMPLETE — 133/133 tests, typecheck/build/diff check PASS; Elena + Isidora report manual smoke PASS.
 
-- [ ] T021 [US5] Define one shield's geometry, start position/direction, path, speed, travel bounds, overshoot handling and movement/contact order in `specs/002-neon-hazard-arena/plan.md`; record H20–H23 expectations in `docs/EVALS_HAZARD_ARENA.md`.
-- [ ] T022 [US5] Add bounds/overshoot, identical-state/time-step determinism, current-position reflection, bounded ball speed, no direct score/life/brick changes, lifecycle freeze and restart tests in `tests/game.test.js`.
-- [ ] T023 [US5] Implement one shield's state/time-step movement and collision in `src/game.js`; render its current position in `src/main.js`; preserve portal exit clearance across the entire sweep.
-- [ ] T024 [US5] Run all checkpoint gates and manual gate/bounds/combined-layout/Hint smoke; record actual results in `docs/EVALS_HAZARD_ARENA.md`.
-- [ ] T025 [US5] Review `src/game.js`, `src/main.js`, `tests/game.test.js` and related evidence; create one clean Moving Shield Gate checkpoint commit before full regression.
+- [x] T021 [US5] Record the approved shield geometry, initial state, 110 px/s simulation-time movement, [170,450] bounds, overshoot reversal, collision order and continuous-contact latch in `specs/002-neon-hazard-arena/plan.md`; record H20–H23 expectations in `docs/EVALS_HAZARD_ARENA.md`.
+- [x] T022 [US5] Add bounds/overshoot, identical-state/time-step determinism, current-position reflection, bounded ball speed, no direct score/life/brick changes, lifecycle freeze and restart tests in `tests/game.test.js`.
+- [x] T023 [US5] Implement one shield's state/time-step movement and collision in `src/game.js`; render its current position in `src/main.js`; preserve portal exit clearance across the entire sweep.
+- [x] T024 [US5] Run all checkpoint gates and manual gate/bounds/combined-layout/Hint smoke; record actual results in `docs/EVALS_HAZARD_ARENA.md`.
+- [x] T025 [US5] Review `src/game.js`, `src/main.js`, `tests/game.test.js` and related evidence; checkpoint commit is the commit containing this record, `feat: add moving shield gate`. Checkpoint 6 remains pending; no push.
 
 ## Checkpoint 6 — Full Hazard Arena Regression and Manual Smoke
 
@@ -78,4 +78,4 @@ For every valid descending paddle contact, the left third sets `vx = -240`, the 
 
 US1 is the completed smallest playable increment; US2 is now also implemented and verified. Each later story has isolated fixtures but follows the preceding verified commit. All five are required for final Core Hazard Arena. Tasks execute serially because mechanics share the same engine, renderer and test file; there are no safe independent implementation tracks here, so no `[P]` tasks are assigned. A partner may review a fixed diff while the driver prepares observations, but join before edits, gate runs or commits.
 
-Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. This checkpoint commits Portal Pair runtime changes with aligned documentation/evidence under explicit user authorization; no push is authorized.
+Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. This checkpoint commits Moving Shield Gate runtime changes with aligned documentation/evidence under explicit user authorization; no push is authorized.
