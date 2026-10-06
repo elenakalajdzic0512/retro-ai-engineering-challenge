@@ -73,3 +73,19 @@ At that earlier checkpoint, limited live Gemini validation had not been run. The
 The live-provider troubleshooting and final validation were human-controlled. The initial 403 responses, unavailable billing tier, adapter schema correction, auth/access classification fix, local gates, and successful Gemini validations were recorded from observed results. AI assistance helped organize the evidence, while Elena controlled the provider/project decision, secret handling, request limit, browser verification, and PASS interpretation.
 
 The successful request used the fixed Gemini model and was followed by manual browser confirmation of the end-to-end flow. No API key or private provider payload was recorded. Live validation is now evidenced, while the final pair-review, role swap, and joint-understanding requirements remain unresolved.
+
+## 2026-10-06 — Hazard Arena scope and Armored Bricks
+
+**Pair context**: Elena + Isidora working together on one development environment. This records the team's current reported pair work; it is not attributed only to Elena and does not retroactively close the unresolved Week 4 role-swap or final pair-review evidence.
+
+**Team decision**: The pair returned to Neon Breaker as the continuing W03/W04 project for Week 5. They selected the locked Hazard Arena scope: Armored Bricks, Directional Paddle, Neon Bumpers, Portal Pair, and Moving Shield Gate.
+
+**Reason**: The original basic Breakout state was considered too simple to support a meaningful tactical bounded agent. The team chose deterministic gameplay complexity that preserves the original game while providing useful tactical state for the later Week 5 agent. This decision does not add an agent, AI-controlled gameplay, or a new AI contract now.
+
+**AI/Codex assistance**: Codex inspected `src/game.js`, `src/main.js`, `tests/game.test.js` and `package.json` before editing. The armor implementation was generated with AI assistance: exactly eight deterministic two-hit bricks in the existing grid, score only on destruction, reset restoration and two visual damage states. Six focused regression tests were added; no existing tests were weakened or removed. Codex observed 92/92 tests PASS (0 failed), typecheck PASS, production build PASS and `git diff --check` PASS. The API tests required a permitted localhost run after sandbox `EPERM`; this did not require backend changes.
+
+**Team/human verification**: Elena + Isidora report manually verifying browser behavior together, with manual smoke PASS and existing Week 4 Ask AI for Hint remaining functional. The team supplied the verified checkpoint state and authorized the commit after verification. Human browser observations are distinguished from Codex's automated command results; no additional live-provider details, role assignments or role swap are invented.
+
+**Checkpoint**: `0f88c3e6b50fa2160b283754413b3ee8e2ba9015` — `feat: add armored bricks to Neon Breaker`. Codex created this one commit following explicit user authorization and a clean review of only the three intended gameplay/test files; no push occurred. The earlier Usage Notes statement that Codex did not commit applies to that historical workflow, not to this later authorized action.
+
+**Documentation assistance and next decision**: Codex formalized the five-mechanic scope in `specs/002-neon-hazard-arena/`, appended the active extension to `docs/GAME_SPEC.md`, and created `docs/EVALS_HAZARD_ARENA.md` with observed armor results separated from PLANNED / NOT RUN future evaluations. Only Armored Bricks is implemented. Directional Paddle, Neon Bumpers, Portal Pair and Moving Shield Gate remain planned, followed by full regression/manual smoke. No runtime code or W04 AI contract is changed by this documentation task, and its documentation changes are not committed or pushed.
