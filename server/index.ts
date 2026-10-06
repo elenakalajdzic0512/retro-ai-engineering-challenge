@@ -11,19 +11,34 @@ import {
 } from './ai/orchestrator.js';
 import { ContractError, parseAiRequest } from './contracts.js';
 import { invokeReadOnlyTool } from './tools.js';
+import { parseTacticalRequest } from './tactical/contracts.js';
+import { createTacticalFakeProvider } from './tactical/fake-provider.js';
+import {
+  TacticalCoachError,
+  getTacticalCoachErrorResponse,
+  runTacticalCoach,
+  type RunTacticalCoachOptions,
+} from './tactical/orchestrator.js';
+import { invokeTacticalTool } from './tactical/tools.js';
 
 const MAX_REQUEST_BODY_BYTES = 1_024;
+const MAX_TACTICAL_REQUEST_BODY_BYTES = 4_096;
 
 class RequestBodyTooLargeError extends Error {}
 
 type OrchestrationOptions = NonNullable<Parameters<typeof runGameAssistant>[1]>;
 type Provider = NonNullable<OrchestrationOptions['provider']>;
+type TacticalProvider = NonNullable<RunTacticalCoachOptions['provider']>;
 
 interface ApiServerOptions {
   provider?: Provider;
   providerFactory?: () => Provider | null;
   toolExecutor?: OrchestrationOptions['toolExecutor'];
   orchestrationOptions?: Omit<OrchestrationOptions, 'provider' | 'toolExecutor'>;
+  tacticalProvider?: TacticalProvider;
+  tacticalProviderFactory?: () => TacticalProvider | null;
+  tacticalToolExecutor?: RunTacticalCoachOptions['toolExecutor'];
+  tacticalOrchestrationOptions?: Omit<RunTacticalCoachOptions, 'provider' | 'signal' | 'toolExecutor'>;
 }
 
 function writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
@@ -31,7 +46,7 @@ function writeJson(response: ServerResponse, statusCode: number, body: unknown):
   response.end(JSON.stringify(body));
 }
 
-function readRequestBody(request: IncomingMessage): Promise<string> {
+function readRequestBody(request: IncomingMessage, maxBytes: number): Promise<string> {
   return new Promise((resolveBody, rejectBody) => {
     const chunks: Buffer[] = [];
     let size = 0;
@@ -39,7 +54,7 @@ function readRequestBody(request: IncomingMessage): Promise<string> {
 
     request.on('data', (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_REQUEST_BODY_BYTES) {
+      if (size > maxBytes) {
         tooLarge = true;
         chunks.length = 0;
       } else if (!tooLarge) {
@@ -71,11 +86,101 @@ function createConfiguredProvider(): Provider | null {
   return null;
 }
 
+function createLocalTacticalFakeProvider(): TacticalProvider {
+  return createTacticalFakeProvider({ outcomes: [
+    { type: 'tool_call', toolName: 'get_tactical_snapshot', arguments: {} },
+    { type: 'tool_call', toolName: 'evaluate_tactical_strategy', arguments: {
+      targetZone: 'center', style: 'balanced', paddleContact: 'center', route: 'direct',
+    } },
+    { type: 'final', output: {
+      summary: 'Clear the center with controlled bounces.', strategy: 'balanced',
+      targetZone: 'center', paddleContact: 'center', route: 'direct',
+      actions: ['Aim for a center paddle bounce when the ball returns.'],
+      evidence: [
+        { source: 'tactical_snapshot', fact: 'bricksByZone.center' },
+        { source: 'strategy_evaluation', fact: 'targetOpportunity' },
+      ],
+    } },
+  ] });
+}
+
+function tacticalHttpStatus(code: TacticalCoachError['code']): number {
+  if (code === 'invalid_input') return 400;
+  if (code === 'rate_limited') return 429;
+  if (code === 'provider_unavailable') return 503;
+  if (code === 'provider_timeout' || code === 'tool_timeout' || code === 'deadline') return 504;
+  if (code === 'cancelled') return 499;
+  return 502;
+}
+
+async function handleTacticalCoachRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  providerFactory: () => TacticalProvider | null,
+  toolExecutor: RunTacticalCoachOptions['toolExecutor'],
+  orchestrationOptions: ApiServerOptions['tacticalOrchestrationOptions'],
+): Promise<void> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const onClose = () => { if (!response.writableEnded) abort(); };
+  request.on('aborted', abort);
+  response.on('close', onClose);
+  const canWrite = () => !controller.signal.aborted && !response.destroyed && !response.writableEnded;
+  try {
+    if (request.method !== 'POST') {
+      response.setHeader('Allow', 'POST');
+      writeJson(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: 'Method not allowed' } });
+      return;
+    }
+    const contentType = request.headers['content-type']?.split(';', 1)[0].trim().toLowerCase();
+    if (contentType !== 'application/json') {
+      writeJson(response, 415, getTacticalCoachErrorResponse(new TacticalCoachError('invalid_input')));
+      return;
+    }
+    let body: string;
+    try { body = await readRequestBody(request, MAX_TACTICAL_REQUEST_BODY_BYTES); }
+    catch (error) {
+      if (!canWrite()) return;
+      const status = error instanceof RequestBodyTooLargeError ? 413 : 400;
+      writeJson(response, status, getTacticalCoachErrorResponse(new TacticalCoachError('invalid_input')));
+      return;
+    }
+    if (!canWrite()) return;
+    let input;
+    try { input = parseTacticalRequest(JSON.parse(body)); }
+    catch {
+      writeJson(response, 400, getTacticalCoachErrorResponse(new TacticalCoachError('invalid_input')));
+      return;
+    }
+    if (!canWrite()) return;
+    try {
+      const result = await runTacticalCoach(input, {
+        ...orchestrationOptions,
+        provider: providerFactory(),
+        toolExecutor,
+        signal: controller.signal,
+      });
+      if (canWrite()) writeJson(response, 200, result);
+    } catch (error) {
+      if (!canWrite()) return;
+      const safe = error instanceof TacticalCoachError ? error : new TacticalCoachError('provider_unavailable');
+      writeJson(response, tacticalHttpStatus(safe.code), getTacticalCoachErrorResponse(safe));
+    }
+  } finally {
+    request.off('aborted', abort);
+    response.off('close', onClose);
+  }
+}
+
 export function createApiServer({
   provider,
   providerFactory = createConfiguredProvider,
   toolExecutor = invokeReadOnlyTool,
   orchestrationOptions = {},
+  tacticalProvider,
+  tacticalProviderFactory = createLocalTacticalFakeProvider,
+  tacticalToolExecutor = invokeTacticalTool,
+  tacticalOrchestrationOptions = {},
 }: ApiServerOptions = {}) {
   return createHttpServer(async (request: IncomingMessage, response: ServerResponse) => {
     let pathname: string;
@@ -86,6 +191,13 @@ export function createApiServer({
       return;
     }
 
+    if (pathname === '/api/tactical-coach') {
+      await handleTacticalCoachRequest(
+        request, response, () => tacticalProvider ?? tacticalProviderFactory(),
+        tacticalToolExecutor, tacticalOrchestrationOptions,
+      );
+      return;
+    }
     if (pathname !== '/api/ai') {
       writeJson(response, 404, { error: { code: 'NOT_FOUND', message: 'Not found' } });
       return;
@@ -104,7 +216,7 @@ export function createApiServer({
 
     let validatedRequest;
     try {
-      const body = await readRequestBody(request);
+      const body = await readRequestBody(request, MAX_REQUEST_BODY_BYTES);
       validatedRequest = parseAiRequest(JSON.parse(body));
     } catch (error: unknown) {
       if (response.destroyed || response.writableEnded) return;

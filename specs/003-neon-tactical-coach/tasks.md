@@ -2,7 +2,7 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts](contracts/), [quickstart.md](quickstart.md).
 **Branch**: `week5/neon-tactical-coach`
-**Status**: W05 Checkpoint 1 deterministic Core (T001–T009), Checkpoint 2 two-tool boundary and fake provider primitive (T010–T012), and Checkpoint 3 bounded provider-neutral agent orchestration (T013–T019) implemented and verified. Gemini adapter, endpoint, UI and live validation remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
+**Status**: W05 Checkpoint 1 deterministic Core (T001–T009), Checkpoint 2 two-tool boundary and fake provider primitive (T010–T012), Checkpoint 3 bounded provider-neutral agent orchestration (T013–T019), and Checkpoint 4 fake-first API/UI (T020–T023) implemented and verified. Gemini adapter, live validation, deployed outer-timeout verification and final evidence remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
 **Tests**: Required by FR-012 and the user; fake-first and regression are gates, not optional examples.
 
 ## Phase 1 — Contract foundation
@@ -38,10 +38,10 @@
 
 ## Phase 5 — Separate endpoint and UI
 
-- [ ] T020 [US1] Add failing HTTP tests in new `tests/tactical-api.test.js` for request shape/media/size, success, sanitized errors, cancellation and no Week 4 route regression.
-- [ ] T021 [US1] Register separate `POST /api/tactical-coach` in `server/index.ts` through new Week 5 modules; retain `/api/ai` behavior and server-only provider/model selection. Check the deployed outer HTTP/proxy timeout exceeds the Coach deadline before live use.
-- [ ] T022 [US2] Add separate goal input, Coach control, bounded progress/error/result rendering in `src/main.js` and necessary markup/style; preserve Ask AI for Hint and all gameplay controls. Add focused UI tests only if they verify user-observable behavior, not implementation mirrors.
-- [ ] T023 [US2] Verify advice never changes canonical game state and no raw tool/provider/chain-of-thought content enters UI.
+- [x] T020 [US1] Add failing HTTP tests in new `tests/tactical-api.test.js` for request shape/media/size, success, sanitized errors, cancellation and no Week 4 route regression.
+- [x] T021 [US1] Register separate `POST /api/tactical-coach` in `server/index.ts` through new Week 5 modules; retain `/api/ai` behavior and server-only provider/model selection. Check the deployed outer HTTP/proxy timeout exceeds the Coach deadline before live use.
+- [x] T022 [US2] Add separate goal input, Coach control, bounded progress/error/result rendering in `src/main.js` and necessary markup/style; preserve Ask AI for Hint and all gameplay controls. Add focused UI tests only if they verify user-observable behavior, not implementation mirrors.
+- [x] T023 [US2] Verify advice never changes canonical game state and no raw tool/provider/chain-of-thought content enters UI.
 
 ## Phase 6 — Regression, provider and evidence gates
 
@@ -54,4 +54,4 @@
 
 ## Dependencies and execution strategy
 
-`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T019 are complete after the reviewed deterministic Core, tool/fake-provider boundary, and bounded provider-neutral orchestrator checkpoints; T020 onward remain pending. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
+`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T023 are complete after the reviewed deterministic Core, tool/fake-provider boundary, bounded provider-neutral orchestrator, and fake-first API/UI checkpoints; T024 onward remain pending. The deployed outer HTTP/proxy timeout in T021 still requires verification before live use. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.

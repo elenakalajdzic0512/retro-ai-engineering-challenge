@@ -1,5 +1,7 @@
 import './style.css';
 import { createGame, launch, update, WIDTH, HEIGHT } from './game.js';
+import { deriveTacticalSnapshot } from './tactical-snapshot.js';
+import { parseTacticalCoachResponse } from './tactical-ui.js';
 
 const canvas = document.querySelector('#game');
 const context = canvas.getContext('2d');
@@ -9,6 +11,11 @@ const status = document.querySelector('#status');
 const aiHintButton = document.querySelector('#ai-hint-button');
 const aiHintStatus = document.querySelector('#ai-hint-status');
 const aiHintResult = document.querySelector('#ai-hint-result');
+const tacticalForm = document.querySelector('#tactical-coach-form');
+const tacticalGoal = document.querySelector('#tactical-coach-goal');
+const tacticalButton = document.querySelector('#tactical-coach-button');
+const tacticalStatus = document.querySelector('#tactical-coach-status');
+const tacticalResult = document.querySelector('#tactical-coach-result');
 const game = createGame();
 const keys = new Set();
 const controls = ['ArrowLeft', 'ArrowRight', 'a', 'd', ' '];
@@ -59,7 +66,74 @@ aiHintButton.addEventListener('click', async () => {
   }
 });
 
+function appendCoachText(parent, tag, value) {
+  const node = document.createElement(tag);
+  node.textContent = value;
+  parent.append(node);
+}
+
+function renderTacticalCoach(result) {
+  const { plan, evidence } = result;
+  appendCoachText(tacticalResult, 'h3', 'Tactical plan');
+  appendCoachText(tacticalResult, 'p', plan.summary);
+  appendCoachText(tacticalResult, 'p', `Strategy: ${plan.strategy} · Target: ${plan.targetZone} · Paddle: ${plan.paddleContact} · Route: ${plan.route}`);
+  appendCoachText(tacticalResult, 'h3', 'Actions');
+  const actions = document.createElement('ul');
+  for (const action of plan.actions) appendCoachText(actions, 'li', action);
+  tacticalResult.append(actions);
+  appendCoachText(tacticalResult, 'h3', 'Evidence');
+  const facts = document.createElement('ul');
+  for (const item of evidence) {
+    const label = item.fact.replaceAll('.', ' ');
+    const value = typeof item.value === 'boolean' ? (item.value ? 'yes' : 'no') : String(item.value);
+    appendCoachText(facts, 'li', `${label}: ${value}`);
+  }
+  tacticalResult.append(facts);
+}
+
+tacticalForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (tacticalButton.disabled) return;
+  tacticalResult.replaceChildren();
+  const goal = tacticalGoal.value.trim();
+  if (!goal) {
+    tacticalStatus.textContent = 'Enter a goal to get a tactical plan.';
+    return;
+  }
+  if ((game.status !== 'ready' && game.status !== 'playing') || !game.bricks.some((brick) => brick.alive)) {
+    tacticalStatus.textContent = 'Tactical Coach is available while a level is in progress.';
+    return;
+  }
+  let state;
+  try { state = deriveTacticalSnapshot(game); }
+  catch {
+    tacticalStatus.textContent = 'Tactical Coach is unavailable. Please try again.';
+    return;
+  }
+  tacticalButton.disabled = true;
+  tacticalGoal.blur();
+  tacticalButton.blur();
+  tacticalStatus.textContent = 'Analyzing arena...';
+  try {
+    const response = await fetch('/api/tactical-coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal, state }),
+    });
+    if (!response.ok) throw new Error('Tactical Coach request failed.');
+    const result = parseTacticalCoachResponse(await response.json());
+    renderTacticalCoach(result);
+    tacticalStatus.textContent = 'Tactical plan ready.';
+  } catch {
+    tacticalResult.replaceChildren();
+    tacticalStatus.textContent = 'Tactical Coach is unavailable. Please try again.';
+  } finally {
+    tacticalButton.disabled = false;
+  }
+});
+
 window.addEventListener('keydown', (event) => {
+  if (event.target === tacticalGoal || event.target === tacticalButton) return;
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
   if (!controls.includes(key)) return;
   event.preventDefault();

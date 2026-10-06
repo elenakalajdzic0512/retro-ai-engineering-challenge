@@ -13,3 +13,15 @@ canvas { display: block; width: 100%; height: auto; border: 2px solid #526886; }
 .ai-hint button:disabled { opacity: 0.55; cursor: wait; }
 #ai-hint-status { min-height: 1.4em; color: #ffe275; }
 #ai-hint-result { min-height: 1.4em; color: #6de3b5; }
+.tactical-coach { margin-top: 16px; padding: 16px; border: 1px solid #bb80e9; background: #150e28; }
+.tactical-coach h2 { margin: 0 0 12px; color: #d6a8ff; font-size: 18px; }
+.tactical-coach form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tactical-coach label { color: #eef5ff; }
+.tactical-coach input { flex: 1 1 260px; min-width: 0; padding: 8px; border: 1px solid #bb80e9; color: #eef5ff; background: #0b1224; font: inherit; }
+.tactical-coach button { padding: 8px 14px; border: 1px solid #d6a8ff; color: #050812; background: #d6a8ff; font: inherit; cursor: pointer; }
+.tactical-coach button:disabled { opacity: 0.55; cursor: wait; }
+#tactical-coach-status { min-height: 1.4em; color: #ffe275; }
+#tactical-coach-result { color: #bdebd7; line-height: 1.5; }
+#tactical-coach-result h3 { margin: 10px 0 4px; color: #d6a8ff; font-size: 16px; }
+#tactical-coach-result p { margin: 6px 0; }
+#tactical-coach-result ul { margin: 4px 0 10px; padding-left: 22px; }

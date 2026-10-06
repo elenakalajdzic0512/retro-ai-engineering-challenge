@@ -18,6 +18,16 @@
         <p id="ai-hint-status" role="status" aria-live="polite"></p>
         <p id="ai-hint-result" aria-live="polite"></p>
       </section>
+      <section class="tactical-coach" aria-labelledby="tactical-coach-heading">
+        <h2 id="tactical-coach-heading">AI Tactical Coach</h2>
+        <form id="tactical-coach-form">
+          <label for="tactical-coach-goal">Your goal</label>
+          <input id="tactical-coach-goal" type="text" placeholder="e.g. Clear the center safely" autocomplete="off" />
+          <button id="tactical-coach-button" type="submit">Run Tactical Coach</button>
+        </form>
+        <p id="tactical-coach-status" role="status" aria-live="polite"></p>
+        <div id="tactical-coach-result" aria-live="polite"></div>
+      </section>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>
