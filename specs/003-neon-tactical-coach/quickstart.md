@@ -1,6 +1,22 @@
 # Quickstart and evaluation guide: Neon Tactical Coach
 
-**Design phase only**: No Week 5 endpoint, UI or provider integration exists yet. This guide describes future implementation and verification; no commands here are claimed as already run for Week 5.
+The endpoint, UI, bounded orchestrator and separate Gemini adapter have been implemented. The sequence below records the design and verification gates; final real-Gemini browser acceptance remains pending.
+
+## Normal runtime modes
+
+From the repository root, run `npm run build:server`. Start one API process using the existing `.env`-loading `start:api` script:
+
+```bash
+AI_PROVIDER=fake TACTICAL_AI_PROVIDER=fake npm run start:api
+```
+
+This keeps Week 4 Hint and Tactical Coach deterministic. For real Tactical Gemini while Week 4 remains fake, start the API instead with:
+
+```bash
+AI_PROVIDER=fake TACTICAL_AI_PROVIDER=gemini npm run start:api
+```
+
+Then run `npm run dev` in a second terminal and open the normal game. The API script loads the local `.env` with `--env-file-if-exists=.env`; `GEMINI_API_KEY` remains backend-only. Unset `TACTICAL_AI_PROVIDER` defaults to fake. The browser sends only `{goal,state}` and cannot select a provider. Each Gemini Coach request creates a fresh adapter. Do not use the one-off Terminal harness for final browser acceptance: enter `Help me clear the center safely without relying on the portal.` in the game UI, verify the real plan/actions/evidence and no game mutation, and confirm gameplay and Week 4 Hint remain usable. Keep the earlier fake/manual recovery and Terminal live-probe evidence separately attributed.
 
 1. Implement and run exact-key contract tests first. Invalid goal/state must produce zero provider and tool calls.
 2. Implement browser snapshot derivation, server revalidation and local deterministic evaluator. Compare against the approved Hazard Arena constants and live game fields, without changing `src/game.js`.

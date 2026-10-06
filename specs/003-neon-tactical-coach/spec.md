@@ -2,7 +2,7 @@
 
 **Feature Branch**: `week5/neon-tactical-coach`
 **Created**: 2026-10-06
-**Status**: Design draft; no Week 5 runtime implementation
+**Status**: Runtime integration implemented; final real-Gemini browser acceptance pending
 **Input**: Build a bounded, advisory tactical planner for the completed Neon Breaker: Hazard Arena without changing gameplay or Week 4 Hint.
 
 ## User Scenarios & Testing
@@ -70,6 +70,7 @@ The player receives a plan within a finite deadline or a clear, safe failure mes
 - **FR-010 — Stops**: Invalid input, repeated/unknown/forbidden tool, invalid arguments/result, tool failure/timeout, malformed output, premature final, exceeded budgets, deadline and cancellation MUST lead to safe, sanitized stops.
 - **FR-011 — Separate UI**: A distinct Tactical Coach goal input and control MUST coexist with Ask AI for Hint. Only a validated plan or safe status/error may be displayed; no hidden prompts, provider payloads, raw tool calls or chain-of-thought.
 - **FR-012 — Evidence and testing**: Deterministic fake-provider tests MUST precede limited live-provider work, require zero API key/network, and cover the success, failure and regression matrix in `quickstart.md`. Live results and human review MUST be recorded separately from fake tests.
+- **FR-013 — Normal provider mode**: The normal API server MUST select Tactical Coach's provider only from server-side `TACTICAL_AI_PROVIDER`, defaulting to a fresh deterministic fake provider and supporting a fresh Gemini Tactical adapter per request when set to `gemini`. Unknown mode or missing Gemini configuration MUST fail safely without falling back to fake. The browser MUST NOT select the provider, and Week 4 `AI_PROVIDER` MUST remain independent.
 
 ### Key Entities
 
@@ -87,6 +88,7 @@ The player receives a plan within a finite deadline or a clear, safe failure mes
 - **SC-003**: Every automated success/failure fixture leaves the game state unchanged and all pre-existing Hazard Arena and Week 4 tests pass.
 - **SC-004**: In a human demo, a player can enter a goal, receive a readable plan, and continue playing without gameplay interruption; a provider failure gives a safe status.
 - **SC-005**: Both team members can explain the two tools, three steps, limits, validation, repeat protection, stops, fake testing and advisory authority using the final evidence record.
+- **SC-006**: Final human acceptance uses the normal game UI with server-configured Tactical Gemini; a real plan, actions and evidence render while gameplay and Week 4 Hint remain usable and Coach does not mutate the game. The earlier fake-first browser and Terminal live-probe checks remain separately attributed.
 
 ## Assumptions and Scope Boundaries
 

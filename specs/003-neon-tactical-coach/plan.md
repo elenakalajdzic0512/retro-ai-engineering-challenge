@@ -4,7 +4,7 @@
 
 ## Summary
 
-Add a separate, advisory Week 5 Tactical Coach to the accepted Hazard Arena game. A player enters a goal; the application validates a bounded browser-reported tactical state, directs exactly three successful model steps through two allowlisted tools, evaluates one candidate deterministically, validates a structured final plan and displays it without changing the game. This document designs the work only; nothing is implemented here.
+Add a separate, advisory Week 5 Tactical Coach to the accepted Hazard Arena game. A player enters a goal; the application validates a bounded browser-reported tactical state, directs exactly three successful model steps through two allowlisted tools, evaluates one candidate deterministically, validates a structured final plan and displays it without changing the game. The runtime is implemented; final real-Gemini browser acceptance remains pending.
 
 ## Technical Context
 
@@ -42,6 +42,12 @@ The new SpecKit folder is the design source of truth. Later `docs/AGENT_EVALS.md
 The new route is `POST /api/tactical-coach` with exact `{goal,state}`. The browser derives coarse counts/zones and categorical motion from the current game, then the server validates and copies it. It is client-reported evidence; a server cannot prove the physical board without owning game state. No raw all-brick array, arbitrary coordinates, provider/model selection or secrets cross the boundary. Invalid local input yields zero provider/tool calls. The Week 4 `/api/ai` request, endpoint, read-only tool and Hint UI remain separate and unchanged.
 
 The Core tool allowlist is exactly `get_tactical_snapshot` and `evaluate_tactical_strategy`, specified in [tools.md](contracts/tools.md). Tool 1 has exact `{}` arguments and returns a validated immutable copy of client-reported request state. Tool 2 accepts exactly targetZone/style/paddleContact/route, reads only the stored validated snapshot and computes one bounded local evaluation. Neither tool receives the mutable browser game, writes to files, runs shell, uses network, calls another model or changes entities. Provider keys, model ID and tool declarations are fixed server-side. Reject arbitrary proposals before dispatch. A dedicated Week 5 adapter must send Gemini function declarations, normalize one tool proposal or structured final output for the orchestrator, and return validated tool results as model context on the next call. The existing Week 4 Gemini provider accepts declaration/result parameters but ignores them and emits only `{hint,category}` final JSON; it must not be repurposed or changed.
+
+## Normal server provider selection
+
+`TACTICAL_AI_PROVIDER` is trusted server configuration for the normal `/api/tactical-coach` route. Unset or `fake` selects a new deterministic Tactical fake provider per request; `gemini` selects a new `createTacticalCoachGeminiProvider()` per request so model history, snapshot and evaluation context cannot cross requests. Unknown mode and missing Gemini configuration stop with sanitized `provider_not_configured`, without fallback or browser-visible configuration detail. Explicit `createApiServer` Tactical provider/factory injection takes precedence for tests and application composition. `AI_PROVIDER` remains solely the independent Week 4 `/api/ai` setting. Existing `start:api`/`dev:api` scripts load local `.env` server-side; the browser sends only `{goal,state}`, never a provider or key. The Gemini adapter, orchestrator, tool contracts and UI rendering are shared by the normal path without a special harness or route.
+
+Final manual acceptance must run the ordinary game UI against this server-configured Gemini mode and verify real plan/actions/evidence, no game mutation, usable controls and Week 4 Hint before and after. The prior fake-first browser/manual unavailable checks and Terminal live probes remain valid, separately attributed evidence but do not alone close this final gate.
 
 ## Normal three-step state machine
 

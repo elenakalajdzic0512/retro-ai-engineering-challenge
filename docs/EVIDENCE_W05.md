@@ -73,3 +73,7 @@ With the frontend still running, the team stopped the normal fake API and used a
 ### Manual restoration and evidence boundary
 
 The team stopped the temporary unavailable-provider process, restored the normal fake-first API and reloaded the page. Another valid Coach request succeeded and normal Tactical plan rendering returned. This was manual process restoration, **not automatic provider failover**. No Gemini live call or API-key handling was involved in this T028 manual browser test. The automated gates, earlier LIVE GEMINI probes, MANUAL FAKE-FIRST success and MANUAL UNAVAILABLE injection are distinct evidence categories. T029 final reconciliation and final Week 5 acceptance remain pending.
+
+## Revised final T028 acceptance gate
+
+The preceding human-reported PASS remains valid evidence for fake-first browser success and deterministic local `provider_unavailable` recovery. The two earlier live Gemini probes remain Terminal-harness evidence. Neither establishes that the normal game UI reached the real Gemini Tactical provider. T028 is therefore reopened: final acceptance additionally requires a human-observed real-Gemini Coach request from the normal game UI using server-side `TACTICAL_AI_PROVIDER=gemini`, with rendered plan/actions/evidence, no game mutation, and usable gameplay and Week 4 Hint. That browser check has **not yet occurred**; T028 and T029 remain pending.

@@ -13,6 +13,7 @@ import { ContractError, parseAiRequest } from './contracts.js';
 import { invokeReadOnlyTool } from './tools.js';
 import { parseTacticalRequest } from './tactical/contracts.js';
 import { createTacticalFakeProvider } from './tactical/fake-provider.js';
+import { createTacticalCoachGeminiProvider } from './tactical/gemini-provider.js';
 import {
   TacticalCoachError,
   getTacticalCoachErrorResponse,
@@ -37,6 +38,7 @@ interface ApiServerOptions {
   orchestrationOptions?: Omit<OrchestrationOptions, 'provider' | 'toolExecutor'>;
   tacticalProvider?: TacticalProvider;
   tacticalProviderFactory?: () => TacticalProvider | null;
+  tacticalGeminiProviderFactory?: () => TacticalProvider;
   tacticalToolExecutor?: RunTacticalCoachOptions['toolExecutor'];
   tacticalOrchestrationOptions?: Omit<RunTacticalCoachOptions, 'provider' | 'signal' | 'toolExecutor'>;
 }
@@ -102,6 +104,13 @@ function createLocalTacticalFakeProvider(): TacticalProvider {
       ],
     } },
   ] });
+}
+
+function createConfiguredTacticalProviderFactory(geminiFactory: () => TacticalProvider): () => TacticalProvider {
+  const mode = process.env.TACTICAL_AI_PROVIDER ?? 'fake';
+  if (mode === 'fake') return createLocalTacticalFakeProvider;
+  if (mode === 'gemini') return geminiFactory;
+  return () => ({ async generate() { return { type: 'failure', code: 'provider_not_configured' }; } });
 }
 
 function tacticalHttpStatus(code: TacticalCoachError['code']): number {
@@ -179,10 +188,13 @@ export function createApiServer({
   toolExecutor = invokeReadOnlyTool,
   orchestrationOptions = {},
   tacticalProvider,
-  tacticalProviderFactory = createLocalTacticalFakeProvider,
+  tacticalProviderFactory,
+  tacticalGeminiProviderFactory = createTacticalCoachGeminiProvider,
   tacticalToolExecutor = invokeTacticalTool,
   tacticalOrchestrationOptions = {},
 }: ApiServerOptions = {}) {
+  const activeTacticalProviderFactory = tacticalProviderFactory
+    ?? createConfiguredTacticalProviderFactory(tacticalGeminiProviderFactory);
   return createHttpServer(async (request: IncomingMessage, response: ServerResponse) => {
     let pathname: string;
     try {
@@ -194,7 +206,7 @@ export function createApiServer({
 
     if (pathname === '/api/tactical-coach') {
       await handleTacticalCoachRequest(
-        request, response, () => tacticalProvider ?? tacticalProviderFactory(),
+        request, response, () => tacticalProvider ?? activeTacticalProviderFactory(),
         tacticalToolExecutor, tacticalOrchestrationOptions,
       );
       return;
