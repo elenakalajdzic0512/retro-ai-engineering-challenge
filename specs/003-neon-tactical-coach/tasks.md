@@ -2,7 +2,7 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts](contracts/), [quickstart.md](quickstart.md).
 **Branch**: `week5/neon-tactical-coach`
-**Status**: W05 Checkpoint 1 deterministic Core (T001–T009) and Checkpoint 2 two-tool boundary and fake provider primitive (T010–T012) implemented and verified. Active bounded agent orchestration, Gemini adapter, endpoint and UI remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
+**Status**: W05 Checkpoint 1 deterministic Core (T001–T009), Checkpoint 2 two-tool boundary and fake provider primitive (T010–T012), and Checkpoint 3 bounded provider-neutral agent orchestration (T013–T019) implemented and verified. Gemini adapter, endpoint, UI and live validation remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
 **Tests**: Required by FR-012 and the user; fake-first and regression are gates, not optional examples.
 
 ## Phase 1 — Contract foundation
@@ -28,13 +28,13 @@
 
 ## Phase 4 — Bounded state machine and final plan
 
-- [ ] T013 [US3] Add failing `NEED_SNAPSHOT → NEED_EVALUATION → NEED_FINAL` success tests (3 steps/3 provider attempts/2 tools), plus premature-final, tool-in-final, out-of-order and repeated-action tests in `tests/tactical-orchestrator.test.js`.
-- [ ] T014 [US3] Implement those three exact states in `server/tactical/orchestrator.ts`; accept only the state-specific output, validate both tool results before transitions, and use state-scoped canonical repeat keys as defense in depth. Reject stale results without adding a client snapshot ID.
-- [ ] T015 [US3] Add failing step/tool/provider-call-budget, `min(5000 ms, remaining deadline)` attempt timeout, 22 s absolute deadline across attempts/backoff/tools/overhead, single transient retry (3 steps/4 attempts/2 tools), cancellation, malformed-model and safe-stop fixtures using injected clock/sleeper in `tests/tactical-orchestrator.test.js`.
-- [ ] T016 [US3] Implement counters, deadline, abort, one global retry/backoff, fixed error taxonomy and public sanitizer in `server/tactical/orchestrator.ts`. Ensure a retry stays in the same logical step.
-- [ ] T017 [US1] Add failing final-output fixtures in `tests/tactical-contracts.test.js` for each of the four candidate-choice mismatches (`strategy` maps to `style`), invented/duplicate facts, either missing evidence source, model-authored success field, extra keys, bad lengths and oversized result.
-- [ ] T018 [US1] Implement final runtime validation against accepted evaluator arguments and server-materialized public evidence from both tool results; only the application decides success, never raw model/provider output.
-- [ ] T019 [US1] Verify all fake success/failure cases and whole-game before/after equality; update only future observed eval evidence.
+- [x] T013 [US3] Add failing `NEED_SNAPSHOT → NEED_EVALUATION → NEED_FINAL` success tests (3 steps/3 provider attempts/2 tools), plus premature-final, tool-in-final, out-of-order and repeated-action tests in `tests/tactical-orchestrator.test.js`.
+- [x] T014 [US3] Implement those three exact states in `server/tactical/orchestrator.ts`; accept only the state-specific output, validate both tool results before transitions, and use state-scoped canonical repeat keys as defense in depth. Reject stale results without adding a client snapshot ID.
+- [x] T015 [US3] Add failing step/tool/provider-call-budget, `min(5000 ms, remaining deadline)` attempt timeout, 22 s absolute deadline across attempts/backoff/tools/overhead, single transient retry (3 steps/4 attempts/2 tools), cancellation, malformed-model and safe-stop fixtures using injected clock/sleeper in `tests/tactical-orchestrator.test.js`.
+- [x] T016 [US3] Implement counters, deadline, abort, one global retry/backoff, fixed error taxonomy and public sanitizer in `server/tactical/orchestrator.ts`. Ensure a retry stays in the same logical step.
+- [x] T017 [US1] Add failing final-output fixtures in `tests/tactical-contracts.test.js` for each of the four candidate-choice mismatches (`strategy` maps to `style`), invented/duplicate facts, either missing evidence source, model-authored success field, extra keys, bad lengths and oversized result.
+- [x] T018 [US1] Implement final runtime validation against accepted evaluator arguments and server-materialized public evidence from both tool results; only the application decides success, never raw model/provider output.
+- [x] T019 [US1] Verify all fake success/failure cases and whole-game before/after equality; update only future observed eval evidence.
 
 ## Phase 5 — Separate endpoint and UI
 
@@ -54,4 +54,4 @@
 
 ## Dependencies and execution strategy
 
-`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T012 are complete after the reviewed deterministic Core and tool/fake-provider checkpoints; T013 onward remain pending. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
+`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T019 are complete after the reviewed deterministic Core, tool/fake-provider boundary, and bounded provider-neutral orchestrator checkpoints; T020 onward remain pending. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.

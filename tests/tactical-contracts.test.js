@@ -231,3 +231,9 @@ test('final plan rejects all four candidate-choice mismatches', () => {
   ]) rejects(() => parseTacticalPlanForCandidate({ ...plan(), ...patch }, candidate()));
   rejects(() => parseTacticalPlanForCandidate(plan(), { ...candidate(), style: 'aggressive' }));
 });
+
+test('final plan rejects an oversized normalized UTF-8 result', () => {
+  const oversized = { ...plan(), summary: '\u0000'.repeat(240), actions: Array(3).fill('\u0000'.repeat(160)) };
+  assert.ok(Buffer.byteLength(JSON.stringify(oversized), 'utf8') > 4096);
+  rejects(() => parseTacticalPlan(oversized));
+});
