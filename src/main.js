@@ -1,7 +1,7 @@
 import './style.css';
 import { createGame, launch, update, WIDTH, HEIGHT } from './game.js';
 import { deriveTacticalSnapshot } from './tactical-snapshot.js';
-import { createTacticalCoachRequestController } from './tactical-ui.js';
+import { createTacticalCoachRequestController, renderTacticalCoachResult } from './tactical-ui.js';
 
 const canvas = document.querySelector('#game');
 const context = canvas.getContext('2d');
@@ -66,36 +66,11 @@ aiHintButton.addEventListener('click', async () => {
   }
 });
 
-function appendCoachText(parent, tag, value) {
-  const node = document.createElement(tag);
-  node.textContent = value;
-  parent.append(node);
-}
-
-function renderTacticalCoach(result) {
-  const { plan, evidence } = result;
-  appendCoachText(tacticalResult, 'h3', 'Tactical plan');
-  appendCoachText(tacticalResult, 'p', plan.summary);
-  appendCoachText(tacticalResult, 'p', `Strategy: ${plan.strategy} · Target: ${plan.targetZone} · Paddle: ${plan.paddleContact} · Route: ${plan.route}`);
-  appendCoachText(tacticalResult, 'h3', 'Actions');
-  const actions = document.createElement('ul');
-  for (const action of plan.actions) appendCoachText(actions, 'li', action);
-  tacticalResult.append(actions);
-  appendCoachText(tacticalResult, 'h3', 'Evidence');
-  const facts = document.createElement('ul');
-  for (const item of evidence) {
-    const label = item.fact.replaceAll('.', ' ');
-    const value = typeof item.value === 'boolean' ? (item.value ? 'yes' : 'no') : String(item.value);
-    appendCoachText(facts, 'li', `${label}: ${value}`);
-  }
-  tacticalResult.append(facts);
-}
-
 const tacticalCoach = createTacticalCoachRequestController({
   button: tacticalButton,
   status: tacticalStatus,
   result: tacticalResult,
-  render: renderTacticalCoach,
+  render: (result) => renderTacticalCoachResult(result, tacticalResult),
   pageWindow: window,
 });
 

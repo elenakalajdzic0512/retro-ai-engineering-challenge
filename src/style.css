@@ -20,8 +20,19 @@ canvas { display: block; width: 100%; height: auto; border: 2px solid #526886; }
 .tactical-coach input { flex: 1 1 260px; min-width: 0; padding: 8px; border: 1px solid #bb80e9; color: #eef5ff; background: #0b1224; font: inherit; }
 .tactical-coach button { padding: 8px 14px; border: 1px solid #d6a8ff; color: #050812; background: #d6a8ff; font: inherit; cursor: pointer; }
 .tactical-coach button:disabled { opacity: 0.55; cursor: wait; }
-#tactical-coach-status { min-height: 1.4em; color: #ffe275; }
-#tactical-coach-result { color: #bdebd7; line-height: 1.5; }
-#tactical-coach-result h3 { margin: 10px 0 4px; color: #d6a8ff; font-size: 16px; }
-#tactical-coach-result p { margin: 6px 0; }
-#tactical-coach-result ul { margin: 4px 0 10px; padding-left: 22px; }
+#tactical-coach-status { min-height: 1.4em; margin: 12px 0; color: #ffe275; font-weight: bold; }
+#tactical-coach-result { color: #bdebd7; line-height: 1.5; overflow-wrap: anywhere; }
+#tactical-coach-result h3 { margin: 18px 0 6px; color: #d6a8ff; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+#tactical-coach-result .coach-recommendation { margin: 0 0 14px; color: #eef5ff; font-size: clamp(16px, 2.5vw, 20px); line-height: 1.45; }
+.coach-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.coach-badge { padding: 5px 9px; border: 1px solid #bb80e9; color: #eef5ff; background: #24143d; }
+.coach-actions { margin: 4px 0 16px; padding-left: 28px; }
+.coach-actions li { padding: 3px 0 3px 4px; }
+.coach-evidence { margin: 4px 0 0; }
+.coach-evidence-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 7px 0; border-bottom: 1px solid #463358; }
+.coach-evidence-row dt, .coach-evidence-row dd { margin: 0; min-width: 0; }
+.coach-evidence-row dd { color: #eef5ff; text-align: right; }
+@media (max-width: 480px) {
+  .coach-evidence-row { grid-template-columns: 1fr; gap: 2px; }
+  .coach-evidence-row dd { text-align: left; }
+}

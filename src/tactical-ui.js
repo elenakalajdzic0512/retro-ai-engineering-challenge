@@ -16,6 +16,93 @@ const factTypes = {
   },
 };
 
+const evidenceLabels = {
+  lives: 'Lives remaining',
+  bricksRemaining: 'Bricks remaining',
+  'bricksByZone.left': 'Bricks on left',
+  'bricksByZone.center': 'Bricks in center',
+  'bricksByZone.right': 'Bricks on right',
+  'armoredByZone.left': 'Armored bricks on left',
+  'armoredByZone.center': 'Armored bricks in center',
+  'armoredByZone.right': 'Armored bricks on right',
+  'ballDirection.horizontal': 'Ball moving horizontally',
+  'ballDirection.vertical': 'Ball moving vertically',
+  'shield.zone': 'Shield position',
+  'shield.direction': 'Shield movement',
+  portalState: 'Portal status',
+  targetOpportunity: 'Targets in chosen zone',
+  armoredTargets: 'Armored targets',
+  riskLevel: 'Risk level',
+  paddleAligned: 'Paddle aligned',
+  shieldInTargetZone: 'Shield in target zone',
+  portalAvailable: 'Portal available',
+  routeUsable: 'Route usable',
+};
+
+const displayValues = new Set([
+  'low', 'medium', 'high', 'left', 'center', 'right', 'up', 'down',
+  'neutral', 'available', 'cooldown',
+]);
+
+export function formatTacticalEvidenceLabel(fact) {
+  if (Object.hasOwn(evidenceLabels, fact)) return evidenceLabels[fact];
+  const readable = String(fact).replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[._-]+/g, ' ').trim().toLowerCase();
+  return readable ? readable[0].toUpperCase() + readable.slice(1) : 'Fact';
+}
+
+export function formatTacticalEvidenceValue(value) {
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'string' && displayValues.has(value)) {
+    return value[0].toUpperCase() + value.slice(1);
+  }
+  return String(value);
+}
+
+function appendText(doc, parent, tag, value, className = '') {
+  const node = doc.createElement(tag);
+  node.className = className;
+  node.textContent = value;
+  parent.append(node);
+  return node;
+}
+
+export function renderTacticalCoachResult({ plan, evidence }, container, doc = document) {
+  container.replaceChildren();
+  appendText(doc, container, 'h3', 'Recommended move');
+  appendText(doc, container, 'p', plan.summary, 'coach-recommendation');
+
+  const badges = doc.createElement('div');
+  badges.className = 'coach-badges';
+  for (const label of [
+    `${{ safe: 'Safe', balanced: 'Balanced', aggressive: 'Aggressive' }[plan.strategy]} approach`,
+    `Target ${plan.targetZone}`,
+    `${{ left: 'Left', center: 'Center', right: 'Right' }[plan.paddleContact]} paddle contact`,
+    `${{ direct: 'Direct', portal: 'Portal' }[plan.route]} route`,
+  ]) {
+    appendText(doc, badges, 'span', label, 'coach-badge');
+  }
+  container.append(badges);
+
+  appendText(doc, container, 'h3', 'What to do next');
+  const actions = doc.createElement('ol');
+  actions.className = 'coach-actions';
+  for (const action of plan.actions) appendText(doc, actions, 'li', action);
+  container.append(actions);
+
+  appendText(doc, container, 'h3', 'Why this plan');
+  const facts = doc.createElement('dl');
+  facts.className = 'coach-evidence';
+  for (const item of evidence) {
+    const row = doc.createElement('div');
+    row.className = 'coach-evidence-row';
+    appendText(doc, row, 'dt', formatTacticalEvidenceLabel(item.fact));
+    appendText(doc, row, 'dd', formatTacticalEvidenceValue(item.value));
+    facts.append(row);
+  }
+  container.append(facts);
+}
+
 function invalid() { throw new TypeError('Invalid Tactical Coach response'); }
 
 function fields(value, names) {

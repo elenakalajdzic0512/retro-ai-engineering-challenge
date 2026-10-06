@@ -72,6 +72,145 @@ test('browser requires materialized evidence to match plan references and both s
   assert.throws(() => parseTacticalCoachResponse(noEvaluation), TypeError);
 });
 
+function element(tagName) {
+  return {
+    tagName, className: '', textContent: '', children: [],
+    append(...items) { this.children.push(...items); },
+    replaceChildren(...items) { this.children = [...items]; },
+  };
+}
+
+function visibleText(node) {
+  return [node.textContent, ...node.children.map(visibleText)].filter(Boolean).join(' ');
+}
+
+test('Coach result renders a player recommendation, plan badges, ordered actions and readable evidence', () => {
+  const input = response();
+  input.plan.summary = 'Executing a safe, direct tactical approach to clear the center zone.';
+  input.plan.strategy = 'safe';
+  input.plan.actions = [
+    'Position the paddle in the center alignment.',
+    'Execute a direct route hit toward the center zone.',
+  ];
+  input.plan.evidence = [
+    { source: 'tactical_snapshot', fact: 'bricksByZone.center' },
+    { source: 'strategy_evaluation', fact: 'routeUsable' },
+    { source: 'strategy_evaluation', fact: 'paddleAligned' },
+  ];
+  input.evidence = [
+    { ...input.plan.evidence[0], value: 10 },
+    { ...input.plan.evidence[1], value: true },
+    { ...input.plan.evidence[2], value: true },
+  ];
+  const root = element('div');
+  tacticalUi.renderTacticalCoachResult(parseTacticalCoachResponse(input), root, { createElement: element });
+  assert.deepEqual(root.children.map((item) => item.tagName), ['h3', 'p', 'div', 'h3', 'ol', 'h3', 'dl']);
+  assert.equal(root.children[0].textContent, 'Recommended move');
+  assert.equal(root.children[1].textContent, input.plan.summary);
+  assert.deepEqual(root.children[2].children.map((item) => item.textContent), [
+    'Safe approach', 'Target center', 'Center paddle contact', 'Direct route',
+  ]);
+  assert.equal(root.children[3].textContent, 'What to do next');
+  assert.deepEqual(root.children[4].children.map((item) => item.textContent), input.plan.actions);
+  assert.equal(root.children[5].textContent, 'Why this plan');
+  assert.deepEqual(root.children[6].children.map((item) => item.children.map((cell) => cell.textContent)), [
+    ['Bricks in center', '10'], ['Route usable', 'Yes'], ['Paddle aligned', 'Yes'],
+  ]);
+  assert.doesNotMatch(visibleText(root), /tactical_snapshot|strategy_evaluation|bricksByZone\.center/);
+  assert.deepEqual(input.evidence[0], { source: 'tactical_snapshot', fact: 'bricksByZone.center', value: 10 });
+});
+
+test('Coach renderer supports different strategies, zones, routes and variable valid content', () => {
+  const input = response();
+  input.plan.strategy = 'aggressive';
+  input.plan.targetZone = 'right';
+  input.plan.paddleContact = 'left';
+  input.plan.route = 'portal';
+  input.plan.summary = 'A'.repeat(240);
+  input.plan.actions = ['B'.repeat(160), 'Second instruction.', 'Third instruction.'];
+  input.plan.evidence = [
+    { source: 'tactical_snapshot', fact: 'portalState' },
+    { source: 'tactical_snapshot', fact: 'ballDirection.vertical' },
+    { source: 'strategy_evaluation', fact: 'riskLevel' },
+    { source: 'strategy_evaluation', fact: 'routeUsable' },
+    { source: 'strategy_evaluation', fact: 'paddleAligned' },
+    { source: 'strategy_evaluation', fact: 'targetOpportunity' },
+  ];
+  input.evidence = [
+    { ...input.plan.evidence[0], value: 'cooldown' },
+    { ...input.plan.evidence[1], value: 'up' },
+    { ...input.plan.evidence[2], value: 'high' },
+    { ...input.plan.evidence[3], value: false },
+    { ...input.plan.evidence[4], value: false },
+    { ...input.plan.evidence[5], value: 7 },
+  ];
+  const root = element('div');
+  tacticalUi.renderTacticalCoachResult(parseTacticalCoachResponse(input), root, { createElement: element });
+  assert.deepEqual(root.children[2].children.map((item) => item.textContent), [
+    'Aggressive approach', 'Target right', 'Left paddle contact', 'Portal route',
+  ]);
+  assert.equal(root.children[1].textContent, input.plan.summary);
+  assert.deepEqual(root.children[4].children.map((item) => item.textContent), input.plan.actions);
+  assert.deepEqual(root.children[6].children.map((item) => item.children.map((cell) => cell.textContent)), [
+    ['Portal status', 'Cooldown'], ['Ball moving vertically', 'Up'], ['Risk level', 'High'],
+    ['Route usable', 'No'], ['Paddle aligned', 'No'], ['Targets in chosen zone', '7'],
+  ]);
+});
+
+test('Coach renderer keeps a one-action, two-fact balanced plan concise', () => {
+  const input = response();
+  input.plan.targetZone = 'left';
+  input.plan.paddleContact = 'right';
+  input.plan.actions = ['Aim the next bounce toward the left.'];
+  input.plan.evidence = [
+    { source: 'tactical_snapshot', fact: 'bricksByZone.left' },
+    { source: 'strategy_evaluation', fact: 'shieldInTargetZone' },
+  ];
+  input.evidence = [
+    { ...input.plan.evidence[0], value: 5 },
+    { ...input.plan.evidence[1], value: false },
+  ];
+  const root = element('div');
+  tacticalUi.renderTacticalCoachResult(parseTacticalCoachResponse(input), root, { createElement: element });
+  assert.deepEqual(root.children[2].children.map((item) => item.textContent), [
+    'Balanced approach', 'Target left', 'Right paddle contact', 'Direct route',
+  ]);
+  assert.deepEqual(root.children[4].children.map((item) => item.textContent), input.plan.actions);
+  assert.deepEqual(root.children[6].children.map((item) => item.children.map((cell) => cell.textContent)), [
+    ['Bricks on left', '5'], ['Shield in target zone', 'No'],
+  ]);
+});
+
+test('every current evidence fact has an explicit player label and unknown facts fall back safely', () => {
+  const labels = {
+    lives: 'Lives remaining', bricksRemaining: 'Bricks remaining',
+    'bricksByZone.left': 'Bricks on left', 'bricksByZone.center': 'Bricks in center',
+    'bricksByZone.right': 'Bricks on right', 'armoredByZone.left': 'Armored bricks on left',
+    'armoredByZone.center': 'Armored bricks in center', 'armoredByZone.right': 'Armored bricks on right',
+    'ballDirection.horizontal': 'Ball moving horizontally',
+    'ballDirection.vertical': 'Ball moving vertically',
+    'shield.zone': 'Shield position', 'shield.direction': 'Shield movement',
+    portalState: 'Portal status', targetOpportunity: 'Targets in chosen zone',
+    armoredTargets: 'Armored targets', riskLevel: 'Risk level',
+    paddleAligned: 'Paddle aligned', shieldInTargetZone: 'Shield in target zone',
+    portalAvailable: 'Portal available', routeUsable: 'Route usable',
+  };
+  for (const [fact, label] of Object.entries(labels)) {
+    assert.equal(tacticalUi.formatTacticalEvidenceLabel(fact), label);
+  }
+  assert.equal(tacticalUi.formatTacticalEvidenceLabel('futureMetric.extraCount'), 'Future metric extra count');
+  assert.equal(tacticalUi.formatTacticalEvidenceLabel('future_metric'), 'Future metric');
+});
+
+test('Coach display values preserve numbers and title-case safe categorical values', () => {
+  assert.equal(tacticalUi.formatTacticalEvidenceValue(10), '10');
+  assert.equal(tacticalUi.formatTacticalEvidenceValue(true), 'Yes');
+  assert.equal(tacticalUi.formatTacticalEvidenceValue(false), 'No');
+  for (const value of ['low', 'medium', 'high', 'left', 'center', 'right', 'up', 'down', 'available', 'cooldown', 'neutral']) {
+    assert.equal(tacticalUi.formatTacticalEvidenceValue(value), value[0].toUpperCase() + value.slice(1));
+  }
+});
+
 function deferred() {
   let resolve;
   let reject;
