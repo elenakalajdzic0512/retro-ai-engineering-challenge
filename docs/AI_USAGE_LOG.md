@@ -73,3 +73,81 @@ At that earlier checkpoint, limited live Gemini validation had not been run. The
 The live-provider troubleshooting and final validation were human-controlled. The initial 403 responses, unavailable billing tier, adapter schema correction, auth/access classification fix, local gates, and successful Gemini validations were recorded from observed results. AI assistance helped organize the evidence, while Elena controlled the provider/project decision, secret handling, request limit, browser verification, and PASS interpretation.
 
 The successful request used the fixed Gemini model and was followed by manual browser confirmation of the end-to-end flow. No API key or private provider payload was recorded. Live validation is now evidenced, while the final pair-review, role swap, and joint-understanding requirements remain unresolved.
+
+## 2026-10-06 — Hazard Arena scope and Armored Bricks
+
+**Pair context**: Elena + Isidora working together on one development environment. This records the team's current reported pair work; it is not attributed only to Elena and does not retroactively close the unresolved Week 4 role-swap or final pair-review evidence.
+
+**Team decision**: The pair returned to Neon Breaker as the continuing W03/W04 project for Week 5. They selected the locked Hazard Arena scope: Armored Bricks, Directional Paddle, Neon Bumpers, Portal Pair, and Moving Shield Gate.
+
+**Reason**: The original basic Breakout state was considered too simple to support a meaningful tactical bounded agent. The team chose deterministic gameplay complexity that preserves the original game while providing useful tactical state for the later Week 5 agent. This decision does not add an agent, AI-controlled gameplay, or a new AI contract now.
+
+**AI/Codex assistance**: Codex inspected `src/game.js`, `src/main.js`, `tests/game.test.js` and `package.json` before editing. The armor implementation was generated with AI assistance: exactly eight deterministic two-hit bricks in the existing grid, score only on destruction, reset restoration and two visual damage states. Six focused regression tests were added; no existing tests were weakened or removed. Codex observed 92/92 tests PASS (0 failed), typecheck PASS, production build PASS and `git diff --check` PASS. The API tests required a permitted localhost run after sandbox `EPERM`; this did not require backend changes.
+
+**Team/human verification**: Elena + Isidora report manually verifying browser behavior together, with manual smoke PASS and existing Week 4 Ask AI for Hint remaining functional. The team supplied the verified checkpoint state and authorized the commit after verification. Human browser observations are distinguished from Codex's automated command results; no additional live-provider details, role assignments or role swap are invented.
+
+**Checkpoint**: `0f88c3e6b50fa2160b283754413b3ee8e2ba9015` — `feat: add armored bricks to Neon Breaker`. Codex created this one commit following explicit user authorization and a clean review of only the three intended gameplay/test files; no push occurred. The earlier Usage Notes statement that Codex did not commit applies to that historical workflow, not to this later authorized action.
+
+**Documentation assistance and next decision**: Codex formalized the five-mechanic scope in `specs/002-neon-hazard-arena/`, appended the active extension to `docs/GAME_SPEC.md`, and created `docs/EVALS_HAZARD_ARENA.md` with observed armor results separated from PLANNED / NOT RUN future evaluations. Only Armored Bricks is implemented. Directional Paddle, Neon Bumpers, Portal Pair and Moving Shield Gate remain planned, followed by full regression/manual smoke. No runtime code or W04 AI contract is changed by this documentation task, and its documentation changes are not committed or pushed.
+
+
+## 2026-10-06 — Checkpoint 2: Directional Paddle Bounce
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the Hazard Arena spec, existing physics and tests; implemented deterministic left/center/right paddle thirds; replaced the intentionally superseded Week 3 no-spin expectation with focused Hazard Arena tests. Coverage includes zone behavior, exact/adjacent boundaries, velocity replacement, repeated-hit bounds, edge overlap and invalid ascending contact. Codex executed automated verification and aligned the relevant spec/plan/tasks and gameplay/eval documentation with the approved fixed `vx = -240 / 0 / +240` and `vy = -abs(previous vy)` rule. Vertical magnitude is preserved, while total speed varies by zone. No spin accumulates.
+
+**Human/team contribution**: Elena + Isidora report reviewing the resulting behavior and manually testing left, center and right aiming; no sticking or uncontrolled acceleration; existing armored/normal bricks; scoring, lives, restart and win/loss; and continued Week 4 Ask AI for Hint functionality. This is human verification reported by the team, not inferred from AI output.
+
+**Observed evidence**: 99 total / 99 passed / 0 failed / 0 skipped; typecheck PASS; build PASS; `git diff --check` PASS; human manual smoke PASS. Codex reran the required automated gates before the combined runtime/documentation checkpoint commit; all passed with the same 99/99 result. See `docs/EVALS_HAZARD_ARENA.md` for scope and test details.
+
+**Decision**: Fixed horizontal velocities provide deterministic, bounded, testable aiming that a later Week 5 coach can recommend. The team authorized one checkpoint commit, `feat: add directional paddle bounce`, containing these verified changes and this record. No push, new AI contract, Bumper, Portal or Shield implementation is included. Earlier Week 3/4 and armor entries remain historical records.
+
+
+## 2026-10-06 — Checkpoint 3: Neon Bumpers
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the approved Hazard Arena specification and current physics implementation; implemented three deterministic circular bumpers, circle-circle detection, normal-vector reflection and anti-sticking separation. Added nine focused automated tests for layout/object independence, direct/angled reflection and speed preservation, state invariants, indestructibility, moving-away rejection, tangent/near-miss behavior, zero-distance fallback and restart. Existing tests were preserved unchanged. Codex executed automated verification and updated checkpoint evidence/status without adding further gameplay mechanics.
+
+**Human/team contribution**: Elena + Isidora report reviewing the implementation; manually verifying all three bumpers and direct/glancing bounce behavior; observing no sticking/jitter; confirming playable layout and brick access, indestructibility, no score/life side effects, armored/normal bricks and directional paddle, scoring/misses/restart/win/loss, and functioning Week 4 Ask AI for Hint. These human observations are distinct from AI-assisted implementation/testing.
+
+**Observed evidence**: 108/108 tests PASS (108 total, 0 failed, 0 skipped), typecheck PASS, build PASS, `git diff --check` PASS, human manual smoke PASS. Required automated gates were rerun before the checkpoint commit and passed; detailed evidence, including a resolved approval-service interruption, is in `docs/EVALS_HAZARD_ARENA.md`.
+
+**Decision**: Mark checkpoint 3 complete and create exactly one user-authorized commit, `feat: add neon bumpers`, containing this record and the verified runtime/tests/evidence. Portal Pair, Moving Shield Gate and Tactical Coach remain unimplemented. W04 contracts remain unchanged. No push is authorized or performed.
+
+## 2026-10-06 — Checkpoint 4: Portal Pair
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the approved Hazard Arena specification and existing physics; implemented the linked portal pair, deterministic inclusive circle trigger, exact velocity-preserving teleportation, normalized exit separation with a deterministic +X zero-speed fallback, and 0.15-second simulation-time cooldown. Added twelve focused tests covering both directions, cooldown blocking/expiry, tangency/near misses, exit direction, invariants, fallback behavior, miss reset and restart restoration. Existing tests were retained unchanged. Codex executed automated verification and aligned portal documentation with the approved exit separation plus cooldown rule, replacing the earlier leave-overlap planning requirement.
+
+**Human/team contribution**: Elena + Isidora report reviewing the resulting behavior and manually verifying A → B and B → A teleportation, preserved apparent direction/speed, no ping-pong/sticking/jitter, later re-entry, unchanged score/lives/bricks, previous armored-brick/directional-paddle/bumper mechanics, miss/restart/win/loss, portal restoration and continued Week 4 Ask AI for Hint functionality. Human manual verification is distinct from AI/Codex-assisted implementation and automated testing.
+
+**Observed evidence**: 120/120 tests PASS (120 total, 0 failed, 0 skipped), typecheck PASS, build PASS, `git diff --check` PASS; human manual browser smoke PASS. See the checkpoint 4 record in `docs/EVALS_HAZARD_ARENA.md` for exact rules and evidence.
+
+**Decision**: Mark checkpoint 4 complete and create exactly one user-authorized commit, `feat: add portal pair`, containing the verified runtime/tests and documentation/evidence. Moving Shield Gate and Tactical Coach remain unimplemented; checkpoint 6 full-arena regression remains pending. Week 4 AI contracts/specs remain unchanged. No push is authorized or performed.
+
+## 2026-10-06 — Checkpoint 5: Moving Shield Gate
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the approved Hazard Arena specification and current physics; implemented deterministic shield movement, bounded overshoot reversal, circle-versus-rectangle collision handling, relative-motion approach detection, speed-preserving reflection and separation. Testing exposed repeated velocity flipping during persistent contact with a moving shield end. Codex introduced the bounded `shieldContact` latch to prevent repeated reflections until separation or ball reset, and added thirteen focused automated tests for movement, bounds, frame-rate equivalence, collision/fallback/tangency, continuous contact, invariants, miss/relaunch and restart. Codex executed automated verification and aligned the shield documentation, including the latch's anti-jitter purpose.
+
+**Human/team contribution**: Elena + Isidora report reviewing the implementation and manually verifying shield movement and boundary reversals, direct/angled collision behavior, specifically checking for sticking, jitter and repeated velocity flipping, and observing no unwanted speed increase. They verified life-loss preservation/relaunch, full restart, unaffected score/lives/bricks, all previous Hazard Arena mechanics, miss/win/loss/restart, and continued Week 4 Ask AI for Hint functionality. These manual observations are distinct from AI-assisted implementation and automated testing.
+
+**Observed evidence**: 133/133 tests PASS (133 total, 0 failed, 0 skipped); typecheck PASS; build PASS; `git diff --check` PASS; human manual browser smoke PASS. Detailed checkpoint evidence is recorded in `docs/EVALS_HAZARD_ARENA.md`.
+
+**Decision**: Mark checkpoint 5 complete and create one user-authorized commit, `feat: add moving shield gate`, with its runtime/tests and documentation/evidence. Checkpoint 6 remains pending; Tactical Coach is unimplemented; Week 4 AI contracts/specs are unchanged. No push is authorized or performed.
+
+## 2026-10-06 — Hazard Arena — Final Full Regression
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Performed the final source/test/spec consistency audit; verified all five mechanics' gameplay invariants, final physics processing order, lifecycle behavior and initial geometry; audited separation from the unchanged Week 4 AI contract. Reviewed H24–H30 coverage and determined no additional regression test was necessary. Ran the full automated verification suite and generated the final manual acceptance checklist. Final documentation work reconciled completion/evidence and stale status wording without changing runtime, tests or backend code.
+
+**Human/team contribution**: Elena + Isidora executed the final complete browser playthrough. They verified all five mechanics working together, combined hazard rallies, no visible sticking/jitter/repeated velocity flipping or portal ping-pong, playable arena and reachable bricks, destruction-only scoring and maximum 400, life-loss preservation and shield freeze/relaunch, win/loss/full restart, and continued Week 4 Ask AI for Hint functionality. These are human-reported acceptance observations, distinct from Codex analysis and automated execution.
+
+**Observed final evidence**: 133/133 tests PASS (133 total, 0 failed, 0 skipped); typecheck PASS; build PASS; `git diff --check` PASS; final full-arena manual playthrough PASS. Automated gates were executed in the preceding final regression audit and are not rerun solely for this Markdown finalization.
+
+**Decision**: Neon Breaker: Hazard Arena is COMPLETE across all six checkpoints: Armored Bricks, Directional Paddle, Neon Bumpers, Portal Pair, Moving Shield Gate and final regression. Preserve 40 bricks, maximum 400 points, 3 initial lives, original lifecycle, deterministic mechanics and the unchanged Week 4 public contract. The user authorized exactly one documentation commit, `docs: finalize Hazard Arena acceptance`. Tactical Coach remains unimplemented and requires separate scope. Nothing is pushed.

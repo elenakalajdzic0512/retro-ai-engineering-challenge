@@ -77,9 +77,37 @@ function draw() {
   const colors = ['#ff5c9d', '#ff9270', '#ffe275', '#6de3b5', '#63cdff'];
   game.bricks.forEach((brick, index) => {
     if (!brick.alive) return;
-    context.fillStyle = colors[Math.floor(index / 8)];
+    context.fillStyle = brick.kind === 'armored'
+      ? (brick.hitsRemaining === 2 ? '#b8c4d9' : '#78859d')
+      : colors[Math.floor(index / 8)];
     context.fillRect(brick.x, brick.y, brick.width, brick.height);
   });
+  for (const bumper of game.bumpers) {
+    context.fillStyle = '#00f5ff';
+    context.beginPath();
+    context.arc(bumper.x, bumper.y, bumper.radius, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#081b33';
+    context.beginPath();
+    context.arc(bumper.x, bumper.y, bumper.radius - 5, 0, Math.PI * 2);
+    context.fill();
+  }
+  for (const portal of game.portals) {
+    for (const [inset, color] of [[0, '#ff4dff'], [4, '#7a1cff'], [8, '#120024']]) {
+      context.fillStyle = color;
+      context.beginPath();
+      context.arc(portal.x, portal.y, portal.radius - inset, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+  const { shield } = game;
+  context.fillStyle = '#39ff14';
+  context.fillRect(shield.x, shield.y, shield.width, shield.height);
+  context.fillStyle = '#0b2a0b';
+  context.fillRect(shield.x + 3, shield.y + 3, shield.width - 6, shield.height - 6);
+  context.strokeStyle = '#d5ffcc';
+  context.lineWidth = 1;
+  context.strokeRect(shield.x + 0.5, shield.y + 0.5, shield.width - 1, shield.height - 1);
   context.fillStyle = '#70f6ff';
   context.fillRect(game.paddle.x, game.paddle.y, game.paddle.width, game.paddle.height);
   context.fillStyle = '#ffffff';

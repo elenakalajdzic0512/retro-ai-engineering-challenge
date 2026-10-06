@@ -93,3 +93,42 @@ The Week 3 game baseline is considered complete when all of the following can be
 - destroying all bricks produces a win state;
 - the game can be restarted;
 - no functionality listed as out of scope has been added.
+
+## Hazard Arena — Later Scoped Extension (2026-10-06)
+
+**Project**: Neon Breaker: Hazard Arena. Extend the same W03/W04 application with deterministic tactical complexity before the Week 5 bounded Tactical Planner. The planner itself is not implemented by this gameplay scope.
+
+The sections above retain the historical Week 3 baseline, including its Out of Scope list and Definition of Done. They are not retroactively rewritten. Week 4 separately introduced the existing backend and Ask AI for Hint. Hazard Arena is a later scoped extension: only the five mechanics below are approved additions. The earlier single-hit brick rules are now specialized by Armored Bricks; the former paddle bounce is now intentionally extended by Directional Paddle Bounce. This does not authorize other old exclusions or arbitrary gameplay redesign.
+
+### Approved Mechanics and Current Status
+
+| Mechanic | Active requirement | Implementation status |
+| --- | --- | --- |
+| Armored Bricks | Exactly 8 armored bricks at zero-based indices 2, 5, 10, 13, 18, 21, 26, 29 within the original 40; 32 normals including index 32. Normal hits start at 1, armor at 2. First armor hit damages without scoring; second destroys for exactly 10 total points. Both reflect normally. Fresh armor is `#b8c4d9`, damaged armor `#78859d`; normal row colors are unchanged. | Implemented/verified at `0f88c3e` |
+| Directional Paddle Bounce | Equal left/center/right thirds set `vx = -240 / 0 / +240`; both exact third boundaries belong to center. Every valid descending contact sets `vy = -abs(previous vy)` and replaces horizontal velocity without accumulating spin. Vertical magnitude is preserved; total speed may change by zone. Paddle controls/speed remain unchanged. | Implemented/verified — checkpoint 2 |
+| Neon Bumpers | Exactly three fixed circular bumpers: left (210,310), right (590,310), center (400,405), radius 24. Indestructible, visually distinct, zero score, no brick-count/win-condition effect; deterministic normal-vector reflection preserves speed. Human smoke confirmed playable layout and access to bricks. | Implemented/verified — checkpoint 3 |
+| Portal Pair | A (100,390) ↔ B (700,390), radius 20, linked IDs a/b. Inclusive circle trigger; exact velocity preservation; normalized-velocity exit outside combined radii by `1e-6` pixels (+X for zero speed). A 0.15-second simulation-time cooldown blocks both portals while positive. | Implemented/verified — checkpoint 4 |
+| Moving Shield Gate | One fresh rectangle: x=310, y=250, width=180, height=12, vx=+110. Left-edge bounds [170,450]; simulation-time movement reflects overshoot at 110 px/s. Circle/rectangle reflection preserves ball speed and adds no shield momentum. | Implemented/verified — checkpoint 5 |
+
+These fixed values intentionally provide deterministic behavior, bounded speed, simple player control and testability, and a tactical aiming action a later Week 5 coach can recommend; no coach or AI contract change is implemented here.
+
+Portal Pair uses fresh objects per game/restart. Cooldown begins at zero, decrements by playing substep `dt` before movement and clamps at zero; no wall-clock timer or additional leave-overlap latch is used. At most one teleport occurs per substep, after bumpers and before miss handling. Miss/ball reset clears cooldown; full restart restores exact geometry, links and zero cooldown. Purple layered circles use `#ff4dff`, `#7a1cff`, `#120024` without labels.
+
+Moving Shield Gate freezes in ready/won/lost. Ordinary misses preserve its x/direction for relaunch; full restart restores the initial state. Closest-point contact includes tangency, uses a deterministic fallback for internal contacts, and checks relative motion before reflecting actual ball velocity. Separation is `1e-6` pixels; `game.shieldContact` prevents repeated reflections during continuous contact and clears on detected separation or ball reset. Physics order is walls → paddle → bricks/win check → shield → bumpers → portals → miss. The shield renders green with a dark inset and bright outline.
+
+### Preserved Invariants
+
+- Same application and 800×600 arena; exactly 40 total bricks, 3 initial lives, maximum score exactly 400.
+- Every destroyed brick awards exactly 10 points, once. Armor never adds scoring opportunities.
+- Existing ready/playing/won/lost lifecycle, Arrow/A/D controls, Space launch/restart, frame-rate-independent paddle movement and strict game configuration validation remain.
+- Win only when all bricks are destroyed; lose when no lives remain. A miss removes one life and resets the ball/paddle while preserving progress as before.
+- Full restart restores original brick kinds/durability/alive state, score/lives, ball/paddle and all hazard/transient state. Terminal games remain frozen until restart.
+- Bumpers, portals and shield are separate from bricks, never award score, never directly change lives or destroy bricks, and never count toward winning. Later ordinary ball collisions/misses retain their normal consequences.
+- Existing Week 4 Ask AI for Hint stays available and functional with its unchanged request/response contract and backend. No automatic AI calls or AI-controlled gameplay.
+- Deterministic behavior, independently testable mechanics, smallest coherent changes, no hidden score changes and no arbitrary physics randomness.
+
+Out of scope remains: multi-ball, weapons, enemies, bosses, power-ups, score multipliers, extra levels, procedural generation, AI-controlled paddle, automatic AI gameplay, and new authentication/backend requirements.
+
+Implementation order is Armored Bricks → Directional Paddle → Neon Bumpers → Portal Pair → Moving Shield Gate → full regression/manual smoke. Every checkpoint requires focused tests, prior tests green, typecheck, production build, applicable manual smoke and a clean checkpoint commit before proceeding.
+
+See the [feature specification](../specs/002-neon-hazard-arena/spec.md), [implementation plan](../specs/002-neon-hazard-arena/plan.md), [tasks](../specs/002-neon-hazard-arena/tasks.md) and separate [Hazard Arena eval matrix](EVALS_HAZARD_ARENA.md). Historical Week 3 `EVALS.md` is unchanged. Armor retains its historical 92/92 baseline. Armor plus Directional Paddle now pass 99/99 tests, typecheck/build and human-reported manual smoke. With Neon Bumpers, checkpoint 3 passes 108/108 tests, typecheck/build and human-reported manual smoke. Portal Pair checkpoint 4 passes 120/120 tests, typecheck/build/diff check and human-reported manual smoke. Moving Shield Gate checkpoint 5 passes 133/133 tests, typecheck/build/diff check and human-reported manual smoke; checkpoint 6 full-arena regression and human acceptance are COMPLETE. Neon Breaker: Hazard Arena is complete with all five approved mechanics; Tactical Coach remains a separate, unimplemented feature.
