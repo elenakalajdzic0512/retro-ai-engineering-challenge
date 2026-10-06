@@ -2,7 +2,7 @@
 
 **Feature Branch**: `week5/neon-hazard-arena`
 **Created**: 2026-10-06
-**Status**: Locked gameplay scope; Checkpoints 1–5 implemented and verified; full-arena regression remains pending.
+**Status**: Locked gameplay scope; COMPLETE — all six checkpoints verified, including final automated regression and human full-arena acceptance.
 **Input**: Extend the continuing W03/W04 Neon Breaker project before the Week 5 bounded Tactical Planner. This artifact formalizes gameplay only; it does not implement or authorize an agent.
 
 ## Goal
@@ -128,7 +128,7 @@ As a player, I can anticipate one predictably moving shield and time trajectorie
 
 ## Assumptions and Scope Boundaries
 
-- Armored Bricks was verified at checkpoint `0f88c3e6b50fa2160b283754413b3ee8e2ba9015`. The 92-test/typecheck/build results were observed before commit; manual smoke and functioning Hint were reported by the human team. Directional Paddle Bounce is also implemented and verified: 99/99 tests, typecheck/build and human-reported manual smoke PASS; see the dated checkpoint 2 record in the eval matrix. Neon Bumpers is verified at `1999735`; Portal Pair is verified at checkpoint 4 with 120/120 tests, typecheck/build/diff check and human-reported manual smoke PASS. Moving Shield Gate is verified at checkpoint 5 with 133/133 tests, typecheck/build/diff check and human-reported manual smoke PASS; full-arena regression remains pending.
+- Armored Bricks was verified at checkpoint `0f88c3e6b50fa2160b283754413b3ee8e2ba9015`. The 92-test/typecheck/build results were observed before commit; manual smoke and functioning Hint were reported by the human team. Directional Paddle Bounce is also implemented and verified: 99/99 tests, typecheck/build and human-reported manual smoke PASS; see the dated checkpoint 2 record in the eval matrix. Neon Bumpers is verified at `1999735`; Portal Pair is verified at checkpoint 4 with 120/120 tests, typecheck/build/diff check and human-reported manual smoke PASS. Moving Shield Gate is verified at checkpoint 5 with 133/133 tests, typecheck/build/diff check and human-reported manual smoke PASS; final full-arena regression and human acceptance are complete; see the checkpoint 6 evidence.
 - Paddle thirds, boundary ties and fixed velocities are now defined in US2. Portal geometry, velocity preservation, exit placement and cooldown are defined in US4. Bumper layout is recorded in the checkpoint 3 evidence; shield dimensions/path/speed are defined in US5. Define them and their expected fixtures before changing runtime code; do not introduce randomness or additional mechanic types.
 - New hazard motion runs during playing and freezes during ready/won/lost. On a miss, preserve hazard positions and clear portal lockout for the reset ball; full restart restores initial hazard state. These are explicit planning defaults for later tests.
 - Week 3 one-hit rules describe the historical baseline. Armor and directional bounce are the only approved changes to those existing collision semantics; other regressions remain protected.

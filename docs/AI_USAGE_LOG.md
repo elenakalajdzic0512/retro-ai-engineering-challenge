@@ -139,3 +139,15 @@ The successful request used the fixed Gemini model and was followed by manual br
 **Observed evidence**: 133/133 tests PASS (133 total, 0 failed, 0 skipped); typecheck PASS; build PASS; `git diff --check` PASS; human manual browser smoke PASS. Detailed checkpoint evidence is recorded in `docs/EVALS_HAZARD_ARENA.md`.
 
 **Decision**: Mark checkpoint 5 complete and create one user-authorized commit, `feat: add moving shield gate`, with its runtime/tests and documentation/evidence. Checkpoint 6 remains pending; Tactical Coach is unimplemented; Week 4 AI contracts/specs are unchanged. No push is authorized or performed.
+
+## 2026-10-06 — Hazard Arena — Final Full Regression
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Performed the final source/test/spec consistency audit; verified all five mechanics' gameplay invariants, final physics processing order, lifecycle behavior and initial geometry; audited separation from the unchanged Week 4 AI contract. Reviewed H24–H30 coverage and determined no additional regression test was necessary. Ran the full automated verification suite and generated the final manual acceptance checklist. Final documentation work reconciled completion/evidence and stale status wording without changing runtime, tests or backend code.
+
+**Human/team contribution**: Elena + Isidora executed the final complete browser playthrough. They verified all five mechanics working together, combined hazard rallies, no visible sticking/jitter/repeated velocity flipping or portal ping-pong, playable arena and reachable bricks, destruction-only scoring and maximum 400, life-loss preservation and shield freeze/relaunch, win/loss/full restart, and continued Week 4 Ask AI for Hint functionality. These are human-reported acceptance observations, distinct from Codex analysis and automated execution.
+
+**Observed final evidence**: 133/133 tests PASS (133 total, 0 failed, 0 skipped); typecheck PASS; build PASS; `git diff --check` PASS; final full-arena manual playthrough PASS. Automated gates were executed in the preceding final regression audit and are not rerun solely for this Markdown finalization.
+
+**Decision**: Neon Breaker: Hazard Arena is COMPLETE across all six checkpoints: Armored Bricks, Directional Paddle, Neon Bumpers, Portal Pair, Moving Shield Gate and final regression. Preserve 40 bricks, maximum 400 points, 3 initial lives, original lifecycle, deterministic mechanics and the unchanged Week 4 public contract. The user authorized exactly one documentation commit, `docs: finalize Hazard Arena acceptance`. Tactical Coach remains unimplemented and requires separate scope. Nothing is pushed.

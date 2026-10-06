@@ -2,13 +2,13 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [eval matrix](../../docs/EVALS_HAZARD_ARENA.md).
 **Branch**: `week5/neon-hazard-arena`
-**Status**: Checkpoints 1–5 are implemented and verified; checkpoint 6 remains pending. Checkpoint 2 is `0b235f8`; checkpoint 3 is `1999735`; checkpoint 4 is `dcdf6f1`; checkpoint 5 is the commit containing this updated record.
+**Status**: COMPLETE — all six Hazard Arena checkpoints are verified. Checkpoint 2 is `0b235f8`; checkpoint 3 is `1999735`; checkpoint 4 is `dcdf6f1`; checkpoint 5 is `75cbb97`; checkpoint 6 final acceptance is the documentation commit containing this record.
 
 ## Setup and Foundation
 
 No new application, dependencies or backend foundations are needed. Existing `src/game.js`, `src/main.js`, `tests/game.test.js` and `package.json` were inspected. Before each future checkpoint, check the branch/status and prior commit, review the current relevant code/tests, and record concrete expected fixtures in `docs/EVALS_HAZARD_ARENA.md` before implementing.
 
-Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. Unchecked tasks remain future implementation work; only the verified checkpoint 5 is included in this commit.
+Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. All checkpoint tasks are closed; this commit contains only final acceptance documentation.
 
 ## Checkpoint 1 — Armored Bricks (US1, P1)
 
@@ -60,17 +60,17 @@ For every valid descending paddle contact, the left third sets `vx = -240`, the 
 - [x] T022 [US5] Add bounds/overshoot, identical-state/time-step determinism, current-position reflection, bounded ball speed, no direct score/life/brick changes, lifecycle freeze and restart tests in `tests/game.test.js`.
 - [x] T023 [US5] Implement one shield's state/time-step movement and collision in `src/game.js`; render its current position in `src/main.js`; preserve portal exit clearance across the entire sweep.
 - [x] T024 [US5] Run all checkpoint gates and manual gate/bounds/combined-layout/Hint smoke; record actual results in `docs/EVALS_HAZARD_ARENA.md`.
-- [x] T025 [US5] Review `src/game.js`, `src/main.js`, `tests/game.test.js` and related evidence; checkpoint commit is the commit containing this record, `feat: add moving shield gate`. Checkpoint 6 remains pending; no push.
+- [x] T025 [US5] Review `src/game.js`, `src/main.js`, `tests/game.test.js` and related evidence; checkpoint commit is `75cbb97`, `feat: add moving shield gate`. No push.
 
 ## Checkpoint 6 — Full Hazard Arena Regression and Manual Smoke
 
-**Depends on**: T025. **Independent acceptance**: H1–H31 on the combined arena, not just individual checkpoints.
+**Depends on**: T025. **Independent acceptance**: H1–H31 on the combined arena, not just individual checkpoints. **Status**: COMPLETE — 133 total/passed, 0 failed/skipped; typecheck/build/diff check PASS; Elena + Isidora report final full-arena playthrough PASS.
 
-- [ ] T026 Add focused combined fixtures in `tests/game.test.js` for mixed contacts, score ≤400, final-armored win, one-life misses/zero-life loss, ready/terminal freezing and complete restart of all hazard/transient state. Preserve existing W03/W04 tests.
-- [ ] T027 Run all focused tests and the full `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`; record exact revision/results and any failures against H1–H30 in `docs/EVALS_HAZARD_ARENA.md`.
-- [ ] T028 Perform human full browser smoke: five mechanics together, all-brick access, controls/launch/miss/win/loss/restart, Hint success/failure without gameplay interruption; record actual H27/H31 evidence, reviewer/driver participation and limitations in `docs/EVALS_HAZARD_ARENA.md` and `docs/AI_USAGE_LOG.md`.
-- [ ] T029 Reconcile completion states and requirements in `specs/002-neon-hazard-arena/spec.md`, `specs/002-neon-hazard-arena/tasks.md`, `docs/GAME_SPEC.md` and `docs/EVALS_HAZARD_ARENA.md`; preserve historical armor results and do not mark unexecuted evaluations PASS.
-- [ ] T030 Review final intended regression/evidence diff including `tests/game.test.js` and `docs/EVALS_HAZARD_ARENA.md`; create one clean full-regression checkpoint commit before any later Tactical Planner work. Do not push.
+- [x] T026 Audit existing `tests/game.test.js` coverage for score ≤400, final-armored win, misses/loss, freezing and complete restart with all hazards present. Existing coverage was sufficient; no redundant tests were added. Combined hazard rallies were verified in the final human playthrough. Existing W03/W04 tests remain unchanged.
+- [x] T027 Run all focused tests and the full `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`; record exact revision/results and any failures against H1–H30 in `docs/EVALS_HAZARD_ARENA.md`.
+- [x] T028 Record Elena + Isidora’s final full-arena playthrough: five mechanics together, reachable bricks, lifecycle/relaunch/restart and functional Hint. Distinguish automated Hint error-path coverage from human success confirmation; do not infer a manual failure-path run or separate driver/reviewer roles. Record actual H27/H31 evidence and limitations in `docs/EVALS_HAZARD_ARENA.md` and `docs/AI_USAGE_LOG.md`.
+- [x] T029 Reconcile completion states and requirements in `specs/002-neon-hazard-arena/spec.md`, `specs/002-neon-hazard-arena/tasks.md`, `docs/GAME_SPEC.md` and `docs/EVALS_HAZARD_ARENA.md`; preserve historical armor results and do not mark unexecuted evaluations PASS.
+- [x] T030 Review final intended regression/evidence diff including `tests/game.test.js` and `docs/EVALS_HAZARD_ARENA.md`; final documentation checkpoint is the commit containing this record, `docs: finalize Hazard Arena acceptance`. No runtime/test changes or push.
 
 ## Dependencies and Execution Strategy
 
@@ -78,4 +78,4 @@ For every valid descending paddle contact, the left third sets `vx = -240`, the 
 
 US1 is the completed smallest playable increment; US2 is now also implemented and verified. Each later story has isolated fixtures but follows the preceding verified commit. All five are required for final Core Hazard Arena. Tasks execute serially because mechanics share the same engine, renderer and test file; there are no safe independent implementation tracks here, so no `[P]` tasks are assigned. A partner may review a fixed diff while the driver prepares observations, but join before edits, gate runs or commits.
 
-Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. This checkpoint commits Moving Shield Gate runtime changes with aligned documentation/evidence under explicit user authorization; no push is authorized.
+Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. This checkpoint finalizes acceptance documentation only under explicit user authorization; no push is authorized.
