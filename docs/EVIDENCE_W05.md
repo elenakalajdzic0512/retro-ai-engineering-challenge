@@ -77,3 +77,23 @@ The team stopped the temporary unavailable-provider process, restored the normal
 ## Revised final T028 acceptance gate
 
 The preceding human-reported PASS remains valid evidence for fake-first browser success and deterministic local `provider_unavailable` recovery. The two earlier live Gemini probes remain Terminal-harness evidence. Neither establishes that the normal game UI reached the real Gemini Tactical provider. T028 is therefore reopened: final acceptance additionally requires a human-observed real-Gemini Coach request from the normal game UI using server-side `TACTICAL_AI_PROVIDER=gemini`, with rendered plan/actions/evidence, no game mutation, and usable gameplay and Week 4 Hint. That browser check has **not yet occurred**; T028 and T029 remain pending.
+
+## Final Real-Gemini Browser Acceptance — T028
+
+**Date and attribution:** 2026-10-06. Elena + Isidora jointly reported **PASS** on one development environment. This is **MANUAL / REAL GEMINI / NORMAL GAME UI** evidence, not a Codex-observed browser run or a repeat of the earlier Terminal probes. They started the backend with `npm run start:api` and the frontend with `npm run dev`, with **no `TACTICAL_AI_PROVIDER` override**. Under the current server default, that normal startup selects a fresh real Gemini Tactical provider for the Coach route. The application and fresh game state loaded; gameplay controls and paddle were usable, and Week 4 Ask AI for Hint worked before Coach.
+
+In the normal game UI they entered `Help me clear the center safely without relying on the portal.` and clicked **Run Tactical Coach**. The Coach panel displayed `Tactical plan ready.` and this readable content:
+
+| Displayed plan field | Human-observed text |
+| --- | --- |
+| Summary | Executing a safe, direct tactical approach to clear the center zone. |
+| Strategy | safe |
+| Target | center |
+| Paddle | center |
+| Route | direct |
+
+The displayed actions were `Position the paddle in the center alignment.` and `Execute a direct route hit toward the center zone.` The pair reported evidence for `bricksByZone.center` with value `10`, `routeUsable` rendered as `yes`, and `paddleAligned` rendered as `yes`. The UI formats dotted fact names with spaces (so `bricksByZone.center` appears as `bricksByZone center`). **“yes” is the browser's rendering of the two boolean evidence values**; this record does not claim to have inspected private provider output.
+
+The pair reported that invoking Coach alone did not mutate score, lives, bricks or game state; gameplay and paddle controls remained usable afterward; Week 4 Hint remained usable afterward; and no raw provider internals, stack trace, debug information or provider payload appeared. They reported the working tree remained clean after the human check. This is the first recorded human browser acceptance of the supported normal game UI → Tactical API → real Gemini provider → bounded local tools and validation → Coach panel path. It demonstrates this observed run, **not universal future Gemini reliability**.
+
+Evidence categories remain separate: **AUTOMATED** deterministic tests/typecheck/build; the two earlier **LIVE GEMINI TERMINAL** probes (first `invalid_final_output`, then corrected PASS); earlier **MANUAL FAKE-FIRST** browser success; **MANUAL UNAVAILABLE** deterministic injection and recovery; and this **MANUAL REAL-GEMINI BROWSER** PASS. The prior findings and T027 pair review remain intact. T028's revised manual acceptance is satisfied; T029 final reconciliation remains pending.
