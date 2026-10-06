@@ -56,4 +56,20 @@ Exactly **two** authorized outer live probes were performed. Each observed **thr
 
 Exact token usage and monetary cost were not measured, so no currency amount is claimed. Actual cost depends on provider pricing and token usage at execution time. The evidence does not record the API key value, authorization headers, hidden chain-of-thought or thought contents, raw private provider payloads, the full raw model prompt, or unnecessary private data; it retains only bounded technical telemetry.
 
-This live phase demonstrates one successful bounded end-to-end run through the corrected adapter and existing application authority model. It does not establish universal future model reliability, exclude future malformed responses, determine future pricing, or verify production/deployed proxy behavior under every timeout or error condition. Runtime validation remains required. T027–T029 and final Week 5 acceptance remain pending.
+This live phase demonstrates one successful bounded end-to-end run through the corrected adapter and existing application authority model. It does not establish universal future model reliability, exclude future malformed responses, determine future pricing, or verify production/deployed proxy behavior under every timeout or error condition. Runtime validation remains required. T029 and final Week 5 acceptance remain pending.
+
+## Final Manual Browser Acceptance — T028
+
+**Date and attribution:** 2026-10-06. Elena + Isidora jointly reported **PASS** from one development environment. The browser observations below are human-reported manual evidence, not Codex-observed behavior. They are separate from automated tests/typecheck/build and the two previously authorized LIVE GEMINI Terminal probes.
+
+### Normal fake-first success — MANUAL / FAKE-FIRST / LOCAL BROWSER
+
+The normal fake-first application loaded. Week 4 Ask AI for Hint worked before Coach, and Tactical Coach appeared visually separate. With the goal `Help me clear the center safely`, Coach returned a successful Tactical plan; its plan, actions and evidence were readable, and evidence values rendered correctly. The Coach invocation did not change score, lives, bricks or game status. Gameplay controls, including the paddle and Space key, remained usable, and Week 4 Hint still worked after Coach.
+
+### Unavailable provider — MANUAL / DETERMINISTIC LOCAL FAILURE INJECTION
+
+With the frontend still running, the team stopped the normal fake API and used a temporary API with the existing `createApiServer` provider injection path. The tactical provider deterministically returned `provider_unavailable` through the real Tactical Coach HTTP route, orchestrator and UI. The browser showed exactly: `Tactical Coach is unavailable. Please try again.` The Coach result/error behavior remained bounded, its button re-enabled, and no raw provider internals, stack or debug data appeared. The failed Coach request did not change score, lives, bricks or game state. Gameplay remained usable; Week 4 Hint remained usable and returned its normal fake hint.
+
+### Manual restoration and evidence boundary
+
+The team stopped the temporary unavailable-provider process, restored the normal fake-first API and reloaded the page. Another valid Coach request succeeded and normal Tactical plan rendering returned. This was manual process restoration, **not automatic provider failover**. No Gemini live call or API-key handling was involved in this T028 manual browser test. The automated gates, earlier LIVE GEMINI probes, MANUAL FAKE-FIRST success and MANUAL UNAVAILABLE injection are distinct evidence categories. T029 final reconciliation and final Week 5 acceptance remain pending.

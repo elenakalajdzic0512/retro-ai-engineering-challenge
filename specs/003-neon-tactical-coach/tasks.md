@@ -2,7 +2,7 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts](contracts/), [quickstart.md](quickstart.md).
 **Branch**: `week5/neon-tactical-coach`
-**Status**: W05 Checkpoints 1–4, regression gate T024, separate Gemini adapter T025, bounded live evidence T026 and dated pair review T027 are complete. Deployed outer-timeout verification, manual acceptance T028 and final reconciliation T029 remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
+**Status**: W05 Checkpoints 1–4, regression gate T024, separate Gemini adapter T025, bounded live evidence T026, dated pair review T027 and manual browser acceptance T028 are complete. Deployed outer-timeout verification and final reconciliation T029 remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
 **Tests**: Required by FR-012 and the user; fake-first and regression are gates, not optional examples.
 
 ## Phase 1 — Contract foundation
@@ -49,9 +49,9 @@
 - [x] T025 [US3] Build a separate `createTacticalCoachGeminiProvider` (or equivalent) that sends function declarations, returns validated tool results as context, parses structured final output and normalizes outputs for W5 orchestration; do not change Week 4 provider behavior. Review current official documentation for `gemini-3.5-flash-lite`/`@google/genai`, then verify exact integration in the limited live phase. Keep fake suite provider-independent.
 - [x] T026 [US3] After local contract/security gates pass and team authorizes a bounded live probe, run limited provider validation without recording keys/private payloads; document actual outcome and cost/config assumptions in `docs/EVIDENCE_W05.md`.
 - [x] T027 [US2] Elena + Isidora jointly review authority boundary, two tools, three steps, budgets, repeat/stops, fake path, no mutation, UI and exact diff. Record actual driver/reviewer roles and each person's understanding in dated `docs/AI_USAGE_LOG.md`; do not infer a role swap.
-- [ ] T028 [US1] Perform and record a manual successful Coach goal and unavailable-provider recovery while gameplay and Week 4 Hint remain usable; preserve fake/live/manual attribution in `docs/EVIDENCE_W05.md`.
+- [x] T028 [US1] Perform and record a manual successful Coach goal and unavailable-provider recovery while gameplay and Week 4 Hint remain usable; preserve fake/live/manual attribution in `docs/EVIDENCE_W05.md`.
 - [ ] T029 [US1] Reconcile SpecKit/eval/usage evidence, unresolved risks and final acceptance; do not mark Week 5 complete or create implementation commits before actual gates and human review pass.
 
 ## Dependencies and execution strategy
 
-`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T027 are complete after the reviewed deterministic Core, tool/fake-provider boundary, bounded provider-neutral orchestrator, fake-first API/UI checkpoints, regression gate, documented corrected-adapter live verification and dated Elena + Isidora pair review; T028–T029 remain pending. The deployed outer HTTP/proxy timeout in T021 still requires verification before final acceptance. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
+`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T028 are complete after the reviewed deterministic Core, tool/fake-provider boundary, bounded provider-neutral orchestrator, fake-first API/UI checkpoints, regression gate, documented corrected-adapter live verification, dated Elena + Isidora pair review and manual browser acceptance; T029 remains pending. The deployed outer HTTP/proxy timeout in T021 still requires verification before final acceptance. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
