@@ -2,7 +2,7 @@
 
 **Feature Branch**: `week5/neon-hazard-arena`
 **Created**: 2026-10-06
-**Status**: Locked gameplay scope; Armored Bricks implemented and verified; remaining mechanics planned.
+**Status**: Locked gameplay scope; Armored Bricks and Directional Paddle Bounce implemented and verified; remaining mechanics planned.
 **Input**: Extend the continuing W03/W04 Neon Breaker project before the Week 5 bounded Tactical Planner. This artifact formalizes gameplay only; it does not implement or authorize an agent.
 
 ## Goal
@@ -36,8 +36,10 @@ As a player, I can intentionally change the ball trajectory through paddle conta
 
 **Acceptance Scenarios**:
 
-1. Given a descending ball and a valid top-surface contact, the left zone sends the ball upward-left, the center zone sends it upward with a neutral horizontal trajectory, and the right zone sends it upward-right.
-2. Given the same contact and incoming state, repeated simulations produce the same outgoing velocity. Contacts do not cause unbounded acceleration; paddle controls and movement speed remain unchanged.
+1. For every valid descending paddle contact, the left third sets `vx = -240`, the center third sets `vx = 0`, and the right third sets `vx = +240`; `vy = -abs(previous vy)` in all zones. Exact 1/3 and 2/3 boundaries belong to center. Each contact replaces horizontal velocity from its current zone, with no accumulated spin. Vertical magnitude is preserved; total ball speed is not preserved across zones.
+2. Given the same contact and incoming state, repeated simulations produce the same outgoing velocity. After a paddle bounce, horizontal magnitude is at most 240 px/s and vertical magnitude is unchanged; paddle controls and movement speed remain unchanged.
+
+These fixed values intentionally provide deterministic behavior, bounded speed, simple player control and testability, and a tactical aiming action a later Week 5 coach can recommend; no coach or AI contract change is implemented here.
 
 ### User Story 3 — Play around Neon Bumpers (Priority: P3)
 
@@ -98,7 +100,7 @@ As a player, I can anticipate one predictably moving shield and time trajectorie
 - **FR-001 — Baseline**: Keep the same application, 800×600 arena, 40 total bricks, 3 initial lives, score 0–400, and exactly 10 points per destroyed brick. Preserve strict existing game configuration validation.
 - **FR-002 — Lifecycle**: Preserve ready/playing/won/lost, win only when all bricks are destroyed, lose when no lives remain, one life lost per miss, and the existing Space launch/restart semantics. Preserve Arrow/A/D horizontal controls and the frame-rate fix.
 - **FR-003 — Armor**: Apply only the eight US1 indices; normal bricks start alive with one hit and armored bricks with two. Award score only on destruction and reflect each valid hit. Fresh/damaged armor is visually distinct; normal row colors remain unchanged.
-- **FR-004 — Directional paddle**: Implement US2's left/center/right contact-dependent upward bounce, deterministic boundary handling and bounded ball speed, without changing paddle speed or controls.
+- **FR-004 — Directional paddle**: Use US2's fixed -240/0/+240 horizontal velocities, center-inclusive third boundaries and `vy = -abs(previous vy)`, without accumulating spin or changing paddle speed or controls.
 - **FR-005 — Bumpers**: Add a small fixed layout of indestructible, visually distinct bumpers that reflect deterministically and leave the level completable.
 - **FR-006 — Portals**: Add exactly two linked portals with bidirectional transfer, a safe deterministic velocity rule, safe exits, and finite cooldown/lockout preventing immediate loops.
 - **FR-007 — Shield**: Add exactly one defensive barrier moving predictably within fixed bounds and reflecting from its current position. Movement depends only on game state and simulation time steps.
@@ -126,8 +128,8 @@ As a player, I can anticipate one predictably moving shield and time trajectorie
 
 ## Assumptions and Scope Boundaries
 
-- Only Armored Bricks is implemented: checkpoint `0f88c3e6b50fa2160b283754413b3ee8e2ba9015`. The 92-test/typecheck/build results were observed before commit; manual smoke and functioning Hint were reported by the human team. This document is retrospective for armor and prospective for other mechanics.
-- The center zone's neutral trajectory is a planning default (vertical bounce). Exact zone thresholds, bumper count/coordinates, portal geometry/velocity rule/cooldown duration and shield dimensions/path/speed are checkpoint design decisions. Define them and their expected fixtures before changing runtime code; do not introduce randomness or additional mechanic types.
+- Armored Bricks was verified at checkpoint `0f88c3e6b50fa2160b283754413b3ee8e2ba9015`. The 92-test/typecheck/build results were observed before commit; manual smoke and functioning Hint were reported by the human team. Directional Paddle Bounce is also implemented and verified: 99/99 tests, typecheck/build and human-reported manual smoke PASS; see the dated checkpoint 2 record in the eval matrix. Bumpers, portals and shield remain planned.
+- Paddle thirds, boundary ties and fixed velocities are now defined in US2. Bumper count/coordinates, portal geometry/velocity rule/cooldown duration and shield dimensions/path/speed remain checkpoint design decisions. Define them and their expected fixtures before changing runtime code; do not introduce randomness or additional mechanic types.
 - New hazard motion runs during playing and freezes during ready/won/lost. On a miss, preserve hazard positions and clear portal lockout for the reset ball; full restart restores initial hazard state. These are explicit planning defaults for later tests.
 - Week 3 one-hit rules describe the historical baseline. Armor and directional bounce are the only approved changes to those existing collision semantics; other regressions remain protected.
 - Out of scope: multi-ball, weapons, enemies, bosses, power-ups, score multipliers, extra levels, procedural generation, arbitrary physics randomness, AI-controlled paddle, automatic AI gameplay, new authentication/backend requirements, and implementing the Week 5 agent.

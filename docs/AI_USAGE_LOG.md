@@ -89,3 +89,16 @@ The successful request used the fixed Gemini model and was followed by manual br
 **Checkpoint**: `0f88c3e6b50fa2160b283754413b3ee8e2ba9015` — `feat: add armored bricks to Neon Breaker`. Codex created this one commit following explicit user authorization and a clean review of only the three intended gameplay/test files; no push occurred. The earlier Usage Notes statement that Codex did not commit applies to that historical workflow, not to this later authorized action.
 
 **Documentation assistance and next decision**: Codex formalized the five-mechanic scope in `specs/002-neon-hazard-arena/`, appended the active extension to `docs/GAME_SPEC.md`, and created `docs/EVALS_HAZARD_ARENA.md` with observed armor results separated from PLANNED / NOT RUN future evaluations. Only Armored Bricks is implemented. Directional Paddle, Neon Bumpers, Portal Pair and Moving Shield Gate remain planned, followed by full regression/manual smoke. No runtime code or W04 AI contract is changed by this documentation task, and its documentation changes are not committed or pushed.
+
+
+## 2026-10-06 — Checkpoint 2: Directional Paddle Bounce
+
+**Pair context**: Elena + Isidora working together on one development environment.
+
+**AI/Codex contribution**: Inspected the Hazard Arena spec, existing physics and tests; implemented deterministic left/center/right paddle thirds; replaced the intentionally superseded Week 3 no-spin expectation with focused Hazard Arena tests. Coverage includes zone behavior, exact/adjacent boundaries, velocity replacement, repeated-hit bounds, edge overlap and invalid ascending contact. Codex executed automated verification and aligned the relevant spec/plan/tasks and gameplay/eval documentation with the approved fixed `vx = -240 / 0 / +240` and `vy = -abs(previous vy)` rule. Vertical magnitude is preserved, while total speed varies by zone. No spin accumulates.
+
+**Human/team contribution**: Elena + Isidora report reviewing the resulting behavior and manually testing left, center and right aiming; no sticking or uncontrolled acceleration; existing armored/normal bricks; scoring, lives, restart and win/loss; and continued Week 4 Ask AI for Hint functionality. This is human verification reported by the team, not inferred from AI output.
+
+**Observed evidence**: 99 total / 99 passed / 0 failed / 0 skipped; typecheck PASS; build PASS; `git diff --check` PASS; human manual smoke PASS. Codex reran the required automated gates before the combined runtime/documentation checkpoint commit; all passed with the same 99/99 result. See `docs/EVALS_HAZARD_ARENA.md` for scope and test details.
+
+**Decision**: Fixed horizontal velocities provide deterministic, bounded, testable aiming that a later Week 5 coach can recommend. The team authorized one checkpoint commit, `feat: add directional paddle bounce`, containing these verified changes and this record. No push, new AI contract, Bumper, Portal or Shield implementation is included. Earlier Week 3/4 and armor entries remain historical records.

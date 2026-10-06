@@ -218,12 +218,98 @@ test('ball reflects from left, right and top boundaries', () => {
   }
 });
 
-test('descending ball reflects from paddle without spin', () => {
+function hitPaddle(game, contactX, vx = 190, vy = 280) {
+  const dt = 1 / 240;
+  Object.assign(game.ball, {
+    x: contactX - vx * dt, y: game.paddle.y - game.ball.radius - 1, vx, vy,
+  });
+  update(game, 0, dt);
+}
+
+// Hazard Arena replaces the old no-spin rule with contact-zone direction.
+for (const [zone, fraction, expectedVx] of [['left', 1 / 6, -240], ['center', 1 / 2, 0], ['right', 5 / 6, 240]]) {
+  test(`descending ball reflects upward from the ${zone} paddle third`, () => {
+    const game = playing();
+    const bricks = structuredClone(game.bricks);
+    hitPaddle(game, game.paddle.x + game.paddle.width * fraction);
+    assert.equal(game.ball.vy, -280);
+    assert.equal(game.ball.vx, expectedVx);
+    assert.equal(game.ball.y, game.paddle.y - game.ball.radius);
+    assert.equal(game.lives, 3);
+    assert.equal(game.status, 'playing');
+    assert.equal(game.score, 0);
+    assert.deepEqual(game.bricks, bricks);
+    // The reflected ball moves clear without retriggering the same contact.
+    update(game, 0, 0.01);
+    assert.ok(game.ball.y < game.paddle.y - game.ball.radius);
+    assert.equal(game.ball.vx, expectedVx);
+    assert.equal(game.ball.vy, -280);
+    assert.equal(game.lives, 3);
+  });
+}
+
+test('exact third boundaries belong to center while adjacent contacts use the proper zone', () => {
+  for (const paddleX of [0, 345, WIDTH - 110]) {
+    for (const third of [1, 2]) {
+      for (const offset of [-1e-7, 0, 1e-7]) {
+        const game = playing();
+        game.paddle.x = paddleX;
+        // Construct geometric boundaries directly; vx=0 avoids contact-point drift.
+        const boundary = game.paddle.x + third * game.paddle.width / 3;
+        hitPaddle(game, boundary + offset, 0);
+        const expectedVx = third === 1 && offset < 0 ? -240 : third === 2 && offset > 0 ? 240 : 0;
+        assert.equal(game.ball.vx, expectedVx);
+        assert.equal(game.ball.vy, -280);
+      }
+    }
+  }
+});
+
+test('paddle zones replace incoming horizontal velocity instead of accumulating spin', () => {
+  for (const [fraction, incomingVx, expectedVx] of [[5 / 6, -190, 240], [1 / 6, 190, -240], [1 / 2, -240, 0]]) {
+    const game = playing();
+    hitPaddle(game, game.paddle.x + game.paddle.width * fraction, incomingVx);
+    assert.equal(game.ball.vx, expectedVx);
+    assert.equal(game.ball.vy, -280);
+  }
+});
+
+test('repeated paddle contacts keep horizontal speed bounded and preserve vertical magnitude', () => {
+  for (const verticalSpeed of [280, 360]) {
+    const game = playing();
+    const zones = [[1 / 6, -240], [1 / 2, 0], [5 / 6, 240]];
+    for (let hit = 0; hit < 60; hit++) {
+      const [fraction, expectedVx] = zones[hit % zones.length];
+      hitPaddle(game, game.paddle.x + game.paddle.width * fraction, game.ball.vx, verticalSpeed);
+      assert.equal(game.ball.vx, expectedVx);
+      assert.ok(Math.abs(game.ball.vx) <= 240);
+      assert.equal(game.ball.vy, -verticalSpeed);
+      assert.ok(Math.hypot(game.ball.vx, game.ball.vy) <= Math.hypot(240, verticalSpeed));
+    }
+    assert.equal(game.lives, 3);
+    assert.equal(game.score, 0);
+    assert.equal(game.status, 'playing');
+  }
+});
+
+test('small overlaps beyond either paddle edge use the nearest side zone safely', () => {
+  for (const [side, expectedVx] of [['left', -240], ['right', 240]]) {
+    const game = playing();
+    const contactX = side === 'left' ? game.paddle.x - 0.1 : game.paddle.x + game.paddle.width + 0.1;
+    hitPaddle(game, contactX, 0);
+    assert.equal(game.ball.vx, expectedVx);
+    assert.equal(game.ball.vy, -280);
+    assert.equal(game.ball.y, game.paddle.y - game.ball.radius);
+    assert.equal(game.lives, 3);
+  }
+});
+
+test('an ascending ball near the paddle does not receive another directional bounce', () => {
   const game = playing();
-  Object.assign(game.ball, { x: 400, y: 543, vx: 190, vy: 280 });
-  update(game, 0, 0.02);
-  assert.equal(game.ball.vy, -280);
+  Object.assign(game.ball, { x: 400, y: game.paddle.y - game.ball.radius, vx: 190, vy: -280 });
+  update(game, 0, 1 / 240);
   assert.equal(game.ball.vx, 190);
+  assert.equal(game.ball.vy, -280);
   assert.equal(game.lives, 3);
 });
 

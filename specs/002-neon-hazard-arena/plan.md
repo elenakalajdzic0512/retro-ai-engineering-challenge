@@ -4,7 +4,7 @@
 
 ## Summary
 
-Extend the existing Canvas game in six serial checkpoints, preserving W03 regressions and W04 Hint. Armor is complete at `0f88c3e`; the remaining four mechanics are planned. This task creates documentation only, with no runtime, dependency, backend, AI contract, or historical evidence changes.
+Extend the existing Canvas game in six serial checkpoints, preserving W03 regressions and W04 Hint. Armor is complete at `0f88c3e`; Directional Paddle Bounce is implemented and verified in checkpoint 2. The remaining three mechanics are planned. Checkpoint 2 includes only the approved engine/test changes and their documentation; no dependency, backend or AI contract changes.
 
 ## Technical Context
 
@@ -27,7 +27,7 @@ The current constitution explicitly governs Week 4. Its no-gameplay-redesign sco
 | Evidence (IX) | Armor results are historical observed/user-reported evidence; future evaluations remain NOT RUN. |
 | Human accountability (X) | Elena + Isidora report working together in one environment now. Do not infer past W04 role swaps or claim unresolved historical pair-review gates are closed. Record actual future reviewer/driver roles when performed. |
 
-Pre-design and post-design assessment: the documentation respects these boundaries. Runtime completion gates for checkpoints 2–6 are not yet satisfied.
+Pre-design and post-design assessment: the documentation respects these boundaries. Checkpoint 2 automated gates pass and Elena + Isidora report manual smoke PASS. Checkpoints 3–6 remain unexecuted.
 
 ## Project Structure
 
@@ -52,21 +52,21 @@ No new `contracts/` is needed. Research, state design and validation guidance ar
 
 1. **Reuse current engine**: Keep geometry and physics in `src/game.js`, rendering in `src/main.js`. A new physics library or app adds unnecessary change surface.
 2. **Completed armor**: Each brick has `kind` and `hitsRemaining`; collision decrements durability, awarding 10 only at zero. Restart already recreates the grid. Colors are `#b8c4d9` fresh and `#78859d` damaged; normal row colors are unchanged.
-3. **Planned paddle**: Normalize contact position across paddle width; define left/center/right thresholds before coding. Use upward-left / vertical / upward-right outgoing trajectories with a documented bounded speed rule. Prefer preserving incoming speed magnitude instead of adding velocity each hit; require a nonzero upward component. Preserve paddle movement at 460 px/s.
+3. **Implemented directional paddle**: For every valid descending paddle contact, the left third sets `vx = -240`, the center third sets `vx = 0`, and the right third sets `vx = +240`; `vy = -abs(previous vy)` in all zones. Exact 1/3 and 2/3 boundaries belong to center. Each contact replaces horizontal velocity from its current zone, with no accumulated spin. Vertical magnitude is preserved; total ball speed is not preserved across zones. The engine compares world-space contact x directly with `paddle.x + paddle.width / 3` and `paddle.x + 2 * paddle.width / 3` to avoid normalization rounding at exact boundaries. Small valid edge overlaps take the nearest side zone. Preserve paddle movement at 460 px/s and existing descending-contact/separation guards. These fixed values intentionally provide deterministic behavior, bounded speed, simple player control and testability, and a tactical aiming action a later Week 5 coach can recommend; no coach or AI contract change is implemented here.
 4. **Planned bumpers**: Store fixed geometry separately from bricks. Prefer a small circle layout with normal-vector reflection and separation after contact. Define radius/count/coordinates and tangent/overlap policy before tests. Reflect only valid incoming contacts and maintain bounded velocity. Layout must leave brick access and return paths open.
 5. **Planned portals**: Store exactly two linked geometries separately from bricks plus ball re-entry lockout. Prefer preserving velocity magnitude and direction with a deterministic exit offset. Define exit clearance and duration before tests; combine finite simulation-time cooldown with leaving portal overlap before reactivation. Never place an exit in a wall, brick, bumper, paddle or possible shield sweep.
 6. **Planned shield**: Store one rectangle with travel bounds, position and direction or phase. Prefer horizontal constant-speed movement with reflected endpoints; account for overshoot. Reflect the ball at the current position without adding shield speed to ball speed. Define the movement/collision order before tests.
 7. **Shared lifecycle**: Initialize hazard state in `createGame()`. Update movement/timers only in playing; freeze other states. Preserve positions/progress after a miss, clear lockout for the reset ball; full restart reconstructs all state. No hazard can write score, brick durability or lives directly.
 8. **Collision integration**: Retain existing walls/paddle/bricks behavior except the approved paddle change. Define deterministic priority for mixed portal/solid contacts before integrating each mechanic, and resolve overlap without repeat-hit loops. Add combined fixtures instead of relying solely on isolated tests.
 
-Numeric layout/tuning choices are deliberately not represented as approved implementation facts. Each checkpoint starts by recording constants, expected outcomes, contact ordering and edge cases in this plan and the eval matrix before writing runtime changes. These are bounded implementation decisions, not an expansion of the locked scope.
+Paddle tuning is resolved above. Remaining hazard layout/tuning choices are deliberately not represented as approved implementation facts. Each checkpoint starts by recording constants, expected outcomes, contact ordering and edge cases in this plan and the eval matrix before writing runtime changes. These are bounded implementation decisions, not an expansion of the locked scope.
 
 ## Checkpoint Order and Gates
 
 | Checkpoint | Scope / evaluations | Current state |
 | --- | --- | --- |
 | 1 | Armored Bricks; H1–H6 plus regression | Implemented/verified, committed `0f88c3e` |
-| 2 | Directional Paddle; H7–H10 | PLANNED / NOT RUN |
+| 2 | Directional Paddle; H7–H10 | Implemented/verified — 99/99 tests; typecheck/build/manual smoke PASS |
 | 3 | Neon Bumpers; H11–H14 | PLANNED / NOT RUN |
 | 4 | Portal Pair; H15–H19 | PLANNED / NOT RUN |
 | 5 | Moving Shield Gate; H20–H23 | PLANNED / NOT RUN |
@@ -74,7 +74,7 @@ Numeric layout/tuning choices are deliberately not represented as approved imple
 
 For every checkpoint: define expectations, add/run focused automated tests, keep all previous tests green, run `npm test`, `npm run typecheck`, `npm run build`, and `git diff --check`; manually smoke-test visual/interactive behavior and Hint. Record exact revision, command results and human observations in the matrix. Review the diff and create one clean checkpoint commit before proceeding. For checkpoint 6, commit the final verified regression/evidence work before any later feature. No push is part of this plan.
 
-Do not delete or weaken tests. The current test `descending ball reflects from paddle without spin` asserts unchanged horizontal speed at center contact. That assumption is intentionally superseded by FR-004. Explain the precise old/new expectation before updating it in checkpoint 2; retain valid-contact, upward reflection and life-preservation assertions. Existing normal-brick index 32 and win tests remain valid.
+Do not delete or weaken tests. The former test `descending ball reflects from paddle without spin` asserted unchanged horizontal speed at center contact. FR-004 intentionally supersedes that expectation: center now sets horizontal velocity to zero. It was replaced with eight focused tests retaining valid-contact, upward reflection and life-preservation coverage and adding zones, boundaries, velocity replacement, repeated-hit bounds, edge overlaps and ascending-contact rejection. Existing normal-brick index 32 and win tests remain valid.
 
 ## Validation Guide
 

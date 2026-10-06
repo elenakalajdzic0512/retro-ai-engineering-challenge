@@ -2,13 +2,13 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [eval matrix](../../docs/EVALS_HAZARD_ARENA.md).
 **Branch**: `week5/neon-hazard-arena`
-**Status**: Documentation only. Checkpoint 1 is complete; checkpoints 2–6 are not executed.
+**Status**: Checkpoints 1 and 2 are implemented and verified; checkpoints 3–6 are not executed. Checkpoint 2 commit is the commit containing this updated record.
 
 ## Setup and Foundation
 
 No new application, dependencies or backend foundations are needed. Existing `src/game.js`, `src/main.js`, `tests/game.test.js` and `package.json` were inspected. Before each future checkpoint, check the branch/status and prior commit, review the current relevant code/tests, and record concrete expected fixtures in `docs/EVALS_HAZARD_ARENA.md` before implementing.
 
-Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. These are future implementation tasks, not instructions to execute during this documentation task.
+Every verification task below requires focused automated tests, **all prior tests green**, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, applicable human manual smoke and a recorded revision/result. Every commit task requires a reviewed intended diff and clean working tree after one checkpoint commit before proceeding. No pushes. Unchecked tasks remain future implementation work; only the verified checkpoint 2 is included in this commit.
 
 ## Checkpoint 1 — Armored Bricks (US1, P1)
 
@@ -22,13 +22,15 @@ Every verification task below requires focused automated tests, **all prior test
 
 ## Checkpoint 2 — Directional Paddle (US2, P2)
 
-**Depends on**: T005. **Goal/independent test**: Aim left/center/right without acceleration; H7–H10.
+**Depends on**: T005. **Goal/independent test**: Aim left/center/right with fixed horizontal velocity and unchanged vertical magnitude; H7–H10. **Status**: implemented and verified.
 
-- [ ] T006 [US2] Define zone thresholds/boundary ties, neutral center, upward angles and bounded speed rule in `specs/002-neon-hazard-arena/plan.md`; record H7–H10 fixtures in `docs/EVALS_HAZARD_ARENA.md`.
-- [ ] T007 [US2] Add focused zone/boundary/repeated-contact tests in `tests/game.test.js`; explain why the old no-spin horizontal-velocity assertion is intentionally superseded before adjusting it, preserving all unrelated assertions and tests.
-- [ ] T008 [US2] Implement contact-position bounce in `src/game.js`, retaining valid descending contact, paddle speed, controls, time stepping and life handling. Add no unrequested zone UI.
-- [ ] T009 [US2] Run all checkpoint gates, 60/120 FPS movement regression and manual trajectory/Hint smoke; record observed results in `docs/EVALS_HAZARD_ARENA.md`.
-- [ ] T010 [US2] Review `src/game.js`, `tests/game.test.js` and related evidence; create one clean Directional Paddle checkpoint commit before starting bumpers.
+For every valid descending paddle contact, the left third sets `vx = -240`, the center third sets `vx = 0`, and the right third sets `vx = +240`; `vy = -abs(previous vy)` in all zones. Exact 1/3 and 2/3 boundaries belong to center. Each contact replaces horizontal velocity from its current zone, with no accumulated spin. Vertical magnitude is preserved; total ball speed is not preserved across zones. These fixed values intentionally provide deterministic behavior, bounded speed, simple player control and testability, and a tactical aiming action a later Week 5 coach can recommend; no coach or AI contract change is implemented here.
+
+- [x] T006 [US2] Record the approved equal thirds, center-inclusive boundaries, fixed -240/0/+240 horizontal velocities and preserved vertical magnitude in `specs/002-neon-hazard-arena/plan.md`; record H7–H10 fixtures in `docs/EVALS_HAZARD_ARENA.md`.
+- [x] T007 [US2] Add focused zone/boundary/repeated-contact tests in `tests/game.test.js`; explain why the old no-spin horizontal-velocity assertion is intentionally superseded before adjusting it, preserving all unrelated assertions and tests.
+- [x] T008 [US2] Implement contact-position bounce in `src/game.js`, retaining valid descending contact, paddle speed, controls, time stepping and life handling. Add no unrequested zone UI.
+- [x] T009 [US2] Run all checkpoint gates, 60/120 FPS movement regression and manual trajectory/Hint smoke; record observed results in `docs/EVALS_HAZARD_ARENA.md`.
+- [x] T010 [US2] Review `src/game.js`, `tests/game.test.js` and related evidence; checkpoint commit: the commit containing this record, `feat: add directional paddle bounce`. No bumpers started and no push.
 
 ## Checkpoint 3 — Neon Bumpers (US3, P3)
 
@@ -74,6 +76,6 @@ Every verification task below requires focused automated tests, **all prior test
 
 `T001–T005 → T006–T010 → T011–T015 → T016–T020 → T021–T025 → T026–T030`.
 
-US1 is the completed smallest playable increment. Each later story has isolated fixtures but follows the preceding verified commit. All five are required for final Core Hazard Arena. Tasks execute serially because mechanics share the same engine, renderer and test file; there are no safe independent implementation tracks here, so no `[P]` tasks are assigned. A partner may review a fixed diff while the driver prepares observations, but join before edits, gate runs or commits.
+US1 is the completed smallest playable increment; US2 is now also implemented and verified. Each later story has isolated fixtures but follows the preceding verified commit. All five are required for final Core Hazard Arena. Tasks execute serially because mechanics share the same engine, renderer and test file; there are no safe independent implementation tracks here, so no `[P]` tasks are assigned. A partner may review a fixed diff while the driver prepares observations, but join before edits, gate runs or commits.
 
-Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. Documentation changes in the current task remain uncommitted until separately requested.
+Never infer PASS from generated code. Document old/new expectations before any intentional test adjustment. Any failed gate blocks advancing to the next checkpoint; preserve the failure record. This checkpoint commits Directional Paddle runtime changes with aligned documentation/evidence under explicit user authorization; no push is authorized.

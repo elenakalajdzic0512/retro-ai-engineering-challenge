@@ -11,7 +11,7 @@ Armored Bricks is implemented at `0f88c3e6b50fa2160b283754413b3ee8e2ba9015` (`fe
 
 Elena + Isidora, working together on one development environment, report **manual browser smoke PASS** and **Week 4 Ask AI for Hint functional**. These human-reported observations are distinct from Codex's automated results. No new browser session or provider request was performed during this documentation task, and detailed new per-request Hint evidence is not inferred.
 
-The armor entries below formalize previously executed verification; they are not claims that this document preceded the armor implementation. Expectations for mechanics 2–5 are prospective. Future mechanics have no observed PASS. The final column is a separate future full-arena evaluation, so an armor-stage PASS cannot imply the complete Hazard Arena already passes.
+The armor entries below formalize previously executed verification; they are not claims that this document preceded the armor implementation. At the armor checkpoint, expectations for mechanics 2–5 were prospective. Bumpers, portals and shield have no observed PASS; checkpoint 2 results are recorded separately below. The final column is a separate future full-arena evaluation, so an armor-stage PASS cannot imply the complete Hazard Arena already passes.
 
 ## Evaluation Matrix
 
@@ -54,3 +54,29 @@ The armor entries below formalize previously executed verification; they are not
 Before implementing each checkpoint, add exact constants and fixtures for its rows. After execution, append a dated run with commit or base revision/dirty state, expected versus observed behavior, commands/test names, result, and human verification attribution. Keep this armor baseline intact. Record deterministic fake tests separately from actual browser/provider observations. Do not record keys or private payloads.
 
 Every checkpoint also requires `git diff --check` PASS, reviewed scope, and one clean checkpoint commit before advancing. Mark failures FAIL and unexecuted work NOT RUN; never carry a prior stage's PASS into the final arena column without rerunning it. H1–H31 must all pass for final completion. The historical Week 3 viewport limitation remains a known limitation unless separately addressed; no viewport fix is claimed here.
+
+
+## 2026-10-06 — Checkpoint 2: Directional Paddle Bounce
+
+**Revision scope**: Base `668d39fe7baca4fddd1b95fbf3ac961d7b7af056` plus the reviewed `src/game.js` / `tests/game.test.js` diff and this checkpoint's documentation. The resulting checkpoint is the commit containing this record, with message `feat: add directional paddle bounce`. The armor matrix above remains historical; its full-arena column still requires checkpoint 6.
+
+**Approved rule**: Left/center/right thirds set `vx = -240 / 0 / +240`; exact 1/3 and 2/3 boundaries belong to center. Every valid descending contact uses `vy = -abs(previous vy)`. Each contact replaces horizontal velocity; it does not accumulate spin or preserve total speed across zones.
+
+| ID | Observed checkpoint 2 evidence | Status |
+| --- | --- | --- |
+| H7 | Left-third test yields vx=-240, vy=-280; safe separation, lives/status/score/bricks preserved. Humans verified left aiming. | PASS |
+| H8 | Center-third test yields vx=0, vy=-280. Both exact boundaries and adjacent contacts are tested at paddle x=0, 345 and 690. Humans verified vertical center aiming. | PASS |
+| H9 | Right-third test yields vx=+240, vy=-280; incoming opposite horizontal velocity is replaced. Humans verified right aiming. | PASS |
+| H10 | 60 repeated contacts at each of vertical speeds 280 and 360 preserve vertical magnitude and keep horizontal magnitude ≤240; existing 60/120 FPS paddle movement tests pass. Edge overlap, ascending-contact rejection and moving clear after reflection pass. Humans report no sticking or uncontrolled acceleration. | PASS |
+| H24–H26 | Existing armor/normal win, miss/loss and restart regressions pass; humans verified bricks, scoring, lives, restart and win/loss. Future hazard state remains untested. | PASS for checkpoint 2 |
+| H27 | Existing W04 automated tests pass; Elena + Isidora report Ask AI for Hint remains functional. No new live-provider request was made by Codex. | PASS for checkpoint 2 |
+| H28 | `npm test`: 99 total, 99 passed, 0 failed, 0 skipped. | PASS |
+| H29 | `npm run typecheck`: exit 0. Existing server TypeScript scope only. | PASS |
+| H30 | `npm run build`: exit 0, production frontend build successful. | PASS |
+| H31 | Elena + Isidora report manual browser smoke PASS on the directional-paddle checkpoint. | PASS for checkpoint 2 |
+
+`git diff --check`: PASS. The pre-commit rerun passed: `npm test` 99/99 (0 failed, 0 skipped), typecheck exit 0, build exit 0 (5 modules, 47 ms); no runtime edits were made during evidence alignment. The old no-spin test was intentionally replaced by eight focused tests, a net increase of seven from the 92-test armor baseline. Unrelated tests remain intact.
+
+**Human verification attribution**: Elena + Isidora working together on one development environment reviewed behavior, tested left/center/right aiming, no sticking or uncontrolled acceleration, normal/armored bricks, scoring/lives/restart/win/loss and W04 Hint. These are user-reported human observations, distinct from Codex's automated checks.
+
+**Not executed**: H11–H23 (Bumpers/Portals/Shield) remain PLANNED / NOT RUN. Combined full-arena acceptance remains PLANNED / NOT RUN; checkpoint 2 PASS does not imply future mechanics exist.

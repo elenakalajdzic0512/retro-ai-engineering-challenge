@@ -98,17 +98,19 @@ The Week 3 game baseline is considered complete when all of the following can be
 
 **Project**: Neon Breaker: Hazard Arena. Extend the same W03/W04 application with deterministic tactical complexity before the Week 5 bounded Tactical Planner. The planner itself is not implemented by this gameplay scope.
 
-The sections above retain the historical Week 3 baseline, including its Out of Scope list and Definition of Done. They are not retroactively rewritten. Week 4 separately introduced the existing backend and Ask AI for Hint. Hazard Arena is a later scoped extension: only the five mechanics below are approved additions. The earlier single-hit brick rules are now specialized by Armored Bricks; the former paddle bounce is intentionally extended by Directional Paddle Bounce when that checkpoint is implemented. This does not authorize other old exclusions or arbitrary gameplay redesign.
+The sections above retain the historical Week 3 baseline, including its Out of Scope list and Definition of Done. They are not retroactively rewritten. Week 4 separately introduced the existing backend and Ask AI for Hint. Hazard Arena is a later scoped extension: only the five mechanics below are approved additions. The earlier single-hit brick rules are now specialized by Armored Bricks; the former paddle bounce is now intentionally extended by Directional Paddle Bounce. This does not authorize other old exclusions or arbitrary gameplay redesign.
 
 ### Approved Mechanics and Current Status
 
 | Mechanic | Active requirement | Implementation status |
 | --- | --- | --- |
 | Armored Bricks | Exactly 8 armored bricks at zero-based indices 2, 5, 10, 13, 18, 21, 26, 29 within the original 40; 32 normals including index 32. Normal hits start at 1, armor at 2. First armor hit damages without scoring; second destroys for exactly 10 total points. Both reflect normally. Fresh armor is `#b8c4d9`, damaged armor `#78859d`; normal row colors are unchanged. | Implemented/verified at `0f88c3e` |
-| Directional Paddle Bounce | Left/center/right contact zones give intentional, deterministic horizontal trajectory control. Valid contact always sends the ball upward with bounded speed; paddle speed/controls remain unchanged. Center-neutral vertical bounce is the planning default; thresholds/angles are specified before implementation. | PLANNED / NOT RUN |
+| Directional Paddle Bounce | Equal left/center/right thirds set `vx = -240 / 0 / +240`; both exact third boundaries belong to center. Every valid descending contact sets `vy = -abs(previous vy)` and replaces horizontal velocity without accumulating spin. Vertical magnitude is preserved; total speed may change by zone. Paddle controls/speed remain unchanged. | Implemented/verified — checkpoint 2 |
 | Neon Bumpers | Fixed circular or clearly bumper-like, indestructible obstacles; deterministic reflection; visually distinct from bricks. Placement must preserve access to every brick and avoid permanent traps. | PLANNED / NOT RUN |
 | Portal Pair | Exactly one linked pair, usable in both directions, with a safe deterministic velocity/exit rule and cooldown/lockout preventing immediate teleport loops. | PLANNED / NOT RUN |
 | Moving Shield Gate | Exactly one defensive barrier moving predictably from game state/time step within fixed arena bounds. It reflects the ball at its current position. | PLANNED / NOT RUN |
+
+These fixed values intentionally provide deterministic behavior, bounded speed, simple player control and testability, and a tactical aiming action a later Week 5 coach can recommend; no coach or AI contract change is implemented here.
 
 ### Preserved Invariants
 
@@ -125,4 +127,4 @@ Out of scope remains: multi-ball, weapons, enemies, bosses, power-ups, score mul
 
 Implementation order is Armored Bricks → Directional Paddle → Neon Bumpers → Portal Pair → Moving Shield Gate → full regression/manual smoke. Every checkpoint requires focused tests, prior tests green, typecheck, production build, applicable manual smoke and a clean checkpoint commit before proceeding.
 
-See the [feature specification](../specs/002-neon-hazard-arena/spec.md), [implementation plan](../specs/002-neon-hazard-arena/plan.md), [tasks](../specs/002-neon-hazard-arena/tasks.md) and separate [Hazard Arena eval matrix](EVALS_HAZARD_ARENA.md). Historical Week 3 `EVALS.md` is unchanged. Only armor is complete: 92/92 tests, typecheck/build and human-reported manual smoke PASS; no future mechanic is claimed implemented.
+See the [feature specification](../specs/002-neon-hazard-arena/spec.md), [implementation plan](../specs/002-neon-hazard-arena/plan.md), [tasks](../specs/002-neon-hazard-arena/tasks.md) and separate [Hazard Arena eval matrix](EVALS_HAZARD_ARENA.md). Historical Week 3 `EVALS.md` is unchanged. Armor retains its historical 92/92 baseline. Armor plus Directional Paddle now pass 99/99 tests, typecheck/build and human-reported manual smoke. Bumpers, portals and shield remain unimplemented.

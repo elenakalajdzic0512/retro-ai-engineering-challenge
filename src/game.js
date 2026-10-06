@@ -1,6 +1,7 @@
 export const WIDTH = 800;
 export const HEIGHT = 600;
 const PADDLE_SPEED = 460;
+const PADDLE_BOUNCE_HORIZONTAL_SPEED = 240;
 const STEP = 1 / 240;
 const ARMORED_BRICK_INDICES = new Set([2, 5, 10, 13, 18, 21, 26, 29]);
 
@@ -83,6 +84,14 @@ function step(game, direction, dt) {
   if (ball.vy > 0 && previousY + ball.radius <= paddle.y && overlaps(ball, paddle)) {
     ball.y = paddle.y - ball.radius;
     ball.vy = -Math.abs(ball.vy);
+    // Compare geometric boundaries directly so both exact thirds belong to center.
+    if (ball.x < paddle.x + paddle.width / 3) {
+      ball.vx = -PADDLE_BOUNCE_HORIZONTAL_SPEED;
+    } else if (ball.x > paddle.x + 2 * paddle.width / 3) {
+      ball.vx = PADDLE_BOUNCE_HORIZONTAL_SPEED;
+    } else {
+      ball.vx = 0;
+    }
   }
   for (const brick of game.bricks) {
     if (!brick.alive || !overlaps(ball, brick)) continue;
