@@ -2,23 +2,23 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts](contracts/), [quickstart.md](quickstart.md).
 **Branch**: `week5/neon-tactical-coach`
-**Status**: DESIGN ONLY — all tasks below are future work, unchecked. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
+**Status**: W05 Checkpoint 1 deterministic Core implemented and verified (T001–T009). Tools, fake provider, agent orchestration, Gemini adapter, endpoint and UI remain pending. Hazard Arena at `8e0aa82` is the frozen gameplay baseline.
 **Tests**: Required by FR-012 and the user; fake-first and regression are gates, not optional examples.
 
 ## Phase 1 — Contract foundation
 
-- [ ] T001 [US1] Review `contracts/agent-api.md`, `contracts/tools.md`, `contracts/final-plan.md` and freeze exact field names, bounds, error mapping and data ownership before code. Record any approved contract changes in SpecKit before implementation.
-- [ ] T002 [US1] Add failing exact-key request, snapshot, candidate, evaluation and final-plan validation tests in new `tests/tactical-contracts.test.js`, including inconsistent counts, `snapshotVersion: 1`, goal Unicode length, one required reference from each evidence source, candidate equality, no model success field and zero provider/tool calls for invalid input.
-- [ ] T003 [US1] Implement runtime validators/types in new `server/tactical/contracts.ts`; preserve `server/contracts.ts` and `server/ai/contracts.ts` for Week 4.
-- [ ] T004 [US1] Verify contract tests pass and the old `tests/contracts.test.js` remains green; record results in future `docs/AGENT_EVALS.md`.
+- [x] T001 [US1] Review `contracts/agent-api.md`, `contracts/tools.md`, `contracts/final-plan.md` and freeze exact field names, bounds, error mapping and data ownership before code. Record any approved contract changes in SpecKit before implementation.
+- [x] T002 [US1] Add failing exact-key request, snapshot, candidate, evaluation and final-plan validation tests in new `tests/tactical-contracts.test.js`, including inconsistent counts, `snapshotVersion: 1`, goal Unicode length, one required reference from each evidence source, candidate equality, no model success field and zero provider/tool calls for invalid input.
+- [x] T003 [US1] Implement runtime validators/types in new `server/tactical/contracts.ts`; preserve `server/contracts.ts` and `server/ai/contracts.ts` for Week 4.
+- [x] T004 [US1] Verify contract tests pass and the old `tests/contracts.test.js` remains green; record results in future `docs/AGENT_EVALS.md`.
 
 ## Phase 2 — Evidence and deterministic evaluation
 
-- [ ] T005 [US1] Add failing snapshot-derivation tests for all 40 brick centers, armor totals, ball neutral direction, shield zone/direction, portal cooldown and no game mutation in new `tests/tactical-snapshot.test.js`.
-- [ ] T006 [US1] Implement a separate bounded snapshot derivation module for browser use (planned `src/tactical-snapshot.js`) and server validation/copying in `server/tactical/contracts.ts`; no edits to `src/game.js`.
-- [ ] T007 [US1] Add failing deterministic evaluator fixtures in new `tests/tactical-evaluator.test.js`: 1/2/3-life risk table, empty zone, portal cooldown/center target, armor count, paddle alignment and shield-zone cue.
-- [ ] T008 [US1] Implement pure local evaluator in `server/tactical/evaluator.ts`; no network, model, file access, probability or game mutation.
-- [ ] T009 [US1] Verify fixed fixtures, byte bounds and repeated identical-state equality; record actual results and caveats.
+- [x] T005 [US1] Add failing snapshot-derivation tests for all 40 brick centers, armor totals, ball neutral direction, shield zone/direction, portal cooldown and no game mutation in new `tests/tactical-snapshot.test.js`.
+- [x] T006 [US1] Implement a separate bounded snapshot derivation module for browser use (planned `src/tactical-snapshot.js`) and server validation/copying in `server/tactical/contracts.ts`; no edits to `src/game.js`.
+- [x] T007 [US1] Add failing deterministic evaluator fixtures in new `tests/tactical-evaluator.test.js`: 1/2/3-life risk table, empty zone, portal cooldown/center target, armor count, paddle alignment and shield-zone cue.
+- [x] T008 [US1] Implement pure local evaluator in `server/tactical/evaluator.ts`; no network, model, file access, probability or game mutation.
+- [x] T009 [US1] Verify fixed fixtures, byte bounds and repeated identical-state equality; record actual results and caveats.
 
 ## Phase 3 — Tools and fake provider
 
@@ -54,4 +54,4 @@
 
 ## Dependencies and execution strategy
 
-`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. No task above is executed in this design-only session. No commit or push is authorized by this task list.
+`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T009 are complete after the reviewed deterministic Core checkpoint; T010 onward remain pending. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.

@@ -151,3 +151,13 @@ The successful request used the fixed Gemini model and was followed by manual br
 **Observed final evidence**: 133/133 tests PASS (133 total, 0 failed, 0 skipped); typecheck PASS; build PASS; `git diff --check` PASS; final full-arena manual playthrough PASS. Automated gates were executed in the preceding final regression audit and are not rerun solely for this Markdown finalization.
 
 **Decision**: Neon Breaker: Hazard Arena is COMPLETE across all six checkpoints: Armored Bricks, Directional Paddle, Neon Bumpers, Portal Pair, Moving Shield Gate and final regression. Preserve 40 bricks, maximum 400 points, 3 initial lives, original lifecycle, deterministic mechanics and the unchanged Week 4 public contract. The user authorized exactly one documentation commit, `docs: finalize Hazard Arena acceptance`. Tactical Coach remains unimplemented and requires separate scope. Nothing is pushed.
+
+## 2026-10-06 — Week 5 Tactical Coach: Deterministic Core
+
+**Pair context**: Elena + Isidora working together on one development environment. No driver/reviewer rotation is inferred or claimed.
+
+**AI/Codex contribution**: Reviewed the approved `specs/003-neon-tactical-coach/` contracts; helped implement separate Week 5 runtime validators, tactical snapshot derivation and the deterministic strategy evaluator; authored and ran focused automated tests; ran the full regression verification; and performed the final static audit. Tests were authored before their corresponding new modules. Initial focused failures were module-resolution failures because those modules did not yet exist, not proof that every behavioral assertion was individually observed red before implementation.
+
+**Human/team contribution**: Elena + Isidora jointly reviewed the Tactical Coach design and intended snapshot fields and tactical semantics. The team reports manually reviewing the resulting implementation and evidence before acceptance and approving preservation of Week 4 and Hazard Arena behavior. This is team-reported review, distinct from Codex's automated checks; no role swap is invented.
+
+**Observed evidence and boundary**: The reviewed checkpoint passed 23 contract, 10 snapshot and 12 evaluator tests; the full suite passed 178/178 (0 failed, 0 skipped), with typecheck, build and `git diff --check` passing. The new core reads client-reported state and cannot independently prove physical gameplay truth. No Tactical Coach tool, fake provider, agent orchestrator, Gemini adapter, endpoint, UI or live-provider test is claimed complete. See `docs/AGENT_EVALS.md` for the observed checkpoint record.
