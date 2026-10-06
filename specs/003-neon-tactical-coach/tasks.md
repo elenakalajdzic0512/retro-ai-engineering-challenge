@@ -45,7 +45,7 @@
 
 ## Phase 6 — Regression, provider and evidence gates
 
-- [ ] T024 [US1] Record expected Week 5 fake scenarios in `docs/AGENT_EVALS.md`, then run all new focused tests, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`; report exact totals/failures and rerun Week 4 Hint plus Hazard Arena regressions.
+- [x] T024 [US1] Record expected Week 5 fake scenarios in `docs/AGENT_EVALS.md`, then run all new focused tests, `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`; report exact totals/failures and rerun Week 4 Hint plus Hazard Arena regressions.
 - [ ] T025 [US3] Build a separate `createTacticalCoachGeminiProvider` (or equivalent) that sends function declarations, returns validated tool results as context, parses structured final output and normalizes outputs for W5 orchestration; do not change Week 4 provider behavior. Review current official documentation for `gemini-3.5-flash-lite`/`@google/genai`, then verify exact integration in the limited live phase. Keep fake suite provider-independent.
 - [ ] T026 [US3] After local contract/security gates pass and team authorizes a bounded live probe, run limited provider validation without recording keys/private payloads; document actual outcome and cost/config assumptions in `docs/EVIDENCE_W05.md`.
 - [ ] T027 [US2] Elena + Isidora jointly review authority boundary, two tools, three steps, budgets, repeat/stops, fake path, no mutation, UI and exact diff. Record actual driver/reviewer roles and each person's understanding in dated `docs/AI_USAGE_LOG.md`; do not infer a role swap.
@@ -54,4 +54,4 @@
 
 ## Dependencies and execution strategy
 
-`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T023 are complete after the reviewed deterministic Core, tool/fake-provider boundary, bounded provider-neutral orchestrator, and fake-first API/UI checkpoints; T024 onward remain pending. The deployed outer HTTP/proxy timeout in T021 still requires verification before live use. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
+`T001–T004 → T005–T009 → T010–T012 → T013–T019 → T020–T023 → T024–T029`. T001–T024 are complete after the reviewed deterministic Core, tool/fake-provider boundary, bounded provider-neutral orchestrator, fake-first API/UI checkpoints and recorded regression gate; T025 onward remain pending. The deployed outer HTTP/proxy timeout in T021 still requires verification before live use. Work is serial because all pieces share one request protocol and reviewer gates. A pair may review prepared expectations in parallel, but final contract and evidence decisions must be joint. This task list does not itself authorize future commits or pushes.
