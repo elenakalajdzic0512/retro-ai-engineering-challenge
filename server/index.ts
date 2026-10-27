@@ -167,6 +167,11 @@ async function handleTacticalCoachRequest(
   let outcome: 'success' | 'failed' | 'aborted' = 'aborted';
   let providerAttempts = 0;
   let executedToolCalls = 0;
+  let providerInFlight = false;
+  let requestFinished = false;
+  const releaseCapacityWhenSettled = () => {
+    if (requestFinished && !providerInFlight) lease?.release();
+  };
   try {
     if (request.method !== 'POST') {
       rejectInvalid();
@@ -210,8 +215,21 @@ async function handleTacticalCoachRequest(
       const provider = providerFactory();
       const trackedProvider: TacticalProvider | null = provider && {
         generate(call) {
+          // A timed-out attempt may ignore abort. Keep its admission reservation
+          // and do not start a retry until the underlying promise settles.
+          if (providerInFlight) return Promise.resolve({ type: 'failure', code: 'provider_timeout' } as const);
           providerAttempts++;
-          return provider.generate(call);
+          providerInFlight = true;
+          try {
+            return Promise.resolve(provider.generate(call)).finally(() => {
+              providerInFlight = false;
+              releaseCapacityWhenSettled();
+            });
+          } catch (error) {
+            providerInFlight = false;
+            releaseCapacityWhenSettled();
+            throw error;
+          }
         },
       };
       const result = await runTacticalCoach(input, {
@@ -235,7 +253,8 @@ async function handleTacticalCoachRequest(
     }
   } finally {
     if (lease) {
-      lease.release();
+      requestFinished = true;
+      releaseCapacityWhenSettled();
       emit('agent.run.completed', outcome === 'success' ? 'COMPLETED' : outcome === 'failed' ? 'FAILED' : 'ABORTED',
         outcome, providerAttempts, executedToolCalls);
     }

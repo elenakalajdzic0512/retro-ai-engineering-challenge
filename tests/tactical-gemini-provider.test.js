@@ -422,6 +422,49 @@ test('T06 adapter rejects normalized final outcomes over 8192 UTF-8 bytes before
   assert.equal(await provider.generate(call(results())), null);
 });
 
+test('T06 raw final UTF-8 bytes are capped before JSON.parse, including multibyte boundaries', async () => {
+  async function finalFrom(raw) {
+    const sdk = stub([functionReply('get_tactical_snapshot', {}),
+      functionReply('evaluate_tactical_strategy', candidate), textReply(raw)]);
+    const provider = createTacticalCoachGeminiProvider({ client: sdk.client });
+    await provider.generate(call());
+    await provider.generate(call([results()[0]]));
+    const originalParse = JSON.parse;
+    let parses = 0;
+    JSON.parse = (...args) => { parses++; return originalParse(...args); };
+    try { return { outcome: await provider.generate(call(results())), parses }; }
+    finally { JSON.parse = originalParse; }
+  }
+
+  const overhead = Buffer.byteLength('{"text":""}', 'utf8');
+  const atLimit = '{"text":"' + 'a'.repeat(8192 - overhead) + '"}';
+  const overLimit = atLimit.slice(0, -2) + 'a"}';
+  assert.equal(Buffer.byteLength(atLimit, 'utf8'), 8192);
+  assert.equal(Buffer.byteLength(overLimit, 'utf8'), 8193);
+  assert.equal((await finalFrom(atLimit)).parses, 1, 'The raw boundary is allowed to reach parsing.');
+  assert.deepEqual(await finalFrom(overLimit), { outcome: null, parses: 0 });
+
+  const multiAtLimit = '{"text":"' + 'ž'.repeat(4090) + 'a"}';
+  const multiOverLimit = '{"text":"' + 'ž'.repeat(4091) + 'a"}';
+  assert.equal(Buffer.byteLength(multiAtLimit, 'utf8'), 8192);
+  assert.equal(Buffer.byteLength(multiOverLimit, 'utf8'), 8194);
+  assert.equal((await finalFrom(multiAtLimit)).parses, 1);
+  assert.deepEqual(await finalFrom(multiOverLimit), { outcome: null, parses: 0 });
+  assert.deepEqual(await finalFrom(JSON.stringify(plan)), {
+    outcome: { type: 'final', output: plan }, parses: 1,
+  });
+
+  const malicious = 'W08_PRIVATE_SYNTHETIC_FINAL_' + 'ž'.repeat(4091);
+  const provider = createTacticalCoachGeminiProvider({ client: stub([
+    functionReply('get_tactical_snapshot', {}),
+    functionReply('evaluate_tactical_strategy', candidate),
+    textReply(JSON.stringify({ ...plan, summary: malicious })),
+  ]).client });
+  await assert.rejects(runTacticalCoach(input(), { provider, toolExecutor: invokeTacticalTool }),
+    (error) => error instanceof TacticalCoachError && error.code === 'malformed_model_output' &&
+      !error.message.includes(malicious));
+});
+
 test('T027 normal three-step SDK-stub envelope remains useful with server-owned generation and retry bounds', async (t) => {
   const sdk = stub([functionReply('get_tactical_snapshot', {}),
     functionReply('evaluate_tactical_strategy', candidate), textReply(JSON.stringify(plan))]);

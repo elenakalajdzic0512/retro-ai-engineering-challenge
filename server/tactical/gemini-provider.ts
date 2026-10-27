@@ -1,13 +1,16 @@
 import { FunctionCallingConfigMode, GoogleGenAI, type Content, type GenerateContentParameters, type Part } from '@google/genai';
 import { parseCandidateStrategy } from './contracts.js';
 import type { TacticalProvider, TacticalProviderCall, TacticalProviderOutcome } from './provider-contracts.js';
-import { isWithinProviderByteLimit } from './provider-contracts.js';
+import { MAX_PROVIDER_OUTCOME_BYTES, isWithinProviderByteLimit } from './provider-contracts.js';
 import { getTacticalToolDeclarations, parseTacticalToolResult, type TacticalToolName, type TacticalToolResult } from './tools.js';
 
 export const TACTICAL_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 // Headroom above the measured compact normal plan, with <=720 prose code points.
 // Token counts are not UTF-8 bytes; the independent byte bound remains authoritative.
 export const TACTICAL_MAX_OUTPUT_TOKENS = 2048;
+// Apply the same byte ceiling to raw final JSON before parsing. Whitespace or
+// escaping may make raw text larger than its normalized outcome; reject it too.
+const MAX_RAW_FINAL_TEXT_BYTES = MAX_PROVIDER_OUTCOME_BYTES;
 
 const SYSTEM_INSTRUCTION = 'You are Neon Breaker Tactical Coach. Follow the current server-provided tool or JSON-output instruction. Use only validated tool responses as arena evidence. Follow three stages in order: first request the snapshot, then propose one strategy evaluation candidate, and only after a validated evaluation response produce the final plan. Never claim an exact trajectory or future outcome.';
 const SNAPSHOT_INSTRUCTION = 'First call get_tactical_snapshot with exactly {}. Do not provide a plan yet.';
@@ -127,6 +130,7 @@ function finalProposal(response: unknown): TacticalProviderOutcome | null {
   const part = object(parts[0]);
   if (!part || typeof part.text !== 'string' ||
       Reflect.ownKeys(part).some((key) => key !== 'text' && key !== 'thoughtSignature')) return null;
+  if (Buffer.byteLength(part.text, 'utf8') > MAX_RAW_FINAL_TEXT_BYTES) return null;
   let output: unknown;
   try { output = JSON.parse(part.text); }
   catch { return null; }

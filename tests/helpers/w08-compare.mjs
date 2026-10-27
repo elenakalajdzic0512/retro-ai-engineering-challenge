@@ -173,7 +173,7 @@ async function browserProfile(root, m, browser, scriptUrl, controlUrl, hardened)
     assert.equal(await page.evaluate(() => window.__W08_EXTERNAL_SCRIPT_EXECUTED__), true);
     const response = await page.goto(base);
     assert.equal(response.status(), 200);
-    await page.locator('#status').waitFor();
+    await page.waitForFunction(() => document.querySelector('#status')?.textContent === 'Press Space to launch');
     assert.equal(await page.locator('#status').textContent(), 'Press Space to launch');
     await page.evaluate((url) => new Promise((done) => {
       window.__W08_EXTERNAL_SCRIPT_EXECUTED__ = false;

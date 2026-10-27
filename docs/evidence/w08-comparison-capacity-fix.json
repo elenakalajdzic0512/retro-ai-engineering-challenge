@@ -1,0 +1,193 @@
+{
+  "expectations": {
+    "P1": "before peak 3 / after peak 2, no excess work, recovery",
+    "P2": "same HTTP-200 script executes before, CSP blocks after; normal app works",
+    "P3": "zero forbidden dispatch in both, positive works"
+  },
+  "toolchain": "shared installed locked W08 toolchain; before source untouched; explicit isolated proxy on both",
+  "revisions": [
+    {
+      "label": "before",
+      "inputHash": "1136905d7611d460da1c8aaf898ebcc61cbcaaffaed77dfcdcfeb37f21b43347",
+      "maliciousInputHash": "62eca91f445015d38fcc986e2ac7b6611c66e14ca5b9b0e42e7e8b4cd3e2dbe9",
+      "P1": {
+        "statuses": [
+          200,
+          200,
+          200,
+          200
+        ],
+        "thirdEntered": true,
+        "thirdWork": {
+          "attempts": 1,
+          "tools": 0
+        },
+        "peakHeldProviderRuns": 3,
+        "attempts": 12,
+        "tools": 8,
+        "heldAdmission": null,
+        "finalAdmission": null
+      },
+      "P3": [
+        {
+          "name": "constructor",
+          "status": 502,
+          "code": "unknown_tool",
+          "attempts": 1,
+          "tools": 0,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        },
+        {
+          "name": "toString",
+          "status": 502,
+          "code": "unknown_tool",
+          "attempts": 1,
+          "tools": 0,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        },
+        {
+          "name": "set_score",
+          "status": 502,
+          "code": "forbidden_tool",
+          "attempts": 1,
+          "tools": 0,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        },
+        {
+          "name": "positive",
+          "status": 200,
+          "code": "success",
+          "attempts": 3,
+          "tools": 2,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        }
+      ],
+      "P2": {
+        "headers": {
+          "content-security-policy": null,
+          "x-content-type-options": null,
+          "referrer-policy": null
+        },
+        "scriptUrl": "http://127.0.0.1:63897/w08-control.js",
+        "controlStatus": 200,
+        "controlMarker": true,
+        "marker": true,
+        "violations": [],
+        "coachStatus": "Tactical plan ready.",
+        "gameplay": "launched",
+        "attempts": 3,
+        "tools": 2
+      }
+    },
+    {
+      "label": "after",
+      "inputHash": "1136905d7611d460da1c8aaf898ebcc61cbcaaffaed77dfcdcfeb37f21b43347",
+      "maliciousInputHash": "62eca91f445015d38fcc986e2ac7b6611c66e14ca5b9b0e42e7e8b4cd3e2dbe9",
+      "P1": {
+        "statuses": [
+          200,
+          200,
+          429,
+          200
+        ],
+        "thirdEntered": false,
+        "thirdWork": {
+          "attempts": 0,
+          "tools": 0
+        },
+        "peakHeldProviderRuns": 2,
+        "attempts": 9,
+        "tools": 6,
+        "heldAdmission": {
+          "activeRuns": 2,
+          "admittedRuns": 2,
+          "releasedRuns": 0
+        },
+        "finalAdmission": {
+          "activeRuns": 0,
+          "admittedRuns": 3,
+          "releasedRuns": 3
+        }
+      },
+      "P3": [
+        {
+          "name": "constructor",
+          "status": 502,
+          "code": "unknown_tool",
+          "attempts": 1,
+          "tools": 0,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        },
+        {
+          "name": "toString",
+          "status": 502,
+          "code": "unknown_tool",
+          "attempts": 1,
+          "tools": 0,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        },
+        {
+          "name": "set_score",
+          "status": 502,
+          "code": "forbidden_tool",
+          "attempts": 1,
+          "tools": 0,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        },
+        {
+          "name": "positive",
+          "status": 200,
+          "code": "success",
+          "attempts": 3,
+          "tools": 2,
+          "forbidden": 0,
+          "stateBefore": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "stateAfter": "ea8a73a12c09c7ef65acc24566dda423964dbd9903081469be940ba7fe0b443c",
+          "changedPaths": []
+        }
+      ],
+      "P2": {
+        "headers": {
+          "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'none'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+          "x-content-type-options": "nosniff",
+          "referrer-policy": "no-referrer"
+        },
+        "scriptUrl": "http://127.0.0.1:63897/w08-control.js",
+        "controlStatus": 200,
+        "controlMarker": true,
+        "marker": false,
+        "violations": [
+          {
+            "directive": "script-src-elem",
+            "blockedURI": "http://127.0.0.1:63897/w08-control.js"
+          }
+        ],
+        "coachStatus": "Tactical plan ready.",
+        "gameplay": "launched",
+        "attempts": 3,
+        "tools": 2
+      }
+    }
+  ]
+}
