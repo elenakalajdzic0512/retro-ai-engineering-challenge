@@ -94,9 +94,9 @@ Browser game
 
 The browser calls the local API; it does not call Gemini directly.
 
-## Verification
+## Week 5 accepted verification
 
-The final accepted gate passed **287 tests, 0 failed, 0 skipped**, plus TypeScript typecheck, client build, and server build. Coverage includes Hazard Arena regressions, Tactical contracts and evaluator, tool boundaries, bounded orchestration, API and provider selection, UI rendering, restart/page-leave stale-response handling, and Week 4 preservation. Automated tests use fake or stubbed providers and make **no real Gemini calls**.
+The Week 5 accepted gate passed **287 tests, 0 failed, 0 skipped**, plus TypeScript typecheck, client build, and server build. Coverage includes Hazard Arena regressions, Tactical contracts and evaluator, tool boundaries, bounded orchestration, API and provider selection, UI rendering, restart/page-leave stale-response handling, and Week 4 preservation. Automated tests use fake or stubbed providers and make **no real Gemini calls**.
 
 ```bash
 npm test
@@ -116,6 +116,14 @@ Acceptance evidence includes the deterministic fake browser path, recovery from 
 ## Status
 
 **W05 Neon Tactical Coach — ACCEPTED.** T001–T029 are complete. The feature builds on the completed Neon Breaker: Hazard Arena gameplay baseline.
+
+**W08 Secure the Arcade — technical verification complete; pair acceptance pending.** On `week8/secure-the-arcade`, the recorded final technical gates passed 332 Node tests and 10 browser tests, plus typecheck/client/server builds. Two paced automated T055 rehearsals also passed; Elena's T051 review and the joint spoken T055 rehearsal remain open (53/55 tasks). Runtime audit has 0 findings; the full audit retains 2 development-package findings, with no claimed dependency fix.
+
+- [Week 8 report based on actual commits](docs/W08_COMMIT_REPORT.md)
+- [Week 8 complete evidence and T00–T17 matrix](EVIDENCE_W08.md)
+- [Week 8 fake-only setup, tasks and eight-minute runbook](specs/004-secure-the-arcade/quickstart.md)
+
+For the W08 local security/demo flow, explicitly select `TACTICAL_AI_PROVIDER=fake` and keep both the API (port 3001) and preview (port 4173) running as documented in the quickstart. An available game page alone does not mean its API is running; a stopped API caused the observed Coach failure and restarting it restored the existing fake flow. The normal server default for Tactical remains Gemini; no live Gemini or real key is needed for W08 checks.
 
 ## Team
 

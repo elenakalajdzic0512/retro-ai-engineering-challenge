@@ -4,6 +4,8 @@
 
 Wave C started on `week8/secure-the-arcade` at `e41f8ca85dcb8b51e873a87b6c5deb114ff9215e` on 2026-10-27 (Europe/Budapest). The immutable W05 comparison baseline is `e0ef30a1eddc9583a9894b79e10d53424d9f0b2a`. Elena's pushed Wave A handoff is `caf46ef6cf198ff31e659d939f96ca0a00638357`; the starting Wave C revision is also the pushed Wave B handoff. Codex executes the technical work on Isidora's behalf. The user confirmed that Elena's reciprocal review and the joint eight-minute rehearsal have **not** happened; T051 and the human rehearsal portion of T055 must remain open.
 
+The later evidence checkpoints are now concrete: Wave C integration/report `ace48bfc8179365cd48625662e59f2d2f2e699a1`, first T055 helper/result `fd7c58f3b52cfb8e1f93a7f57a93ef236757dc76`, and repeat result `b166651d492ddf516d70b4e0b3fd63b8040c4b9e`. The [commit-based report](docs/W08_COMMIT_REPORT.md) maps each revision to changed files, observed checks, actual AI contribution and remaining human work; Git history was inspected before preparing that report. The documentation update adds no new full-suite PASS claim.
+
 ## Expectations written before Wave C evaluations
 
 - T00: normal gameplay moves, then a fake Tactical request succeeds with at least two provider steps and one real allowlisted tool execution, both evidence sources and no complete canonical game mutation; Week 4 Hint also succeeds and gameplay can resume.
