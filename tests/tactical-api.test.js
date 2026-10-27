@@ -603,6 +603,7 @@ test('client abort cancels an in-flight Coach provider without an unsafe respons
 test('T14 synthetic internal provider failure stays out of public and next-model context', async () => {
   const sentinel = 'W08_SERVER_SECRET_DO_NOT_EXPOSE';
   const nextInputs = [];
+  const events = [];
   let attempts = 0;
   const provider = { async generate(call) {
     attempts++;
@@ -612,6 +613,7 @@ test('T14 synthetic internal provider failure stays out of public and next-model
   } };
   await withServer({
     tacticalProvider: provider,
+    tacticalSecurityEventSink: (event) => events.push(event),
     tacticalGeminiProviderFactory() { throw new Error('Live Gemini must not be selected.'); },
     tacticalOrchestrationOptions: { sleep: async () => {} },
   }, async (base) => {
@@ -624,4 +626,6 @@ test('T14 synthetic internal provider failure stays out of public and next-model
     for (const input of nextInputs) assert.doesNotMatch(input, /W08_SERVER_SECRET_DO_NOT_EXPOSE/);
     // The HTTP JSON is also the browser-bound result for this local API flow.
   });
+  assert.equal(events.length, 2);
+  for (const event of events) assert.doesNotMatch(JSON.stringify(event), /W08_SERVER_SECRET_DO_NOT_EXPOSE/);
 });

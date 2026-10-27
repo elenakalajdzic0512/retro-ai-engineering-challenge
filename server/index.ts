@@ -21,6 +21,17 @@ import {
   type RunTacticalCoachOptions,
 } from './tactical/orchestrator.js';
 import { invokeTacticalTool } from './tactical/tools.js';
+import {
+  createTacticalAdmission,
+  type TacticalAdmission,
+  type TacticalAdmissionLease,
+} from './tactical/admission.js';
+import {
+  createTacticalCorrelationId,
+  defaultTacticalSecurityEventSink,
+  emitTacticalSecurityEvent,
+  type TacticalSecurityEventSink,
+} from './tactical/security-events.js';
 
 const MAX_REQUEST_BODY_BYTES = 1_024;
 const MAX_TACTICAL_REQUEST_BODY_BYTES = 4_096;
@@ -41,6 +52,10 @@ interface ApiServerOptions {
   tacticalGeminiProviderFactory?: () => TacticalProvider;
   tacticalToolExecutor?: RunTacticalCoachOptions['toolExecutor'];
   tacticalOrchestrationOptions?: Omit<RunTacticalCoachOptions, 'provider' | 'signal' | 'toolExecutor'>;
+  tacticalAdmissionClock?: () => number;
+  tacticalAdmission?: TacticalAdmission;
+  tacticalSecurityEventSink?: TacticalSecurityEventSink;
+  tacticalCorrelationIdFactory?: () => string;
 }
 
 function writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
@@ -127,23 +142,41 @@ async function handleTacticalCoachRequest(
   request: IncomingMessage,
   response: ServerResponse,
   providerFactory: () => TacticalProvider | null,
-  toolExecutor: RunTacticalCoachOptions['toolExecutor'],
+  toolExecutor: NonNullable<RunTacticalCoachOptions['toolExecutor']>,
   orchestrationOptions: ApiServerOptions['tacticalOrchestrationOptions'],
+  admission: TacticalAdmission,
+  eventSink: TacticalSecurityEventSink,
+  correlationIdFactory: () => string,
 ): Promise<void> {
+  const correlationId = correlationIdFactory();
+  const emit = (
+    event: Parameters<typeof emitTacticalSecurityEvent>[1],
+    reason: Parameters<typeof emitTacticalSecurityEvent>[3],
+    outcome: Parameters<typeof emitTacticalSecurityEvent>[4],
+    providerAttempts?: number,
+    executedToolCalls?: number,
+  ) => emitTacticalSecurityEvent(eventSink, event, correlationId, reason, outcome, providerAttempts, executedToolCalls);
+  const rejectInvalid = () => emit('agent.run.rejected', 'INVALID_REQUEST', 'rejected');
   const controller = new AbortController();
   const abort = () => controller.abort();
   const onClose = () => { if (!response.writableEnded) abort(); };
   request.on('aborted', abort);
   response.on('close', onClose);
   const canWrite = () => !controller.signal.aborted && !response.destroyed && !response.writableEnded;
+  let lease: TacticalAdmissionLease | undefined;
+  let outcome: 'success' | 'failed' | 'aborted' = 'aborted';
+  let providerAttempts = 0;
+  let executedToolCalls = 0;
   try {
     if (request.method !== 'POST') {
+      rejectInvalid();
       response.setHeader('Allow', 'POST');
       writeJson(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: 'Method not allowed' } });
       return;
     }
     const contentType = request.headers['content-type']?.split(';', 1)[0].trim().toLowerCase();
     if (contentType !== 'application/json') {
+      rejectInvalid();
       writeJson(response, 415, getTacticalCoachErrorResponse(new TacticalCoachError('invalid_input')));
       return;
     }
@@ -151,6 +184,7 @@ async function handleTacticalCoachRequest(
     try { body = await readRequestBody(request, MAX_TACTICAL_REQUEST_BODY_BYTES); }
     catch (error) {
       if (!canWrite()) return;
+      rejectInvalid();
       const status = error instanceof RequestBodyTooLargeError ? 413 : 400;
       writeJson(response, status, getTacticalCoachErrorResponse(new TacticalCoachError('invalid_input')));
       return;
@@ -159,24 +193,52 @@ async function handleTacticalCoachRequest(
     let input;
     try { input = parseTacticalRequest(JSON.parse(body)); }
     catch {
+      rejectInvalid();
       writeJson(response, 400, getTacticalCoachErrorResponse(new TacticalCoachError('invalid_input')));
       return;
     }
     if (!canWrite()) return;
+    const decision = admission.tryAdmit();
+    if (!decision.admitted) {
+      emit('agent.run.rejected', decision.reason, 'rejected');
+      writeJson(response, 429, getTacticalCoachErrorResponse(new TacticalCoachError('rate_limited')));
+      return;
+    }
+    lease = decision.lease;
+    emit('agent.run.admitted', 'ADMITTED', 'admitted');
     try {
+      const provider = providerFactory();
+      const trackedProvider: TacticalProvider | null = provider && {
+        generate(call) {
+          providerAttempts++;
+          return provider.generate(call);
+        },
+      };
       const result = await runTacticalCoach(input, {
         ...orchestrationOptions,
-        provider: providerFactory(),
-        toolExecutor,
+        provider: trackedProvider,
+        toolExecutor(name, args, context) {
+          executedToolCalls++;
+          return toolExecutor(name, args, context);
+        },
         signal: controller.signal,
       });
-      if (canWrite()) writeJson(response, 200, result);
+      if (canWrite()) {
+        writeJson(response, 200, result);
+        outcome = 'success';
+      }
     } catch (error) {
       if (!canWrite()) return;
       const safe = error instanceof TacticalCoachError ? error : new TacticalCoachError('provider_unavailable');
       writeJson(response, tacticalHttpStatus(safe.code), getTacticalCoachErrorResponse(safe));
+      outcome = 'failed';
     }
   } finally {
+    if (lease) {
+      lease.release();
+      emit('agent.run.completed', outcome === 'success' ? 'COMPLETED' : outcome === 'failed' ? 'FAILED' : 'ABORTED',
+        outcome, providerAttempts, executedToolCalls);
+    }
     request.off('aborted', abort);
     response.off('close', onClose);
   }
@@ -192,9 +254,14 @@ export function createApiServer({
   tacticalGeminiProviderFactory = createTacticalCoachGeminiProvider,
   tacticalToolExecutor = invokeTacticalTool,
   tacticalOrchestrationOptions = {},
+  tacticalAdmissionClock,
+  tacticalAdmission,
+  tacticalSecurityEventSink = defaultTacticalSecurityEventSink,
+  tacticalCorrelationIdFactory = createTacticalCorrelationId,
 }: ApiServerOptions = {}) {
   const activeTacticalProviderFactory = tacticalProviderFactory
     ?? createConfiguredTacticalProviderFactory(tacticalGeminiProviderFactory);
+  const admission = tacticalAdmission ?? createTacticalAdmission(tacticalAdmissionClock);
   return createHttpServer(async (request: IncomingMessage, response: ServerResponse) => {
     let pathname: string;
     try {
@@ -208,6 +275,7 @@ export function createApiServer({
       await handleTacticalCoachRequest(
         request, response, () => tacticalProvider ?? activeTacticalProviderFactory(),
         tacticalToolExecutor, tacticalOrchestrationOptions,
+        admission, tacticalSecurityEventSink, tacticalCorrelationIdFactory,
       );
       return;
     }
