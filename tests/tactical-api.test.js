@@ -6,6 +6,7 @@ import { createApiServer } from '../dist-server/index.js';
 import { createTacticalFakeProvider } from '../dist-server/tactical/fake-provider.js';
 import { createTacticalCoachGeminiProvider } from '../dist-server/tactical/gemini-provider.js';
 import { invokeTacticalTool } from '../dist-server/tactical/tools.js';
+import { parseTacticalSnapshot } from '../dist-server/tactical/contracts.js';
 
 const validRequest = () => ({ goal: 'Clear the center safely.', state: deriveTacticalSnapshot(createGame()) });
 const candidate = { targetZone: 'center', style: 'balanced', paddleContact: 'center', route: 'direct' };
@@ -69,6 +70,7 @@ function createFakeClock(start = 0) {
 function createTacticalHttpFixture({ holdFirstAttempt = false, clock = createFakeClock() } = {}) {
   const entered = [];
   const held = [];
+  const providerCalls = [];
   const metrics = {
     providerConstructions: 0,
     providerAttempts: 0,
@@ -90,6 +92,7 @@ function createTacticalHttpFixture({ holdFirstAttempt = false, clock = createFak
       let firstAttempt = true;
       return { async generate(call) {
         metrics.providerAttempts++;
+        providerCalls.push(structuredClone(call.input));
         if (firstAttempt && holdFirstAttempt) {
           firstAttempt = false;
           const gate = deferred();
@@ -114,7 +117,7 @@ function createTacticalHttpFixture({ holdFirstAttempt = false, clock = createFak
     tacticalOrchestrationOptions: { now: clock.now },
   };
   return {
-    metrics, clock, options,
+    metrics, clock, options, providerCalls,
     waitForHeldRun() {
       const arrival = deferred();
       entered.push(arrival);
@@ -178,6 +181,140 @@ test('T005 fake clock and held HTTP request release deterministically', async ()
     assert.equal(fixture.metrics.releasedRuns, 1);
     assert.equal(fixture.metrics.providerAttempts, 3);
     assert.equal(clock.advance(60_000), 61_100);
+  });
+});
+
+function assertNoInitialWork(fixture) {
+  assert.equal(fixture.metrics.providerConstructions, 0);
+  assert.equal(fixture.metrics.providerAttempts, 0);
+  assert.equal(fixture.metrics.executedToolCalls, 0);
+  assert.equal(fixture.metrics.admittedArrivals, 0);
+}
+
+async function assertSafeInitialRejection(body, expectedStatus = 400) {
+  const fixture = createTacticalHttpFixture();
+  await fixture.withServer(async (base) => {
+    const response = await post(base, body);
+    assert.equal(response.status, expectedStatus);
+    const raw = await response.text();
+    const publicBody = JSON.parse(raw);
+    assert.deepEqual(Object.keys(publicBody), ['error']);
+    assert.deepEqual(Object.keys(publicBody.error), ['code', 'message']);
+    assert.equal(publicBody.error.code, 'invalid_input');
+    assert.equal(typeof publicBody.error.message, 'string');
+    assert.ok(raw.length < 256);
+    assert.doesNotMatch(raw, /W08_UNTRUSTED_MARKER|GEMINI_API_KEY|stack|\n\s*at\s/i);
+    assertNoInitialWork(fixture);
+  });
+}
+
+test('T01 invalid JSON stops before provider construction and returns a safe error', async () => {
+  await assertSafeInitialRejection('{"goal":"W08_UNTRUSTED_MARKER",');
+});
+
+test('T01 wrong top-level goal type stops before provider construction', async () => {
+  await assertSafeInitialRejection({ ...validRequest(), goal: 42 });
+});
+
+test('T01 wrong nested lives type stops before provider construction', async () => {
+  const input = validRequest();
+  input.state.lives = '3';
+  await assertSafeInitialRejection(input);
+});
+
+test('T01 domain-invalid score/count relationship stops before provider construction', async () => {
+  const input = validRequest();
+  input.state.score = 10; // Correct type/range, inconsistent with 40 remaining bricks.
+  await assertSafeInitialRejection(input);
+});
+
+test('T01 legitimate 240-code-point goal reaches the fake flow', async () => {
+  const fixture = createTacticalHttpFixture();
+  await fixture.withServer(async (base) => {
+    const response = await post(base, { ...validRequest(), goal: 'A'.repeat(240) });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).plan.summary, final.summary);
+    assert.equal(fixture.metrics.providerConstructions, 1);
+    assert.equal(fixture.metrics.providerAttempts, 3);
+    assert.equal(fixture.metrics.executedToolCalls, 2);
+  });
+});
+
+test('T02 JSON body above 4096 bytes is rejected before provider work', async () => {
+  const oversized = JSON.stringify(validRequest()) + ' '.repeat(4097);
+  assert.ok(Buffer.byteLength(oversized, 'utf8') > 4096);
+  await assertSafeInitialRejection(oversized, 413);
+});
+
+for (const [field, value] of [
+  ['provider', 'gemini'], ['maxSteps', 999], ['ownerId', 'foreign-user'], ['role', 'admin'],
+]) {
+  test(`T02 well-sized ${field} field cannot choose server authority`, async () => {
+    const input = { ...validRequest(), [field]: value };
+    assert.ok(Buffer.byteLength(JSON.stringify(input), 'utf8') < 4096);
+    await assertSafeInitialRejection(input);
+  });
+}
+
+test('T02 normal request still reaches the fixed fake provider flow', async () => {
+  const fixture = createTacticalHttpFixture();
+  await fixture.withServer(async (base) => {
+    const response = await post(base, validRequest());
+    assert.equal(response.status, 200);
+    assert.equal(fixture.metrics.providerConstructions, 1);
+    assert.equal(fixture.metrics.providerAttempts, 3);
+    assert.equal(fixture.metrics.executedToolCalls, 2);
+  });
+});
+
+// Local/demo request scope only: there is no private account or foreign-resource lookup API to authenticate.
+for (const field of ['gameId', 'sessionId', 'scenarioId', 'resourceId']) {
+  test(`T03 arbitrary ${field} selector cannot expand the exact request scope`, async () => {
+    const input = { ...validRequest(), [field]: 'W08_UNTRUSTED_MARKER' };
+    assert.ok(Buffer.byteLength(JSON.stringify(input), 'utf8') < 4096);
+    await assertSafeInitialRejection(input);
+  });
+}
+
+test('T15 forged but contract-valid state remains unverified advisory input', async () => {
+  const game = createGame();
+  const canonicalBefore = structuredClone(game);
+  const genuineState = deriveTacticalSnapshot(game);
+  const forgedState = {
+    ...structuredClone(genuineState), status: 'playing', score: 10,
+    bricksRemaining: 39, normalBricksRemaining: 31,
+    bricksByZone: { ...genuineState.bricksByZone, left: genuineState.bricksByZone.left - 1 },
+  };
+  assert.deepEqual(parseTacticalSnapshot(forgedState), forgedState);
+  assert.notDeepEqual(forgedState, genuineState);
+
+  const fixture = createTacticalHttpFixture();
+  await fixture.withServer(async (base) => {
+    const forgedResponse = await post(base, { goal: 'Clear the center safely.', state: forgedState });
+    assert.equal(forgedResponse.status, 200);
+    const forgedBody = await forgedResponse.json();
+    assert.deepEqual(Object.keys(forgedBody), ['plan', 'evidence']);
+    assert.equal(Object.hasOwn(forgedBody, 'score'), false);
+    assert.deepEqual(fixture.providerCalls[0].state, forgedState);
+    assert.equal(fixture.metrics.providerConstructions, 1);
+    assert.equal(fixture.metrics.admittedArrivals, 1); // Test-side observation; W05 has no admission policy.
+    assert.equal(fixture.metrics.providerAttempts, 3);
+    assert.equal(fixture.metrics.executedToolCalls, 2);
+    assert.equal(fixture.metrics.executedAllowedToolCalls, 2);
+    assert.equal(fixture.metrics.executedForbiddenToolCalls, 0);
+    assert.deepEqual(game, canonicalBefore);
+
+    // A later normal request still carries the real local snapshot and gets the same fixed work budget.
+    const normalResponse = await post(base, { goal: 'Clear the center safely.', state: deriveTacticalSnapshot(game) });
+    assert.equal(normalResponse.status, 200);
+    assert.deepEqual(fixture.providerCalls[3].state, genuineState);
+    assert.equal(fixture.metrics.providerConstructions, 2);
+    assert.equal(fixture.metrics.admittedArrivals, 2);
+    assert.equal(fixture.metrics.providerAttempts, 6);
+    assert.equal(fixture.metrics.executedToolCalls, 4);
+    assert.equal(fixture.metrics.executedAllowedToolCalls, 4);
+    assert.equal(fixture.metrics.executedForbiddenToolCalls, 0);
+    assert.deepEqual(game, canonicalBefore);
   });
 });
 

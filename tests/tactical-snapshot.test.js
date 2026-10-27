@@ -24,6 +24,21 @@ test('fresh game derives exact 40/32/8 counts and a contract-valid snapshot', ()
   assert.ok(Buffer.byteLength(JSON.stringify(snapshot), 'utf8') <= 8192);
 });
 
+test('T15 a consistent forged snapshot validates without changing canonical gameplay', () => {
+  const game = createGame();
+  const before = structuredClone(game);
+  const genuine = deriveTacticalSnapshot(game);
+  const forged = {
+    ...structuredClone(genuine), status: 'playing', score: 10,
+    bricksRemaining: 39, normalBricksRemaining: 31,
+    bricksByZone: { ...genuine.bricksByZone, left: genuine.bricksByZone.left - 1 },
+  };
+  assert.deepEqual(parseTacticalSnapshot(forged), forged);
+  assert.notDeepEqual(forged, genuine);
+  assert.deepEqual(game, before);
+  assert.deepEqual(deriveTacticalSnapshot(game), genuine);
+});
+
 test('all 40 brick centers use arena thirds, with exact boundaries in center', () => {
   const game = createGame();
   for (let index = 0; index < game.bricks.length; index++) {
