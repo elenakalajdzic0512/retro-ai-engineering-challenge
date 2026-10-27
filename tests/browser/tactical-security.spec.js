@@ -7,6 +7,8 @@ import { createGame } from '../../src/game.js';
 import { deriveTacticalSnapshot } from '../../src/tactical-snapshot.js';
 import { createApiServer } from '../../dist-server/index.js';
 import { createTacticalFakeProvider } from '../../dist-server/tactical/fake-provider.js';
+import { invokeTacticalTool } from '../../dist-server/tactical/tools.js';
+import { createTacticalAdmission } from '../../dist-server/tactical/admission.js';
 
 const host = '127.0.0.1';
 const scriptPath = '/w08-control.js';
@@ -57,6 +59,8 @@ let nextSummary = defaultSummary;
 let admissionTime = 0;
 const observedGoals = [];
 const securityEvents = [];
+const metrics = { providerAttempts: 0, executedToolCalls: 0, executedForbiddenToolCalls: 0 };
+const admission = createTacticalAdmission(() => admissionTime);
 const previousGeminiKey = process.env.GEMINI_API_KEY;
 
 async function artifactFiles(directory) {
@@ -71,6 +75,7 @@ async function artifactFiles(directory) {
 async function submitCoach(page, summary, goal = 'Clear the center safely.') {
   // Keep independent acceptance cases outside the single-process 5-per-60s window.
   admissionTime += 60_001;
+  const before = { ...metrics };
   nextSummary = summary;
   const pageResponse = await page.goto(previewUrl);
   expect(pageResponse?.status()).toBe(200);
@@ -79,6 +84,11 @@ async function submitCoach(page, summary, goal = 'Clear the center safely.') {
   await page.locator('#tactical-coach-goal').fill(goal);
   await page.locator('#tactical-coach-button').click();
   await expect(page.locator('#tactical-coach-status')).toHaveText('Tactical plan ready.');
+  const delta = Object.fromEntries(Object.keys(metrics).map((key) => [key, metrics[key] - before[key]]));
+  expect(delta).toEqual({ providerAttempts: 3, executedToolCalls: 2, executedForbiddenToolCalls: 0 });
+  expect(admission.snapshot().activeRuns).toBe(0);
+  expect(admission.snapshot().admittedRuns).toBe(1);
+  console.info('W08 browser flow counters:', JSON.stringify({ ...delta, activeAfter: 0, admittedInWindow: 1 }));
   return page.locator('#tactical-coach-result');
 }
 
@@ -98,6 +108,7 @@ test.beforeAll(async () => {
   process.env.GEMINI_API_KEY = sentinel;
   try {
     api = createApiServer({
+      tacticalAdmission: admission,
       tacticalAdmissionClock: () => admissionTime,
       tacticalSecurityEventSink: (event) => securityEvents.push(event),
       tacticalGeminiProviderFactory() {
@@ -106,9 +117,15 @@ test.beforeAll(async () => {
       tacticalProviderFactory() {
         const fake = createTacticalFakeProvider({ outcomes: tacticalScript(nextSummary) });
         return { generate(call) {
+          metrics.providerAttempts++;
           observedGoals.push(call.input.goal);
           return fake.generate(call);
         } };
+      },
+      tacticalToolExecutor(name, args, context) {
+        metrics.executedToolCalls++;
+        if (!['get_tactical_snapshot', 'evaluate_tactical_strategy'].includes(name)) metrics.executedForbiddenToolCalls++;
+        return invokeTacticalTool(name, args, context);
       },
     });
   } finally {

@@ -1,0 +1,21 @@
+{
+  "requestBytes": 4096,
+  "goalCodePoints": 240,
+  "finalPlanAndSuccessBytes": 4096,
+  "normalizedProviderBytes": 8192,
+  "toolResultBytes": 8192,
+  "logicalSteps": 3,
+  "toolExecutions": 2,
+  "providerAttempts": 4,
+  "transientRetries": 1,
+  "perCallTimeoutMs": 5000,
+  "totalDeadlineMs": 22000,
+  "localToolBudgetMs": 100,
+  "retryBackoffMs": 100,
+  "activeRuns": 2,
+  "admittedRuns": 5,
+  "admissionWindowMs": 60000,
+  "maxOutputTokens": 2048,
+  "sdkHttpAttempts": 1,
+  "provenance": "Compiled runtime exports; non-exported request/goal/final/retry/SDK policies checked in source and boundary/config tests."
+}

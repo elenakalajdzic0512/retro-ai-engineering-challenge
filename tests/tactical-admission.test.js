@@ -206,6 +206,8 @@ test('T13 lifecycle: success, error, timeout, cancellation, disconnect and late 
     let providerAbort = 0;
     const entered = gate();
     const late = gate();
+    const abortObserved = gate();
+    const completionObserved = gate();
     let fakeTime = 0;
     const admission = createTacticalAdmission(() => 0);
     const securityEvents = [];
@@ -217,7 +219,10 @@ test('T13 lifecycle: success, error, timeout, cancellation, disconnect and late 
     };
     const options = {
       tacticalAdmission: admission,
-      tacticalSecurityEventSink: (event) => securityEvents.push(event),
+      tacticalSecurityEventSink(event) {
+        securityEvents.push(event);
+        if (event.event === 'agent.run.completed') completionObserved.resolve();
+      },
       tacticalOrchestrationOptions: mode === 'timeout' ? { now: () => fakeTime, scheduler, sleep: async () => {} } : {},
       tacticalProviderFactory() {
         constructions++;
@@ -231,7 +236,7 @@ test('T13 lifecycle: success, error, timeout, cancellation, disconnect and late 
             return new Promise(() => {});
           }
           if (firstRun && ['cancellation', 'disconnect', 'late'].includes(mode) && attempts === 1) {
-            call.signal.addEventListener('abort', () => { providerAbort++; }, { once: true });
+            call.signal.addEventListener('abort', () => { providerAbort++; abortObserved.resolve(); }, { once: true });
             entered.resolve();
             return late.promise;
           }
@@ -265,11 +270,12 @@ test('T13 lifecycle: success, error, timeout, cancellation, disconnect and late 
           controller.abort();
           await assert.rejects(pending);
         }
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        await abortObserved.promise;
+        await completionObserved.promise;
         assert.equal(providerAbort, 1, `${mode} must abort its in-flight fake provider`);
         if (mode === 'late') late.resolve({ type: 'final', output: outcomes()[2].output });
         else late.resolve({ type: 'failure', code: 'provider_rejected' });
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise((resolve) => setImmediate(resolve));
       }
       assert.deepEqual(admission.snapshot(), { activeRuns: 0, admittedRuns: 1, releasedRuns: 1 },
         `${mode} releases its one server slot exactly once`);

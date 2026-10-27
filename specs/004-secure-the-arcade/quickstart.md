@@ -1,6 +1,6 @@
 # Validation Quickstart: Secure the Arcade
 
-**Status**: Living validation guide. Sections labeled planned or tied to an earlier task describe that point in time; the Wave A and Wave B sections record executed checks. Wave C remains pending. No live Gemini was used.
+**Status**: Living validation guide. Sections labeled planned or tied to an earlier task describe that point in time. Wave A/B and Wave C technical checks are recorded; Elena's T051 review and the T055 two-person rehearsal remain pending. No live Gemini was used.
 
 ## Prerequisites and checkpoint
 
@@ -249,3 +249,52 @@ Pre-commit status contains only the nine intended Wave B source/test/docs modifi
 ## Evidence and review exit criteria
 
 Populate `EVIDENCE_W08.md` later with six risk cases, official T00–T17 results, three same-fixture pre/post comparisons, commands/checkpoints, actual counts/headers/DOM observations, and residual limitations. Clearly distinguish planned, executed, observed, and inferred statements. Elena and Isidora cross-review each other's protection and negative tests, record actual work rather than planned ownership, and complete a final local demo only after these gates pass.
+
+## Wave C technical execution and report (2026-10-27)
+
+The instruction to execute the remaining Secure the Arcade tasks supersedes the earlier Wave B-only stop. Current branch remains `week8/secure-the-arcade`; no Hazard Arena reimplementation was performed. Wave A handoff: `caf46ef6cf198ff31e659d939f96ca0a00638357`; Wave B handoff / Wave C starting revision: `e41f8ca85dcb8b51e873a87b6c5deb114ff9215e`. Detailed work descriptions, exact commands, counts, architecture, data/risk inventories and limitations are in [EVIDENCE_W08.md](../../EVIDENCE_W08.md). Durable data: [comparisons](../../docs/evidence/w08-comparison.json), [effective policy](../../docs/evidence/w08-policy.json), [full audit](../../docs/evidence/w08-audit-full.json), [runtime audit](../../docs/evidence/w08-audit-runtime.json).
+
+**Completed technical tasks:** T035, T041, T045–T050, T053, T054. T00 now connects normal moving gameplay, 3 Tactical attempts/2 executed allowed tools/0 forbidden, both evidence sources, one fake Week 4 Hint call and complete canonical state equality; gameplay resumes afterwards. Browser fixture counters independently measure 3/2/0 and active after 0/current-window admitted 1 for T04/T05/T16 helper flows. P1/P2/P3 use one unmodified archived W05 source tree plus the current source under one installed toolchain; the explicit isolated proxy adaptation is identical on both. The helper is `tests/helpers/w08-compare.mjs`, with input, control-script and no-mutation assertions, safe teardown and JSON output.
+
+**Observed P1:** baseline peak 3/provider work for third; W08 peak 2, third 429/0 attempts/0 tools and successful recovery; totals 12/8 before versus 9/6 after including recovery. **Observed P2:** same HTTP-200 script executes before, is blocked with script-src-elem after; normal fake Coach 3/2 and game launches on both. **Observed P3:** constructor/toString/set_score execute 0 forbidden tools on both, positive case succeeds; no intentionally vulnerable baseline was created. Each comparison ran twice; report retains the second result.
+
+**Verification:** selected affected integration 236/236; final selected Node T00–T17 checks 41/41 plus Chromium 10/10; typecheck/client/server builds pass. First full run passed 332/332; its repeat found one T13 disconnect timing failure (331 pass/1 fail) because a fixed 20 ms wait did not establish that the server observed disconnect. The smallest fixture correction waits for actual fake-provider abort and lifecycle-completion gates, preserving exactly-once assertions. Focused admission then passed 3/3; both corrected full runs passed **332/332**, 0 failed/cancelled/skipped/TODO. Runtime source, UI, packages and lockfile were unchanged. This is the T041 permitted integration correction, documented rather than erased.
+
+**Audit and scope:** current runtime-only audit exit 0/0 findings; full audit exit 1 with 2 high-severity development-package entries (Vite/source-map-js), unchanged graph and no claimed fix. The report records individual advisories, Windows editor-tooling risk, serving/input mitigations and residual uncertainty. Source-map-js is still vulnerable in the dev graph; the previous macOS-only conclusion is not applied to Windows. No live Gemini, real key, main merge, PR or teammate notification was used. The pre-existing `.agents/skills/student-weekly-report/` directory stays outside the task commit.
+
+**Human tasks remain open:** the user explicitly confirmed that Elena has not yet performed T051 and no joint eight-minute rehearsal has taken place. Codex's technical preparation/self-review is not substituted for these people. T051 review packet and honest contribution record are in the evidence report; T055 runbook is prepared below. Do not label final pair acceptance complete until these actual observations are added.
+
+### T055 — prepared exact eight-minute runbook (not yet rehearsed)
+
+The following segment durations sum to exactly **8:00** (60+90+150+90+90 seconds). Elena/Isidora roles are suggestions for the future rehearsal, not a record of participation. Use a visible timer, stop each segment at its listed boundary, and record the actual timing/findings after the pair runs it. The technical fixtures have been exercised; no claim of a timed two-person demonstration is made.
+
+Prepare builds, terminal commands, `EVIDENCE_W08.md` and the committed comparison JSON before the timer. For the browser demo, use separate terminals with explicit fake mode; build and start before 0:00:
+
+```powershell
+$env:TACTICAL_AI_PROVIDER = 'fake'
+$env:AI_PROVIDER = 'fake'
+$env:GEMINI_API_KEY = ''
+npm.cmd run build:server
+npm.cmd run build
+npm.cmd run start:api
+# Separate terminal, from the same root:
+npm.cmd run preview -- --host 127.0.0.1 --port 4173 --strictPort
+```
+
+Open `http://127.0.0.1:4173`; no real key/live provider is needed. Stop both foreground processes after the demonstration. Comparison/test commands manage their own isolated ports and teardown.
+
+| Timer / duration | Suggested driver and action | Visible proof and explanation |
+| --- | --- | --- |
+| **0:00–1:00 / 60 s** | Isidora shows Neon Breaker, launches the ball and identifies the advisory Coach. Elena traces the diagram. | Browser state is client-reported/unverified; provider proposal is untrusted; the application owns policy. Name top priorities: aggregate exhaustion, browser script execution, tool authority. |
+| **1:00–2:30 / 90 s** | Isidora submits a normal fake Coach goal and Hint; Elena runs `node --test --test-reporter=tap --test-name-pattern='^T00 ' tests/tactical-api.test.js`. | Readable plan and both evidence sources, measured 3 provider/2 allowed/0 forbidden, one Hint call, complete before/after game equality and continued gameplay. Explain where app values are materialized. |
+| **2:30–5:00 / 150 s** | Elena shows T02 direct HTTP privilege/body rejection and T04/T05/T16 browser output; Isidora shows T07/T09/T17 forbidden fake proposal after malicious goal. Use the focused Node command/report and browser command below. | Separate invalid HTTP cases start 0 work. HTML/Markdown/URLs stay text; a reachable script executes on no-CSP control and is blocked by script-src-elem on preview. Forbidden proposal has 0 execution, unchanged full local game and minimal safe events. Explain this is application policy, not universal real-Gemini immunity. |
+| **5:00–6:30 / 90 s** | Isidora shows T11/T12 counters and late-result tests; Elena shows T13 concurrency, rolling window and exactly-once release. | Effective 8192 provider/tool bytes, 4096 request/final bytes, 240-point goal, 3/2/4/1 run budgets, 5000/22000 ms limits, 2 active and 5 per rolling 60 s. Explain retry does not reset deadline and demonstrate recovery. Show two 332/332 full results and browser 10/10. |
+| **6:30–8:00 / 90 s** | Both compare P1/P2/P3 JSON and delivered headers, show fresh build status and dependency table, then state limits and answer the enforcement question. | Peak 3→2; reachable script allowed→blocked; forbidden tools remain refused before/after. Audit runtime 0/full 2 dev entries, unfixed Windows tooling risks, post-SDK byte check, local per-process scope, no trusted ledger/live-model proof. Each person names a decision, enforcement file, forbidden effect, test and its proof limit. |
+
+Focused browser command for the 2:30 segment (the unescaped pipes below are regex alternation):
+
+```powershell
+npm.cmd run test:browser:w08 -- --grep 'T04|T05|T16'
+```
+
+After the real rehearsal, append actual participants, date, start/end duration, each person's explanation/review findings, unexpected outcomes and follow-up. If the run overruns, record it and repeat after narrowing presentation; do not backfill a planned 8:00 as an observed 8:00. T051 and T055 remain unchecked until the required human work is actually complete.

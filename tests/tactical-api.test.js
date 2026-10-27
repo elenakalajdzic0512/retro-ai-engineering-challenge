@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame } from '../src/game.js';
+import { createHash } from 'node:crypto';
+import { createGame, launch, update } from '../src/game.js';
 import { deriveTacticalSnapshot } from '../src/tactical-snapshot.js';
 import { createApiServer } from '../dist-server/index.js';
 import { createTacticalFakeProvider } from '../dist-server/tactical/fake-provider.js';
@@ -8,6 +9,7 @@ import { createTacticalCoachGeminiProvider } from '../dist-server/tactical/gemin
 import { invokeTacticalTool } from '../dist-server/tactical/tools.js';
 import { parseTacticalSnapshot } from '../dist-server/tactical/contracts.js';
 import { createTacticalAdmission } from '../dist-server/tactical/admission.js';
+import { createFakeProvider } from '../dist-server/ai/fake-provider.js';
 
 const validRequest = () => ({ goal: 'Clear the center safely.', state: deriveTacticalSnapshot(createGame()) });
 const candidate = { targetZone: 'center', style: 'balanced', paddleContact: 'center', route: 'direct' };
@@ -161,6 +163,50 @@ test('T005 HTTP fixture distinguishes pre-provider rejection from a valid fake p
     assert.equal(fixture.metrics.executedAllowedToolCalls, 2);
     assert.equal(fixture.metrics.executedForbiddenToolCalls, 0);
   });
+});
+
+test('T00 normal gameplay, real allowed Tactical tools and Week 4 Hint preserve the complete game', async (t) => {
+  const game = createGame();
+  launch(game);
+  const initialBall = structuredClone(game.ball);
+  update(game, 0, 1 / 60);
+  assert.equal(game.status, 'playing');
+  assert.notDeepEqual(game.ball, initialBall);
+  const before = structuredClone(game);
+  const fixture = createTacticalHttpFixture();
+  const hint = createFakeProvider({ outcomes: [
+    { type: 'final', output: JSON.stringify({ hint: 'Keep the ball in play.', category: 'general' }) },
+  ] });
+  fixture.options.provider = hint;
+  const events = [];
+  const admission = createTacticalAdmission(() => 0);
+  fixture.options.tacticalAdmission = admission;
+  fixture.options.tacticalSecurityEventSink = (event) => events.push(event);
+  await fixture.withServer(async (base) => {
+    const response = await post(base, { goal: 'Clear the center safely.', state: deriveTacticalSnapshot(game) });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(body.plan, final);
+    assert.deepEqual(new Set(body.evidence.map((item) => item.source)), new Set(['tactical_snapshot', 'strategy_evaluation']));
+    assert.equal(fixture.metrics.providerAttempts, 3);
+    assert.equal(fixture.metrics.executedAllowedToolCalls, 2);
+    assert.equal(fixture.metrics.executedForbiddenToolCalls, 0);
+    assert.deepEqual(game, before);
+    const hintResponse = await fetch(`${base}/api/ai`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: game.status, score: game.score, lives: game.lives,
+        bricksRemaining: game.bricks.filter((brick) => brick.alive).length }) });
+    assert.equal(hintResponse.status, 200);
+    assert.deepEqual(await hintResponse.json(), { hint: 'Keep the ball in play.', category: 'general' });
+    assert.equal(hint.calls.length, 1);
+    assert.deepEqual(game, before);
+  });
+  assert.deepEqual(admission.snapshot(), { activeRuns: 0, admittedRuns: 1, releasedRuns: 1 });
+  assert.equal(events.at(-1).providerAttempts, 3);
+  assert.equal(events.at(-1).executedToolCalls, 2);
+  const digest = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  t.diagnostic(`T00 providerAttempts=3; executedAllowedToolCalls=2; executedForbiddenToolCalls=0; admitted=1; activeAfter=0; Hint=1; stateBefore=${digest(before)}; stateAfter=${digest(game)}; changedPaths=[]`);
+  update(game, 0, 1 / 60);
+  assert.notDeepEqual(game.ball, before.ball, 'Gameplay resumes after both advisory requests.');
 });
 
 test('T005 fake clock and held HTTP request release deterministically', async () => {
