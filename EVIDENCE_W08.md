@@ -259,6 +259,14 @@ Package audit severity counts describe affected package entries, not the number 
 | T051 | Prepared concrete review packet; awaiting Elena's actual review. | **Open — human** |
 | T053 | Reviewed intended test/evidence diff, app-owned secret surfaces, fixed errors, dependency graph unchanged and scope; unrelated local skill excluded. | Complete |
 | T054 | Typecheck/builds, two corrected full runs, final matrix/browser checks, artifact scan and current full/runtime audits, with actual exits/findings. | Complete |
-| T055 | Exact eight-minute runbook and reproducible commands prepared. Both-person timed rehearsal/explanations still needed. | **Open — human rehearsal** |
+| T055 | Exact runbook prepared; follow-up Codex paced technical dry run passed in 8:00.015 with command time separated from pacing (record below). Both-person speech/rehearsal still needed. | **Open — human rehearsal** |
 
 Technical verification is complete with the documented development-tool findings and proof limits. Final pair acceptance/merge/demo readiness is **pending T051 and T055**, not declared complete by this report. No teammate message, force push, `main` merge or PR publication is part of this execution.
+
+## T055 follow-up: paced technical dry run
+
+The user subsequently asked Codex to try T055. On 2026-10-27 at **21:01:28–21:09:28 Europe/Budapest**, `node tests/helpers/w08-rehearse.mjs` completed its five scheduled phases with **technical PASS**. The timer measured **480015 ms**; actual commands/actions used **11895 ms**, with **468120 ms of deliberate pacing/available explanation time**. The server/client preparation builds passed before the timer (638/657 ms). The base revision was `ace48bfc8179365cd48625662e59f2d2f2e699a1`; this follow-up adds the rehearsal helper/evidence, not runtime changes.
+
+Durable observations: [exact timing/commands JSON](docs/evidence/w08-t055-rehearsal.json), [visually inspected normal-flow screenshot](docs/evidence/w08-t055-normal.png), and the per-phase table in [quickstart.md](specs/004-secure-the-arcade/quickstart.md). The live built browser showed a launched game, successful Hint, readable Tactical plan and two evidence rows, 3 provider attempts/2 tool calls and no page errors. T00 passed 1/1; HTTP/forbidden-tool selection passed 9/9; browser security selection passed 8/8; budget/timeout/admission selection passed 7/7; fresh same-input P1/P2/P3 comparison passed. Each phase completed within its slot; start drift was at most 22 ms. No real key/live Gemini was used. All fixture servers/browsers closed; no dependency changed. The existing runtime/full audit snapshots were read for the limitations segment, not rerun.
+
+The eight-minute duration was **programmatically paced**, not an observation of spoken delivery, human role switching, or continuous game play. This demonstrates that the technical demonstrations fit the allocation, and preserves the actual command durations instead of claiming eight minutes of active test work. Elena and Isidora's joint spoken rehearsal/explanations and Elena's T051 review remain pending; their completion has not been inferred or marked PASS.

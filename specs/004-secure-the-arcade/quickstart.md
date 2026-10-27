@@ -264,7 +264,7 @@ The instruction to execute the remaining Secure the Arcade tasks supersedes the 
 
 **Human tasks remain open:** the user explicitly confirmed that Elena has not yet performed T051 and no joint eight-minute rehearsal has taken place. Codex's technical preparation/self-review is not substituted for these people. T051 review packet and honest contribution record are in the evidence report; T055 runbook is prepared below. Do not label final pair acceptance complete until these actual observations are added.
 
-### T055 — prepared exact eight-minute runbook (not yet rehearsed)
+### T055 — prepared eight-minute runbook (pair rehearsal still pending)
 
 The following segment durations sum to exactly **8:00** (60+90+150+90+90 seconds). Elena/Isidora roles are suggestions for the future rehearsal, not a record of participation. Use a visible timer, stop each segment at its listed boundary, and record the actual timing/findings after the pair runs it. The technical fixtures have been exercised; no claim of a timed two-person demonstration is made.
 
@@ -298,3 +298,25 @@ npm.cmd run test:browser:w08 -- --grep 'T04|T05|T16'
 ```
 
 After the real rehearsal, append actual participants, date, start/end duration, each person's explanation/review findings, unexpected outcomes and follow-up. If the run overruns, record it and repeat after narrowing presentation; do not backfill a planned 8:00 as an observed 8:00. T051 and T055 remain unchecked until the required human work is actually complete.
+
+### T055 follow-up — executed Codex technical dry run (2026-10-27)
+
+At the user's request, Codex ran the five segments on a real monotonic timer, **21:01:28–21:09:28 Europe/Budapest** (UTC 20:01:28–20:09:28), based on revision `ace48bfc8179365cd48625662e59f2d2f2e699a1`. The result was **technical PASS**, elapsed **480015 ms (8:00.015)**. Exact start/end timestamps, commands and segment measurements are in [w08-t055-rehearsal.json](../../docs/evidence/w08-t055-rehearsal.json); [the screenshot](../../docs/evidence/w08-t055-normal.png) was visually inspected and shows the launched game plus successful Hint/Coach responses.
+
+| Scheduled segment | Actual technical work | Observed result |
+| --- | ---: | --- |
+| 0:00–1:00 | 1.096 s | Built preview in Chromium: game launches, Hint ready, Tactical plan ready with 2 evidence rows, provider/tool counts 3/2, no page errors. |
+| 1:00–2:30 | 0.626 s | Official T00: 1/1 test passed; full canonical state before/after equal, 3 attempts/2 allowed/0 forbidden and one Hint call. |
+| 2:30–5:00 | 7.443 s | 9/9 selected HTTP/tool tests and 8/8 T04/T05/T16 browser tests passed, including reachable-script CSP proof. |
+| 5:00–6:30 | 0.562 s | 7/7 T11/T12/T13 budget, timeout, rolling-limit, disconnect and recovery tests passed. |
+| 6:30–8:00 | 2.168 s | Fresh P1/P2/P3 comparison passed: peak 3→2, script executes→blocked, forbidden execution 0 on both; policy and dated audit snapshots checked. |
+
+Total active technical work was **11895 ms (11.895 s)**; **468120 ms** was scheduled pacing/available explanation time. Preparation builds took 638 ms server and 657 ms client **before** the timer. No step exceeded its planned segment; phase starts had at most 22 ms scheduling drift. All local APIs/previews/Chromium instances were closed by their fixtures. No runtime/package change, live Gemini, real key or new dependency was required. The audit data shown was the already recorded snapshot, not a newly executed audit.
+
+Reproduce after the builds and W05 archive preparation documented in `EVIDENCE_W08.md`:
+
+```powershell
+node tests/helpers/w08-rehearse.mjs
+```
+
+This helper deliberately waits until the scheduled segment boundaries and the 480-second end, and records **command time separately from pacing**. It is an automated technical feasibility check, not measured speech, human handovers, or continuous eight-minute gameplay. The generous remaining segment time supports the prepared runbook; the actual pair still needs to rehearse explanations and record its real duration. T051 and the human requirement of T055 remain open.

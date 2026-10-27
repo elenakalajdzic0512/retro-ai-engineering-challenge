@@ -173,6 +173,8 @@ After both handoffs, complete T035, T041, T045, T046, T047, T048, T049, T050, T0
 - [x] T054 [US4] [Joint] Run final `npm run typecheck`, full `npm test`, `npm run build`, `npm run build:server`, the actual W08 security/browser commands added during implementation, deterministic fake-only suite, production header/CSP check, sentinel search, and dependency audit; record exact commands, exit codes, pass/fail/skipped counts, and failures in `EVIDENCE_W08.md` and `specs/004-secure-the-arcade/quickstart.md`; do not claim a nonexistent script currently exists (FR-009, FR-014, FR-015).
 - [ ] T055 [US4] [Joint] Prepare and rehearse an exactly 8-minute runbook in `specs/004-secure-the-arcade/quickstart.md`: 0:00–1:00 game/AI/risk; 1:00–2:30 normal W05 ≥2 steps and actual allowed tool; 2:30–5:00 browser/API abuse and agent/tool abuse; 5:00–6:30 counters/state/automated tests; 6:30–8:00 P1/P2/P3 before/after, production build, limitations; both Elena and Isidora must explain decision/enforcement location, forbidden effect, test, and what proof does not establish (FR-009, FR-013, FR-014).
 
+**T055 follow-up observation (2026-10-27):** Codex executed a programmatically paced technical dry run: 8:00.015 elapsed, 11.895 seconds active technical work; all five segments passed within their slots. The helper, timing JSON, screenshot and limitations are recorded in `quickstart.md` and `EVIDENCE_W08.md`. This does not replace the required two-person spoken rehearsal/explanations, so T055 remains unchecked.
+
 **Checkpoint**: Reproducible evidence and actual pair review support a final decision; no claimed result precedes its run.
 
 ---

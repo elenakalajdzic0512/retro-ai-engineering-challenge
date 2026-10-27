@@ -1,0 +1,171 @@
+{
+  "kind": "Codex paced technical dry run; no spoken or two-person rehearsal",
+  "timezone": "Europe/Budapest",
+  "targetMs": 480000,
+  "sourceRevision": "ace48bfc8179365cd48625662e59f2d2f2e699a1",
+  "preparation": [
+    {
+      "name": "server-build",
+      "command": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.server.json"
+      ],
+      "exit": 0,
+      "durationMs": 638
+    },
+    {
+      "name": "client-build",
+      "command": [
+        "node",
+        "node_modules/vite/bin/vite.js",
+        "build"
+      ],
+      "exit": 0,
+      "durationMs": 657
+    }
+  ],
+  "phases": [
+    {
+      "name": "0:00–1:00 game and boundaries",
+      "scheduledStartMs": 0,
+      "scheduledEndMs": 60000,
+      "actualStartMs": 1,
+      "workFinishedMs": 1097,
+      "activeWorkMs": 1096,
+      "spareMs": 58903,
+      "result": {
+        "game": "launched",
+        "coach": "Tactical plan ready.",
+        "hint": "AI hint ready.",
+        "providerAttempts": 3,
+        "executedToolCalls": 2,
+        "pageErrors": [],
+        "screenshot": "node_modules/.cache/w08-t055/normal-coach-hint.png"
+      }
+    },
+    {
+      "name": "1:00–2:30 normal T00",
+      "scheduledStartMs": 60000,
+      "scheduledEndMs": 150000,
+      "actualStartMs": 60005,
+      "workFinishedMs": 60631,
+      "activeWorkMs": 626,
+      "spareMs": 89369,
+      "result": {
+        "name": "t00",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=^T00 ",
+          "tests/tactical-api.test.js"
+        ],
+        "exit": 0,
+        "durationMs": 625
+      }
+    },
+    {
+      "name": "2:30–5:00 HTTP, browser and forbidden tools",
+      "scheduledStartMs": 150000,
+      "scheduledEndMs": 300000,
+      "actualStartMs": 150022,
+      "workFinishedMs": 157465,
+      "activeWorkMs": 7443,
+      "spareMs": 142535,
+      "result": [
+        {
+          "name": "negative-http-tools",
+          "command": [
+            "node",
+            "--test",
+            "--test-reporter=tap",
+            "--test-name-pattern=^T(?:02|07|09|17)(?: |/)",
+            "tests/tactical-api.test.js",
+            "tests/tactical-orchestrator.test.js",
+            "tests/tactical-tools.test.js"
+          ],
+          "exit": 0,
+          "durationMs": 460
+        },
+        {
+          "name": "browser",
+          "command": [
+            "node",
+            "node_modules/@playwright/test/cli.js",
+            "test",
+            "--config=playwright.config.js",
+            "--grep",
+            "T04|T05|T16"
+          ],
+          "exit": 0,
+          "durationMs": 6983
+        }
+      ]
+    },
+    {
+      "name": "5:00–6:30 budgets, timeout and recovery",
+      "scheduledStartMs": 300000,
+      "scheduledEndMs": 390000,
+      "actualStartMs": 300012,
+      "workFinishedMs": 300574,
+      "activeWorkMs": 562,
+      "spareMs": 89426,
+      "result": {
+        "name": "budgets",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=^T(?:11|12|13)(?: |/)",
+          "tests/tactical-orchestrator.test.js",
+          "tests/tactical-admission.test.js"
+        ],
+        "exit": 0,
+        "durationMs": 561
+      }
+    },
+    {
+      "name": "6:30–8:00 comparisons and limitations",
+      "scheduledStartMs": 390000,
+      "scheduledEndMs": 480000,
+      "actualStartMs": 390015,
+      "workFinishedMs": 392183,
+      "activeWorkMs": 2168,
+      "spareMs": 87817,
+      "result": {
+        "comparison": {
+          "name": "comparisons",
+          "command": [
+            "node",
+            "tests/helpers/w08-compare.mjs",
+            "node_modules/.cache/w08-before",
+            ".",
+            "node_modules/.cache/w08-t055/comparison.json"
+          ],
+          "exit": 0,
+          "durationMs": 2164
+        },
+        "openDevelopmentPackages": [
+          "source-map-js",
+          "vite"
+        ],
+        "runtimeAuditFindings": 0,
+        "limits": [
+          "post-SDK bytes",
+          "single-process admission",
+          "unverified client state",
+          "no live-Gemini immunity proof",
+          "human review/rehearsal still pending"
+        ]
+      }
+    }
+  ],
+  "startedAtUtc": "2026-10-27T20:01:28.665Z",
+  "elapsedMs": 480015,
+  "finishedAtUtc": "2026-10-27T20:09:28.683Z",
+  "status": "technical PASS; time paced by automation, not a spoken rehearsal",
+  "activeWorkMs": 11895,
+  "pacingAndReviewMs": 468120
+}
