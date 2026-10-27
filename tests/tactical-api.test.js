@@ -5,6 +5,7 @@ import { deriveTacticalSnapshot } from '../src/tactical-snapshot.js';
 import { createApiServer } from '../dist-server/index.js';
 import { createTacticalFakeProvider } from '../dist-server/tactical/fake-provider.js';
 import { createTacticalCoachGeminiProvider } from '../dist-server/tactical/gemini-provider.js';
+import { invokeTacticalTool } from '../dist-server/tactical/tools.js';
 
 const validRequest = () => ({ goal: 'Clear the center safely.', state: deriveTacticalSnapshot(createGame()) });
 const candidate = { targetZone: 'center', style: 'balanced', paddleContact: 'center', route: 'direct' };
@@ -45,6 +46,140 @@ async function withTacticalMode(mode, action) {
     else process.env.TACTICAL_AI_PROVIDER = original;
   }
 }
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+function createFakeClock(start = 0) {
+  let time = start;
+  return {
+    now: () => time,
+    advance(milliseconds) {
+      assert.ok(Number.isFinite(milliseconds) && milliseconds >= 0);
+      time += milliseconds;
+      return time;
+    },
+  };
+}
+
+// Test-side observations, not W05 production admission counters or enforcement.
+function createTacticalHttpFixture({ holdFirstAttempt = false, clock = createFakeClock() } = {}) {
+  const entered = [];
+  const held = [];
+  const metrics = {
+    providerConstructions: 0,
+    providerAttempts: 0,
+    executedToolCalls: 0,
+    executedAllowedToolCalls: 0,
+    executedForbiddenToolCalls: 0,
+    admittedArrivals: 0,
+    activeRuns: 0,
+    releasedRuns: 0,
+  };
+  const allowed = new Set(['get_tactical_snapshot', 'evaluate_tactical_strategy']);
+  const options = {
+    tacticalGeminiProviderFactory() { throw new Error('Live Gemini must never be selected by this fixture.'); },
+    tacticalProviderFactory() {
+      metrics.providerConstructions++;
+      // Factory entry follows HTTP/schema validation. This is only a test-side proxy for admission.
+      metrics.admittedArrivals++;
+      const fake = createTacticalFakeProvider({ outcomes: script() });
+      let firstAttempt = true;
+      return { async generate(call) {
+        metrics.providerAttempts++;
+        if (firstAttempt && holdFirstAttempt) {
+          firstAttempt = false;
+          const gate = deferred();
+          metrics.activeRuns++; // Currently held fake-provider runs, not a server-owned active slot.
+          held.push(gate);
+          const arrival = entered.shift();
+          arrival?.resolve();
+          await gate.promise;
+          metrics.activeRuns--;
+          metrics.releasedRuns++;
+        }
+        firstAttempt = false;
+        return fake.generate(call);
+      } };
+    },
+    tacticalToolExecutor(name, args, context) {
+      metrics.executedToolCalls++;
+      if (allowed.has(name)) metrics.executedAllowedToolCalls++;
+      else metrics.executedForbiddenToolCalls++;
+      return invokeTacticalTool(name, args, context);
+    },
+    tacticalOrchestrationOptions: { now: clock.now },
+  };
+  return {
+    metrics, clock, options,
+    waitForHeldRun() {
+      const arrival = deferred();
+      entered.push(arrival);
+      return arrival.promise;
+    },
+    releaseNext() {
+      const gate = held.shift();
+      assert.ok(gate, 'No held fake-provider run to release.');
+      gate.resolve();
+    },
+    releaseAll() { while (held.length) held.shift().resolve(); },
+    withServer(action) {
+      return withServer(options, async (base) => {
+        try { return await action(base); }
+        finally { while (held.length) held.shift().resolve(); }
+      });
+    },
+  };
+}
+
+test('T005 HTTP fixture distinguishes pre-provider rejection from a valid fake path', async () => {
+  const fixture = createTacticalHttpFixture();
+  await fixture.withServer(async (base) => {
+    const rejected = await post(base, { ...validRequest(), goal: '' });
+    assert.equal(rejected.status, 400);
+    assert.equal((await rejected.json()).error.code, 'invalid_input');
+    assert.deepEqual(fixture.metrics, {
+      providerConstructions: 0, providerAttempts: 0, executedToolCalls: 0,
+      executedAllowedToolCalls: 0, executedForbiddenToolCalls: 0,
+      admittedArrivals: 0, activeRuns: 0, releasedRuns: 0,
+    });
+
+    const accepted = await post(base, validRequest());
+    assert.equal(accepted.status, 200);
+    assert.equal((await accepted.json()).plan.summary, final.summary);
+    assert.equal(fixture.metrics.providerConstructions, 1);
+    assert.equal(fixture.metrics.admittedArrivals, 1);
+    assert.equal(fixture.metrics.providerAttempts, 3);
+    assert.equal(fixture.metrics.executedToolCalls, 2);
+    assert.equal(fixture.metrics.executedAllowedToolCalls, 2);
+    assert.equal(fixture.metrics.executedForbiddenToolCalls, 0);
+  });
+});
+
+test('T005 fake clock and held HTTP request release deterministically', async () => {
+  const clock = createFakeClock(100);
+  const fixture = createTacticalHttpFixture({ holdFirstAttempt: true, clock });
+  await fixture.withServer(async (base) => {
+    const entered = fixture.waitForHeldRun();
+    const pending = post(base, validRequest());
+    await entered;
+    assert.equal(fixture.metrics.providerConstructions, 1);
+    assert.equal(fixture.metrics.providerAttempts, 1);
+    assert.equal(fixture.metrics.admittedArrivals, 1);
+    assert.equal(fixture.metrics.activeRuns, 1);
+    assert.equal(clock.now(), 100);
+    assert.equal(clock.advance(1_000), 1_100);
+    fixture.releaseNext();
+    assert.equal((await pending).status, 200);
+    assert.equal(fixture.metrics.activeRuns, 0);
+    assert.equal(fixture.metrics.releasedRuns, 1);
+    assert.equal(fixture.metrics.providerAttempts, 3);
+    assert.equal(clock.advance(60_000), 61_100);
+  });
+});
 
 test('explicit fake Tactical mode stays deterministic without Gemini work', async () => {
   await withTacticalMode('fake', () => withServer({ tacticalGeminiProviderFactory() {
