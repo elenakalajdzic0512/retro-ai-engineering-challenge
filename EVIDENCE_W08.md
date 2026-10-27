@@ -270,3 +270,17 @@ The user subsequently asked Codex to try T055. On 2026-10-27 at **21:01:28–21:
 Durable observations: [exact timing/commands JSON](docs/evidence/w08-t055-rehearsal.json), [visually inspected normal-flow screenshot](docs/evidence/w08-t055-normal.png), and the per-phase table in [quickstart.md](specs/004-secure-the-arcade/quickstart.md). The live built browser showed a launched game, successful Hint, readable Tactical plan and two evidence rows, 3 provider attempts/2 tool calls and no page errors. T00 passed 1/1; HTTP/forbidden-tool selection passed 9/9; browser security selection passed 8/8; budget/timeout/admission selection passed 7/7; fresh same-input P1/P2/P3 comparison passed. Each phase completed within its slot; start drift was at most 22 ms. No real key/live Gemini was used. All fixture servers/browsers closed; no dependency changed. The existing runtime/full audit snapshots were read for the limitations segment, not rerun.
 
 The eight-minute duration was **programmatically paced**, not an observation of spoken delivery, human role switching, or continuous game play. This demonstrates that the technical demonstrations fit the allocation, and preserves the actual command durations instead of claiming eight minutes of active test work. Elena and Isidora's joint spoken rehearsal/explanations and Elena's T051 review remain pending; their completion has not been inferred or marked PASS.
+
+### T055 requested repeat — 2026-10-27
+
+At the user's request, the **same unchanged helper** was executed again from `fd7c58f3b52cfb8e1f93a7f57a93ef236757dc76`, at **21:11:55–21:19:55 Europe/Budapest**. The repeat passed with **480009 ms (8:00.009)** paced duration, **9240 ms (9.240 s)** active technical work and **470769 ms** scheduled pacing/available explanation time. No runtime/config/dependency change occurred between the two runs. The first observations remain intact; [repeat timing and commands](docs/evidence/w08-t055-rehearsal-repeat.json) and [repeat screenshot](docs/evidence/w08-t055-normal-repeat.png) are separate artifacts.
+
+| Scheduled segment | First active work | Repeat active work | Repeat observation |
+| --- | ---: | ---: | --- |
+| 0:00–1:00 | 1.096 s | 0.849 s | Game launched; Coach/Hint ready; 3 provider attempts, 2 tool calls, no page errors. |
+| 1:00–2:30 | 0.626 s | 0.415 s | T00 1/1; canonical before/after state equal. |
+| 2:30–5:00 | 7.443 s | 5.202 s | HTTP/tool 9/9 and browser 8/8, including CSP script-src-elem proof. |
+| 5:00–6:30 | 0.562 s | 0.576 s | Budget/timeout/admission/lifecycle 7/7. |
+| 6:30–8:00 | 2.168 s | 2.198 s | P1/P2/P3 repeat passed with the same policy outcomes and zero forbidden execution. |
+
+All phase starts were within 16 ms of schedule and every command fit its segment; these are two local observations, not a general performance benchmark. The full eight-minute duration remains deliberately paced rather than measured human speech. All temporary servers/browsers were closed. T051 and the two-person explanation/rehearsal requirement of T055 remain open.

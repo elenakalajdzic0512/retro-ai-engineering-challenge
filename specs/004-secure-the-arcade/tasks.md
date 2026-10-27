@@ -175,6 +175,8 @@ After both handoffs, complete T035, T041, T045, T046, T047, T048, T049, T050, T0
 
 **T055 follow-up observation (2026-10-27):** Codex executed a programmatically paced technical dry run: 8:00.015 elapsed, 11.895 seconds active technical work; all five segments passed within their slots. The helper, timing JSON, screenshot and limitations are recorded in `quickstart.md` and `EVIDENCE_W08.md`. This does not replace the required two-person spoken rehearsal/explanations, so T055 remains unchecked.
 
+**T055 requested repeat (2026-10-27):** identical helper passed again: 8:00.009 paced duration, 9.240 seconds active technical work; T00 1/1, HTTP/tool 9/9, browser 8/8, budgets/admission 7/7, P1/P2/P3 passed. Separate repeat timing/screenshot preserve the first run. The two-person requirement remains open.
+
 **Checkpoint**: Reproducible evidence and actual pair review support a final decision; no claimed result precedes its run.
 
 ---
