@@ -599,3 +599,29 @@ test('client abort cancels an in-flight Coach provider without an unsafe respons
     assert.equal(aborted, true);
   });
 });
+
+test('T14 synthetic internal provider failure stays out of public and next-model context', async () => {
+  const sentinel = 'W08_SERVER_SECRET_DO_NOT_EXPOSE';
+  const nextInputs = [];
+  let attempts = 0;
+  const provider = { async generate(call) {
+    attempts++;
+    if (attempts === 1) throw new Error(`internal failure ${sentinel}`);
+    nextInputs.push(JSON.stringify({ input: call.input, toolResults: call.toolResults }));
+    return { type: 'failure', code: 'provider_rejected' };
+  } };
+  await withServer({
+    tacticalProvider: provider,
+    tacticalGeminiProviderFactory() { throw new Error('Live Gemini must not be selected.'); },
+    tacticalOrchestrationOptions: { sleep: async () => {} },
+  }, async (base) => {
+    const response = await post(base, validRequest());
+    const publicBody = await response.text();
+    assert.equal(response.status, 502);
+    assert.equal(JSON.parse(publicBody).error.code, 'provider_rejected');
+    assert.doesNotMatch(publicBody, /W08_SERVER_SECRET_DO_NOT_EXPOSE/);
+    assert.ok(nextInputs.length >= 1, 'Transient failure reaches a later fake model call.');
+    for (const input of nextInputs) assert.doesNotMatch(input, /W08_SERVER_SECRET_DO_NOT_EXPOSE/);
+    // The HTTP JSON is also the browser-bound result for this local API flow.
+  });
+});
