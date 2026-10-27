@@ -1,9 +1,13 @@
 import { FunctionCallingConfigMode, GoogleGenAI, type Content, type GenerateContentParameters, type Part } from '@google/genai';
 import { parseCandidateStrategy } from './contracts.js';
 import type { TacticalProvider, TacticalProviderCall, TacticalProviderOutcome } from './provider-contracts.js';
+import { isWithinProviderByteLimit } from './provider-contracts.js';
 import { getTacticalToolDeclarations, parseTacticalToolResult, type TacticalToolName, type TacticalToolResult } from './tools.js';
 
 export const TACTICAL_GEMINI_MODEL = 'gemini-3.5-flash-lite';
+// Headroom above the measured compact normal plan, with <=720 prose code points.
+// Token counts are not UTF-8 bytes; the independent byte bound remains authoritative.
+export const TACTICAL_MAX_OUTPUT_TOKENS = 2048;
 
 const SYSTEM_INSTRUCTION = 'You are Neon Breaker Tactical Coach. Follow the current server-provided tool or JSON-output instruction. Use only validated tool responses as arena evidence. Follow three stages in order: first request the snapshot, then propose one strategy evaluation candidate, and only after a validated evaluation response produce the final plan. Never claim an exact trajectory or future outcome.';
 const SNAPSHOT_INSTRUCTION = 'First call get_tactical_snapshot with exactly {}. Do not provide a plan yet.';
@@ -207,6 +211,9 @@ export function createTacticalCoachGeminiProvider(options: TacticalGeminiProvide
       const config: NonNullable<GenerateContentParameters['config']> = {
         abortSignal: call.signal,
         automaticFunctionCalling: { disable: true },
+        maxOutputTokens: TACTICAL_MAX_OUTPUT_TOKENS,
+        // SDK attempts includes the first HTTP request. Only the orchestrator owns retries.
+        httpOptions: { retryOptions: { attempts: 1 } },
         systemInstruction: `${SYSTEM_INSTRUCTION} ${step === 0 ? SNAPSHOT_INSTRUCTION : step === 1 ? EVALUATION_INSTRUCTION : FINAL_INSTRUCTION}`,
         candidateCount: 1,
         ...(expected ? {
@@ -225,7 +232,7 @@ export function createTacticalCoachGeminiProvider(options: TacticalGeminiProvide
       if (refused(response)) return { type: 'failure', code: 'provider_rejected' };
       if (expected) {
         const normalized = toolProposal(response, expected);
-        if (!normalized) return null;
+        if (!normalized || !isWithinProviderByteLimit(normalized.proposal)) return null;
         history.splice(0, history.length, ...contents, { role: 'model', parts: [normalized.modelPart] });
         pending = { name: expected, ...(normalized.id === undefined ? {} : { id: normalized.id }) };
         completedResults = step;
@@ -233,7 +240,8 @@ export function createTacticalCoachGeminiProvider(options: TacticalGeminiProvide
         return normalized.proposal;
       }
       const normalized = finalProposal(response);
-      if (normalized) finished = true;
+      if (!normalized || !isWithinProviderByteLimit(normalized)) return null;
+      finished = true;
       return normalized;
     },
   };

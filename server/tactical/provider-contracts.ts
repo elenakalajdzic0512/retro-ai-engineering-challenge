@@ -1,6 +1,16 @@
 import type { TacticalRequest } from './contracts.js';
 import type { TacticalToolDeclaration, TacticalToolResult } from './tools.js';
 
+export const MAX_PROVIDER_OUTCOME_BYTES = 8192;
+
+// Post-SDK/application data bound; this does not limit bytes received by the transport.
+export function isWithinProviderByteLimit(value: unknown): boolean {
+  try {
+    const serialized = JSON.stringify(value);
+    return typeof serialized === 'string' && Buffer.byteLength(serialized, 'utf8') <= MAX_PROVIDER_OUTCOME_BYTES;
+  } catch { return false; }
+}
+
 export type TacticalProviderFailureCode =
   | 'provider_timeout' | 'provider_unavailable' | 'rate_limited'
   | 'provider_rejected' | 'provider_not_configured';

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { GoogleGenAI } from '@google/genai';
 import { createGame } from '../src/game.js';
 import { deriveTacticalSnapshot } from '../src/tactical-snapshot.js';
 import { createTacticalToolContext, getTacticalToolDeclarations, invokeTacticalTool } from '../dist-server/tactical/tools.js';
@@ -70,7 +71,7 @@ test('initial Gemini request exposes goal and only the snapshot declaration, nev
   assert.equal(request.model, MODEL);
   assert.deepEqual(request.contents, [{ role: 'user', parts: [{ text: providerCall.input.goal }] }]);
   assert.deepEqual(Object.keys(request.config).sort(), [
-    'abortSignal', 'automaticFunctionCalling', 'candidateCount', 'systemInstruction', 'toolConfig', 'tools',
+    'abortSignal', 'automaticFunctionCalling', 'candidateCount', 'httpOptions', 'maxOutputTokens', 'systemInstruction', 'toolConfig', 'tools',
   ]);
   assert.equal(request.config.abortSignal, controller.signal);
   assert.deepEqual(request.config.automaticFunctionCalling, { disable: true });
@@ -397,4 +398,85 @@ test('malformed Gemini tool output stops through the orchestrator without local 
     toolExecutor() { tools++; throw new Error('must not execute'); },
   }), (error) => error instanceof TacticalCoachError && error.code === 'malformed_model_output');
   assert.equal(tools, 0);
+});
+
+test('T06 adapter rejects normalized final outcomes over 8192 UTF-8 bytes before returning them', async () => {
+  const base = { type: 'final', output: { text: '' } };
+  const overhead = Buffer.byteLength(JSON.stringify(base));
+  for (const extra of [0, 1]) {
+    const output = { text: 'a'.repeat(8192 - overhead + extra) };
+    const sdk = stub([functionReply('get_tactical_snapshot', {}),
+      functionReply('evaluate_tactical_strategy', candidate), textReply(JSON.stringify(output))]);
+    const provider = createTacticalCoachGeminiProvider({ client: sdk.client });
+    await provider.generate(call());
+    await provider.generate(call([results()[0]]));
+    const normalized = await provider.generate(call(results()));
+    assert.deepEqual(normalized, extra ? null : { type: 'final', output });
+    assert.equal(sdk.requests.length, 3);
+  }
+  const sdk = stub([functionReply('get_tactical_snapshot', {}),
+    functionReply('evaluate_tactical_strategy', candidate), textReply(JSON.stringify({ text: 'ž'.repeat(4096) }))]);
+  const provider = createTacticalCoachGeminiProvider({ client: sdk.client });
+  await provider.generate(call());
+  await provider.generate(call([results()[0]]));
+  assert.equal(await provider.generate(call(results())), null);
+});
+
+test('T027 normal three-step SDK-stub envelope remains useful with server-owned generation and retry bounds', async (t) => {
+  const sdk = stub([functionReply('get_tactical_snapshot', {}),
+    functionReply('evaluate_tactical_strategy', candidate), textReply(JSON.stringify(plan))]);
+  const adapter = createTacticalCoachGeminiProvider({ client: sdk.client });
+  const outcomes = [];
+  let tools = 0;
+  const result = await runTacticalCoach(input(), {
+    provider: { async generate(call) { const outcome = await adapter.generate(call); outcomes.push(outcome); return outcome; } },
+    toolExecutor(name, args, context) { tools++; return invokeTacticalTool(name, args, context); },
+  });
+  assert.deepEqual(result.plan, plan);
+  assert.equal(tools, 2);
+  assert.equal(outcomes.length, 3);
+  const bytes = outcomes.map((outcome) => Buffer.byteLength(JSON.stringify(outcome)));
+  t.diagnostic(`normalized outcome bytes: ${bytes.join(', ')}; public success bytes: ${Buffer.byteLength(JSON.stringify(result))}`);
+  assert.ok(bytes.every((size) => size <= 8192));
+  for (const request of sdk.requests) {
+    assert.equal(request.config.maxOutputTokens, 2048);
+    assert.deepEqual(request.config.httpOptions.retryOptions, { attempts: 1 });
+    assert.equal(request.config.automaticFunctionCalling.disable, true);
+  }
+});
+
+test('T029 actual installed SDK uses one HTTP fetch per app attempt, including transient retry', async () => {
+  const httpCalls = [];
+  const replies = [
+    { status: 503, body: { error: { code: 503, message: 'W08_PRIVATE_SYNTHETIC_OUTAGE', status: 'UNAVAILABLE' } } },
+    { status: 200, body: functionReply('get_tactical_snapshot', {}, 'snapshot') },
+    { status: 200, body: functionReply('evaluate_tactical_strategy', candidate, 'evaluation') },
+    { status: 200, body: textReply(JSON.stringify(plan)) },
+  ];
+  const client = new GoogleGenAI({ apiKey: 'W08_SYNTHETIC_NOT_A_REAL_KEY', httpOptions: {
+    async fetch(url, init) {
+      httpCalls.push({ url: String(url), body: JSON.parse(init.body) });
+      const reply = replies.shift();
+      assert.ok(reply, 'no hidden fifth SDK fetch');
+      return new Response(JSON.stringify(reply.body), { status: reply.status, headers: { 'Content-Type': 'application/json' } });
+    },
+  } });
+  const adapter = createTacticalCoachGeminiProvider({ client });
+  const appCalls = [];
+  const sleeps = [];
+  const result = await runTacticalCoach(input(), {
+    provider: { async generate(call) {
+      appCalls.push({ timeout: call.timeoutMs, prior: structuredClone(call.toolResults) });
+      return adapter.generate(call);
+    } },
+    sleep: async (ms) => { sleeps.push(ms); },
+  });
+  assert.deepEqual(result.plan, plan);
+  assert.equal(appCalls.length, 4);
+  assert.equal(httpCalls.length, 4);
+  assert.deepEqual(sleeps, [100]);
+  assert.deepEqual(appCalls.map((call) => call.prior.length), [0, 0, 1, 2]);
+  assert.deepEqual(httpCalls[0].body, httpCalls[1].body);
+  assert.equal(httpCalls.every((call) => call.body.generationConfig.maxOutputTokens === 2048), true);
+  assert.equal(JSON.stringify(appCalls).includes('W08_PRIVATE_SYNTHETIC_OUTAGE'), false);
 });

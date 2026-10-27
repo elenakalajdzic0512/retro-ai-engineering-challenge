@@ -10,6 +10,7 @@ import {
   type TacticalSnapshot,
 } from './contracts.js';
 import type { TacticalProvider, TacticalProviderFailureCode, TacticalProviderOutcome } from './provider-contracts.js';
+import { isWithinProviderByteLimit } from './provider-contracts.js';
 import {
   createTacticalToolContext,
   getTacticalToolDeclarations,
@@ -340,6 +341,7 @@ export async function runTacticalCoach(request: unknown, options: RunTacticalCoa
         const raw = await providerAttempt(provider, input, results, Math.min(PER_CALL_TIMEOUT_MS, remaining), signal, scheduler);
         checkAbortAndDeadline(signal, now, deadline);
         output = parseProviderOutcome(raw);
+        if (!isWithinProviderByteLimit(output)) fail('malformed_model_output');
       } catch (error) {
         if (error instanceof RunCancelled) fail('cancelled');
         if (error instanceof AttemptTimeout) {

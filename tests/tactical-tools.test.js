@@ -196,3 +196,71 @@ test('schema-valid risk mismatch also fails trusted recomputation', () => {
   };
   fails(() => invokeTacticalTool('evaluate_tactical_strategy', choice, stored, injected), 'invalid_tool_result');
 });
+
+test('T03/T08 two request contexts stay isolated; a schema-valid foreign context is not a capability', () => {
+  const original = snapshot();
+  const other = { ...snapshot(), lives: 1 };
+  const runA = createTacticalToolContext(original);
+  const runB = createTacticalToolContext(other);
+  original.lives = 2;
+  assert.equal(runA.snapshot.lives, 3);
+  assert.ok(Object.isFrozen(runA.snapshot.shield));
+  const foreignCopy = structuredClone(runB);
+  assert.deepEqual(parseTacticalSnapshot(foreignCopy.snapshot), other);
+  let evaluations = 0;
+  const evaluator = (state, args) => { evaluations++; return evaluateTacticalStrategy(state, args); };
+  fails(() => invokeTacticalTool('get_tactical_snapshot', {}, foreignCopy), 'invalid_input');
+  fails(() => invokeTacticalTool('evaluate_tactical_strategy', candidate(), foreignCopy, evaluator), 'invalid_input');
+  assert.equal(evaluations, 0);
+  assert.equal(invokeTacticalTool('get_tactical_snapshot', {}, runA).result.lives, 3);
+  assert.equal(invokeTacticalTool('get_tactical_snapshot', {}, runB).result.lives, 1);
+  const own = invokeTacticalTool('evaluate_tactical_strategy', candidate(), runA, evaluator);
+  assert.equal(own.result.riskLevel, 'low');
+  assert.equal(evaluations, 1);
+  // Valid shape alone is insufficient: a different run's evaluation fails recomputation.
+  const foreign = invokeTacticalTool('evaluate_tactical_strategy', candidate(), runB).result;
+  assert.deepEqual(parseStrategyEvaluation(foreign), foreign);
+  fails(() => invokeTacticalTool('evaluate_tactical_strategy', candidate(), runA, () => foreign), 'invalid_tool_result');
+  assert.equal(runA.snapshot.lives, 3);
+});
+
+test('T07 exact dispatch rejects unknown, forbidden and prototype names before business work', () => {
+  let executions = 0;
+  const evaluator = (state, args) => { executions++; return evaluateTacticalStrategy(state, args); };
+  for (const [name, code] of [['missing', 'unknown_tool'], ['constructor', 'unknown_tool'],
+    ['toString', 'unknown_tool'], ['set_score', 'forbidden_tool']]) {
+    fails(() => invokeTacticalTool(name, candidate(), context(), evaluator), code);
+    assert.equal(executions, 0);
+  }
+  invokeTacticalTool('evaluate_tactical_strategy', candidate(), context(), evaluator);
+  assert.equal(executions, 1);
+});
+
+test('T08 invalid, extra, inherited and accessor arguments stop before evaluation', () => {
+  let executions = 0;
+  let getterCalls = 0;
+  const accessor = { ...candidate() };
+  Object.defineProperty(accessor, 'route', { enumerable: true, get() { getterCalls++; return 'direct'; } });
+  const evaluator = (state, args) => { executions++; return evaluateTacticalStrategy(state, args); };
+  for (const args of [{ ...candidate(), targetZone: 'foreign' }, { ...candidate(), sessionId: 'other-run' },
+    Object.create(candidate()), Object.assign(Object.create({ sessionId: 'other-run' }), candidate()), accessor]) {
+    fails(() => invokeTacticalTool('evaluate_tactical_strategy', args, context(), evaluator), 'invalid_tool_arguments');
+  }
+  assert.equal(executions, 0);
+  assert.equal(getterCalls, 0);
+  invokeTacticalTool('evaluate_tactical_strategy', candidate(), context(), evaluator);
+  assert.equal(executions, 1);
+});
+
+test('T10 tool-result size boundary is UTF-8; invalid shape and extra synthetic secret fail separately', () => {
+  const exact = { text: 'a'.repeat(8192 - 11) };
+  assert.equal(Buffer.byteLength(JSON.stringify(exact)), 8192);
+  assertTacticalToolResultByteLength(exact);
+  fails(() => assertTacticalToolResultByteLength({ text: exact.text + 'a' }), 'invalid_tool_result');
+  fails(() => assertTacticalToolResultByteLength({ text: 'ž'.repeat(4096) }), 'invalid_tool_result');
+  const valid = invokeTacticalTool('get_tactical_snapshot', {}, context());
+  fails(() => parseTacticalToolResult({ toolName: valid.toolName, result: { lives: 3 } }), 'invalid_tool_result');
+  fails(() => parseTacticalToolResult({ ...valid, secret: 'W08_TOOL_SECRET_DO_NOT_FORWARD' }), 'invalid_tool_result');
+  fails(() => parseTacticalToolResult({ ...valid, result: { ...valid.result, secret: 'W08_TOOL_SECRET_DO_NOT_FORWARD' } }), 'invalid_tool_result');
+  assert.deepEqual(parseTacticalToolResult(valid), valid);
+});

@@ -1,6 +1,6 @@
 # Validation Quickstart: Secure the Arcade
 
-**Status**: Living validation guide. Sections labeled planned or tied to an earlier task describe that point in time; the T031–T034 section records current executed checks. No live Gemini was used.
+**Status**: Living validation guide. Sections labeled planned or tied to an earlier task describe that point in time; the Wave A and Wave B sections record executed checks. Wave C remains pending. No live Gemini was used.
 
 ## Prerequisites and checkpoint
 
@@ -163,6 +163,88 @@ Focused commands:
 TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='^T(01|02|03|15)' tests/tactical-api.test.js tests/tactical-snapshot.test.js
 TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='T13|T14' tests/tactical-admission.test.js tests/tactical-api.test.js tests/tactical-security-events.test.js
 ```
+
+## Isidora Wave B implementation and review (2026-10-27)
+
+Starting checkpoint: **`caf46ef6cf198ff31e659d939f96ca0a00638357`**, fetched from `origin/week8/secure-the-arcade` and verified before work. Local environment: **Windows, Node v24.21.0, npm 11.19.0**. Only Wave B is implemented here; the Joint T00 integration, P1/P2/P3 comparisons, official complete T00–T17 matrix, `EVIDENCE_W08.md`, Elena's reciprocal review and demo remain Wave C work. No live Gemini request or real key was used.
+
+### T002 review/use and T004 installed-SDK findings
+
+Reviewed Elena's shared fixture vocabulary and P1/P2/P3 expectations above. New tests use `providerAttempts`/actual `generate` invocations, actual tool executor entry, separate forbidden-execution counts, and full `structuredClone(createGame())` comparisons. The combined T17 uses the same forged-valid score/count relationship as T15. The new `observedRun` helper records proposals separately from dispatch, each model-visible context, absolute fake time, attempt timeout/signal and backoff. Its manual scheduler holds and releases late settlements deterministically. Gemini tests retain the SDK request stub and add the **actual installed SDK with a custom in-memory fetch**; this is not a live HTTP provider check. T002 remains shared: Elena prepared it; Codex reviewed/reused it for Isidora's Wave B. Codex performed this implementation and T052 code/test review on Isidora's behalf; this record does not assert an additional independent human review. No before/after comparison was performed in Wave B.
+
+Installed/locked **`@google/genai@2.24.0`** exposes `GenerateContentConfig.maxOutputTokens`, `GenerateContentConfig.httpOptions`, `HttpOptions.retryOptions`, `HttpOptions.fetch`, and `HttpRetryOptions.attempts` in `node_modules/@google/genai/dist/genai.d.ts`. In `dist/node/index.mjs`, `ApiClient.apiCall` returns `runFetch()` directly when retry options are absent. If options are supplied, `attempts` counts the initial fetch and `pRetry` receives `retries: attempts - 1`; the unspecified attempts default inside that branch is 5. Therefore the W05 absent option did not itself enable five hidden retries. W08 explicitly sets **`httpOptions: { retryOptions: { attempts: 1 } }` on every generate request**, preserving one HTTP request per application attempt using the supported API. Automatic function calling remains disabled.
+
+The SDK consumes/parses the remote response before `models.generateContent` resolves. The earliest application-controlled **normalized outcome** check is immediately after `toolProposal`/`finalProposal` constructs the outcome in `server/tactical/gemini-provider.ts`, before tool history/continuation or final return is committed. The common boundary in `orchestrator.ts` independently checks parsed outcomes from every provider, including injected fakes, before dispatch/final-plan validation. `MAX_PROVIDER_OUTCOME_BYTES = 8192` and the shared UTF-8 serialization check live in `provider-contracts.ts`. Oversized adapter outcomes return `null` and fail as sanitized malformed output in orchestration. **This is a post-SDK, post-receive bound, not a network-stream or SDK allocation limit**; it also does not bound all raw SDK metadata such as thought signatures. The final plan and public success retain the separate 4096-byte checks.
+
+### T019/T027–T029 measured envelope and policy
+
+Before the production edits, the expanded three-file tool/orchestrator/Gemini suite ran **94 tests: 90 passed, 4 failed, 0 skipped/TODO**. Failures demonstrated acceptance of an over-8192-byte adapter final, absence of generation configuration in the normal-envelope and actual-SDK checks, and the shared provider boundary reaching tool-name validation with an oversized outcome. They were expected red tests, not an official P1/P2/P3 before comparison. After the narrow edits, the same suite passed **94/94**.
+
+The normal deterministic SDK-stub path has **3 model steps, 2 executed allowed tools**, normalized outcomes of **70 / 157 / 331 UTF-8 bytes**, and a **450-byte materialized public success**. Every request now sets server-owned **`maxOutputTokens: 2048`**. This permits substantial headroom above the measured compact plan and its fixed JSON/evidence fields, while bounding generation. The contract permits up to 240 summary plus 3×160 action code points; tokenization varies, so 2048 tokens is a local conservative generation policy, **not a guarantee that every maximal Unicode plan or real-model generation fits**, and not an 8192-byte conversion. Fake/stub normal coaching remains useful; live token consumption/quality was not measured. A truncated `MAX_TOKENS` candidate remains rejected by the existing adapter.
+
+The real installed-SDK/custom-fetch test scripts HTTP 503, snapshot, evaluation and final responses: **4 application attempts = 4 mocked HTTP fetches**, exactly one application backoff of 100 ms, contexts with **0/0/1/2 prior results**, and unchanged request contents on retry. It verifies the configured limit reaches the SDK's serialized `generationConfig`; no SDK retry bypasses the app counter in this case. Existing guards remain **3 logical steps, 2 tool executions, 4 total provider attempts, 1 transient retry, 5000 ms per attempt, 22000 ms absolute total deadline**. Request body remains 4096 bytes and goal 240 code points; tool result remains 8192 bytes. Elena's admission policy remains 2 active and 5 newly admitted per rolling 60000 ms per server instance. No client field changes these values.
+
+### Negative cases and conditional T017/T030 disposition
+
+| Scenario | Executed observation / proof limit |
+| --- | --- |
+| T03/T08 context isolation | Two server-created contexts expose only their own copied/frozen snapshots. A schema-valid cloned foreign context lacks the WeakSet capability and is rejected before evaluator work; a foreign but contract-valid evaluation fails trusted recomputation. The same current-context tool succeeds. This is local request scope, not authentication; trusted server code can construct its own contexts. |
+| T07/T09 tool authority | Unknown, `constructor`, `toString` and forbidden `set_score` proposals each reach policy with 1 provider attempt and 0 tool/forbidden executions. The malicious goal is observed in the fake input before its scripted forbidden proposal. Complete local game equals its before copy. A positive plan executes both allowed tools. This proves application dispatch policy, not real-Gemini prompt immunity. |
+| T06 provider data | Invalid decision stops after 1 attempt/0 tools; invalid final stops after 3 attempts/2 tools. Exactly 8192 normalized bytes reach semantic validation, 8193 fail first; multibyte oversize is rejected independently of character count. Raw output is absent from the public error. Adapter-only boundary acceptance does not imply a valid final plan. |
+| T10 tool data | Invalid shape, over-limit UTF-8 result, extra envelope secret, and extra nested result secret are separate cases. Each stops after 1 provider attempt/1 executor entry, with no next model call or secret in model context. Valid bounded results reach contexts of sizes 0/1/2. The byte checker independently accepts 8192 and rejects 8193 bytes; fixed valid production schemas cannot naturally fill that size. |
+| T11 independent budgets | Full useful path with a transient failure consumes 4 provider attempts, 1 retry, 2 tools and 3 logical steps; counters/context persist through retry. A third tool stops before execution; out-of-phase tool stops before its work. Existing phase machine prevents a fourth logical step. Direct action-tracker and attempt-reservation tests separately prove duplicate rejection and refusal of the fifth reservation; they do not claim a reachable fifth HTTP provider attempt. Existing second-transient tests prove no second retry. |
+| T12 per-call/late result | Manual scheduler fires two separate 5000 ms timeouts, with both signals aborted; settling those fake promises later causes no tool execution or success and leaves no timer. Existing HTTP admission tests separately cover slot release. |
+| T12 aggregate deadline | Three individually sub-5000 ms attempts take 4900 ms each; one requested 100 ms backoff includes a simulated 2500 ms event-loop scheduling stall. Attempts start at 0/7500/12400/17300 ms, so the fourth receives only 4700 ms. It expires at absolute 22000 ms, aborts, starts no more work, and discards a late valid final. The scheduling delay is explicit: 4×5000 + 100 + 2×100 is otherwise below 22000, so ordinary fully bounded work need not naturally exhaust the total deadline. |
+| T17 combined HTTP case | A forged-valid playing snapshot (score 10 and consistent remaining brick counts) plus malicious goal/newline reaches the fake. Its `set_score` proposal includes a synthetic secret. Observed: 1 provider attempt, 1 forbidden proposal, 0 executed tools, 0 forbidden executions, 1 admitted run, 0 active after release, and full canonical local game equality. Exactly admitted/completed events share the generated correlation ID; completion is failed with counts 1/0, no raw goal/state/proposal/secret or forged event. This connects HTTP validation/admission, model input, dispatch, state and event boundaries beyond isolated T09/T14/T15; the separately held game is a local fixture, not authenticated caller history. |
+
+**T017: existing W05 protection verified, no tools/dispatch/context source change required. T030: existing W05 tool-result, repetition, retry, timeout and late-settlement controls verified, no conditional source fix required.** The only orchestration source addition is the separately required T028 common provider-byte check. `tools.ts`, HTTP policy and UI were unchanged.
+
+### T052 review of Elena's completed test and enforcement
+
+Reviewed **`T01 invalid JSON stops before provider construction and returns a safe error`**, its `assertSafeInitialRejection`/`assertNoInitialWork` helpers in `tests/tactical-api.test.js`, and `handleTacticalCoachRequest` in `server/index.ts`. Forbidden effect: malformed direct JSON must not construct/call a provider, enter tool work, consume an accepted admission or expose private input. The test bypasses the UI, submits malformed JSON, checks fixed sanitized `invalid_input` response and zero provider construction/attempt/tool counters. Enforcement reads the bounded body, catches `JSON.parse`/exact request parsing, emits minimal rejection and returns **before `admission.tryAdmit()` and `providerFactory()`**. Finding: the observed negative and positive controls support the intended ordering; no source correction needed. The focused T01/T02 plus new T17 run passed **12/12**. Proof limit: these selected malformed/privilege fixtures do not establish authentication, every possible parser input, or real-provider safety. Browser XSS/CSP guarantees come from the separate Chromium suite, not this HTTP test.
+
+Complete path for review: browser derives an unverified snapshot and sends exact `{goal,state}` to relative `/api/tactical-coach`; preview proxies to the loopback API; HTTP/body/runtime validation precedes server-owned admission/provider construction; orchestrator enforces absolute deadline/attempt/step/tool budgets; fake or Gemini returns an untrusted bounded proposal; phase/name/own-argument/context checks precede read-only tools; only exact validated/recomputed tool results enter the next model call; final candidate/schema/size checks precede application evidence materialization; API emits a fixed safe response and releases the slot in `finally`; browser validates it and renders through `textContent`. Operational events contain only allowed metadata.
+
+### Reproduction on Windows and environment constraints
+
+Use PowerShell **`npm.cmd` / `npx.cmd`** where execution policy blocks `npm.ps1`. The locked install was `npm.cmd ci --no-audit --no-fund`; package/lockfile versions were unchanged. Its sandboxed attempt could not finish registry access and was interrupted; approved execution completed. Git fetch/switch also required approved `.git` access. SpecKit prerequisites ran through Git Bash with `SPECIFY_FEATURE_DIRECTORY=specs/004-secure-the-arcade`; the default Windows/WSL bash was unavailable. `requirements.md` passed **30/30**; no extension hooks were configured.
+
+```powershell
+$env:TACTICAL_AI_PROVIDER = 'fake'
+$env:GEMINI_API_KEY = ''
+npm.cmd run build:server
+node --test --test-reporter=tap tests/tactical-tools.test.js tests/tactical-orchestrator.test.js tests/tactical-gemini-provider.test.js
+node --test --test-reporter=tap --test-name-pattern='^T17|^T01|^T02' tests/tactical-api.test.js
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
+npm.cmd run build:server
+npm.cmd run test:browser:w08
+git diff --check
+git status --short
+```
+
+The first browser command was blocked by sandboxed esbuild parent-directory access. Approved execution built successfully but all 10 cases failed at **browser launch**, because the Chromium binary was absent; these were environment failures, not DOM/CSP assertions. `npx.cmd playwright install chromium` then completed with approved access and the identical browser command passed as recorded below.
+
+**Dependency limitation on this machine:** T043/T044 above describe Elena's macOS checkpoint and are preserved as history. Their Windows-only `launch-editor` non-applicability conclusion cannot be transferred to this Windows workstation. This run uses the built loopback preview and does not invoke an editor-launch route; Windows development-tool exposure remains **accepted/open pending separate reassessment/remediation**. No dependency was upgraded and no advisory is claimed fixed. No new audit was run in Wave B; the previous runtime audit's zero findings remain a dated observation, not a new result or a proof of application security.
+
+### Isidora Wave B handoff gate — observed results
+
+**ISIDORA HALF COMPLETE — READY FOR JOINT INTEGRATION**. All 17 Isidora-owned Wave B tasks are checked after their relevant tests; T017 and T030 are conditional existing-control confirmations. The actual handoff SHA is established by the subsequent commit/push and reported in the handoff message; use that real SHA in later Joint evidence, not the starting Elena SHA above.
+
+| Executed gate | Observed final result |
+| --- | --- |
+| Focused tool/orchestrator/Gemini suite, exact three-file command above | Exit 0; **94 passed**, 0 failed/cancelled/skipped/TODO. Includes T03/T06–T12, normal useful plan, and actual SDK with mocked fetch. |
+| Focused `^T17\|^T01\|^T02` HTTP command above | Exit 0; **12 passed**, 0 failed/cancelled/skipped/TODO. Includes Elena T01 review and the combined T17. |
+| `TACTICAL_AI_PROVIDER=fake npm.cmd test`, with `GEMINI_API_KEY` empty | Exit 0; **331 passed**, 0 failed/cancelled/skipped/TODO. The full suite was repeated after the final source adjustment with the same 331/331 result. |
+| `npm.cmd run typecheck` | Exit 0. |
+| `npm.cmd run build`; `npm.cmd run build:server` | Exit 0, also executed as prerequisites of the successful final browser command. Vite built 7 modules; no client source change. |
+| `npm.cmd run test:browser:w08` after Chromium installation | Exit 0; **10 passed** in 19.4 s. T039 observed the intended `script-src-elem` violation for the available second-origin control script; T04/T05/T16 and normal fake Coach/game smoke passed. |
+| `rg -n --no-ignore --text --fixed-strings 'W08_SERVER_SECRET_DO_NOT_EXPOSE' dist` | Exit 1/no matches: **0 occurrences** in fresh client artifacts. Browser T16 independently checks the synthetic sentinel. |
+| `rg --files --no-ignore dist -g '*.map'` | Exit 1/no paths: source maps absent. |
+| `git diff --check`; package/lockfile diff | Clean; **no package/lockfile change**. |
+
+Pre-commit status contains only the nine intended Wave B source/test/docs modifications plus the **pre-existing untracked `.agents/skills/student-weekly-report/` directory**, which is left untouched and excluded from the commit. Builds, browser outputs and local test logs are ignored under `dist/`, `dist-server/` and `node_modules/.cache/`. No `main` merge, PR, Joint evidence comparison or teammate notification was performed in Wave B. Residual limits remain fake-only proof, post-SDK size enforcement, advisory client state, one-process admission and the open development dependency risks described above.
 
 ## Evidence and review exit criteria
 
