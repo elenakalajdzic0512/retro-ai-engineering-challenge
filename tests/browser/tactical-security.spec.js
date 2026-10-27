@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { test, expect } from '@playwright/test';
 import { preview } from 'vite';
 import { createGame } from '../../src/game.js';
@@ -9,6 +11,8 @@ import { createTacticalFakeProvider } from '../../dist-server/tactical/fake-prov
 const host = '127.0.0.1';
 const scriptPath = '/w08-control.js';
 const scriptBody = 'window.__W08_EXTERNAL_SCRIPT_EXECUTED__ = true;';
+const sentinel = 'W08_SERVER_SECRET_DO_NOT_EXPOSE';
+const expectedCsp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'none'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
 const defaultSummary = 'Clear the center with controlled bounces.';
 const xssPayload = '<img src="/w08-missing.png" onerror="window.__w08XssMarker = true">';
 const candidate = { targetZone: 'center', style: 'balanced', paddleContact: 'center', route: 'direct' };
@@ -45,11 +49,24 @@ async function close(server) {
 let api;
 let previewServer;
 let secondOrigin;
+let noCspControl;
 let previewUrl;
 let scriptUrl;
+let controlUrl;
 let nextSummary = defaultSummary;
 let admissionTime = 0;
 const observedGoals = [];
+const securityEvents = [];
+const previousGeminiKey = process.env.GEMINI_API_KEY;
+
+async function artifactFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const path = join(directory, entry.name);
+    return entry.isDirectory() ? artifactFiles(path) : [path];
+  }));
+  return nested.flat();
+}
 
 async function submitCoach(page, summary, goal = 'Clear the center safely.') {
   // Keep independent acceptance cases outside the single-process 5-per-60s window.
@@ -78,9 +95,11 @@ test.beforeAll(async () => {
   // The explicit fake mode is selected before server construction; this guard fails if Gemini is selected.
   const previousMode = process.env.TACTICAL_AI_PROVIDER;
   process.env.TACTICAL_AI_PROVIDER = 'fake';
+  process.env.GEMINI_API_KEY = sentinel;
   try {
     api = createApiServer({
       tacticalAdmissionClock: () => admissionTime,
+      tacticalSecurityEventSink: (event) => securityEvents.push(event),
       tacticalGeminiProviderFactory() {
         throw new Error('Live Gemini must not be selected by the W08 browser fixture.');
       },
@@ -98,11 +117,18 @@ test.beforeAll(async () => {
   }
   const apiUrl = await listen(api);
 
-  // Serve the real production build. The inline proxy is test-only; vite.config.js remains for T038.
-  previewServer = await preview({
-    logLevel: 'error',
-    preview: { host, port: 0, strictPort: true, proxy: { '/api': { target: apiUrl } } },
-  });
+  // Use the actual production preview proxy/headers with this fixture's isolated API port.
+  const previousPreviewPort = process.env.W08_PREVIEW_API_PORT;
+  process.env.W08_PREVIEW_API_PORT = new URL(apiUrl).port;
+  try {
+    previewServer = await preview({
+      logLevel: 'error',
+      preview: { host, port: 0, strictPort: true },
+    });
+  } finally {
+    if (previousPreviewPort === undefined) delete process.env.W08_PREVIEW_API_PORT;
+    else process.env.W08_PREVIEW_API_PORT = previousPreviewPort;
+  }
   previewUrl = `http://${host}:${previewServer.httpServer.address().port}`;
 
   secondOrigin = createServer((request, response) => {
@@ -114,10 +140,19 @@ test.beforeAll(async () => {
     response.end(scriptBody);
   });
   scriptUrl = `${await listen(secondOrigin)}${scriptPath}`;
+
+  noCspControl = createServer((_request, response) => {
+    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    response.end(`<!doctype html><html><head><script src="${scriptUrl}"></script></head><body>W08 no-CSP control</body></html>`);
+  });
+  controlUrl = await listen(noCspControl);
 });
 
 test.afterAll(async () => {
+  if (previousGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
+  else process.env.GEMINI_API_KEY = previousGeminiKey;
   const shutdown = await Promise.allSettled([
+    close(noCspControl),
     close(secondOrigin),
     previewServer?.close(),
     close(api),
@@ -144,6 +179,142 @@ test('T008 production-profile fixture starts fake API, preview and controlled sc
   }, tacticalInput);
   expect(coach.status).toBe(200);
   expect(coach.body.plan.summary).toBe(defaultSummary);
+});
+
+test('T038 configuration smoke delivers headers and keeps built game and fake Coach working', async ({ page }) => {
+  const cspViolations = [];
+  const pageErrors = [];
+  page.on('console', (message) => {
+    if (/content security policy|violat(?:es|ion).*directive/i.test(message.text())) {
+      cspViolations.push(message.text());
+    }
+  });
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  nextSummary = defaultSummary;
+  admissionTime += 60_001;
+  const pageResponse = await page.goto(previewUrl);
+  expect(pageResponse?.status()).toBe(200);
+  const headers = pageResponse.headers();
+  expect(headers['content-security-policy']).toContain("default-src 'self'");
+  expect(headers['content-security-policy']).toContain("script-src 'self'");
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['referrer-policy']).toBe('no-referrer');
+  await expect(page.locator('#status')).toHaveText('Press Space to launch');
+  expect(await page.locator('h1').evaluate((node) => getComputedStyle(node).color)).toBe('rgb(112, 246, 255)');
+
+  await page.locator('#tactical-coach-goal').fill('Clear the center safely.');
+  await page.locator('#tactical-coach-button').click();
+  await expect(page.locator('#tactical-coach-status')).toHaveText('Tactical plan ready.');
+  await expect(page.locator('.coach-recommendation')).toHaveText(defaultSummary);
+  expect(cspViolations).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('T16 T039 available second-origin script executes without CSP and is blocked by production script-src', async ({ page, request }) => {
+  const resource = await request.get(scriptUrl);
+  expect(resource.status()).toBe(200);
+  expect(resource.headers()['content-type']).toMatch(/^application\/javascript\b/);
+  expect(await resource.text()).toBe(scriptBody);
+  expect(new URL(scriptUrl).origin).not.toBe(new URL(controlUrl).origin);
+  expect(new URL(scriptUrl).origin).not.toBe(new URL(previewUrl).origin);
+
+  await page.addInitScript(() => { window.__W08_EXTERNAL_SCRIPT_EXECUTED__ = false; });
+  const controlResponse = await page.goto(controlUrl);
+  expect(controlResponse?.status()).toBe(200);
+  expect(controlResponse.headers()['content-security-policy']).toBeUndefined();
+  expect(await page.evaluate(() => window.__W08_EXTERNAL_SCRIPT_EXECUTED__)).toBe(true);
+
+  const productionResponse = await page.goto(previewUrl);
+  expect(productionResponse?.status()).toBe(200);
+  const headers = productionResponse.headers();
+  expect(headers['content-security-policy']).toBe(expectedCsp);
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['referrer-policy']).toBe('no-referrer');
+
+  await page.evaluate((url) => {
+    window.__W08_EXTERNAL_SCRIPT_EXECUTED__ = false;
+    window.__w08ScriptViolations = [];
+    document.addEventListener('securitypolicyviolation', (event) => {
+      window.__w08ScriptViolations.push({
+        effectiveDirective: event.effectiveDirective,
+        violatedDirective: event.violatedDirective,
+        blockedURI: event.blockedURI,
+      });
+    });
+    const script = document.createElement('script');
+    script.src = url;
+    document.head.append(script);
+  }, scriptUrl);
+  await expect.poll(() => page.evaluate(() => window.__w08ScriptViolations.length)).toBeGreaterThan(0);
+  const violations = await page.evaluate(() => window.__w08ScriptViolations);
+  const scriptViolation = violations.find((event) => /^script-src(?:-elem)?$/.test(event.effectiveDirective)
+    && event.blockedURI === scriptUrl);
+  expect(scriptViolation).toBeDefined();
+  console.info('T039 browser CSP violation:', JSON.stringify(scriptViolation));
+  expect(await page.evaluate(() => window.__W08_EXTERNAL_SCRIPT_EXECUTED__)).toBe(false);
+});
+
+test('T16 T040 synthetic server sentinel stays outside built client and fake production UI', async ({ page }) => {
+  expect(process.env.GEMINI_API_KEY).toBe(sentinel);
+  const files = await artifactFiles('dist');
+  expect(files.length).toBeGreaterThan(0);
+  const matches = [];
+  for (const path of files) {
+    if ((await readFile(path)).includes(Buffer.from(sentinel))) matches.push(path);
+  }
+  expect(matches).toEqual([]);
+
+  const pageErrors = [];
+  const unexpectedViolations = [];
+  const tacticalRequests = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('console', (message) => {
+    if (/content security policy|violat(?:es|ion).*directive/i.test(message.text())) {
+      unexpectedViolations.push(message.text());
+    }
+  });
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/tactical-coach') tacticalRequests.push(request.url());
+  });
+
+  nextSummary = defaultSummary;
+  admissionTime += 60_001;
+  const pageResponse = await page.goto(previewUrl);
+  expect(pageResponse?.status()).toBe(200);
+  expect(await pageResponse.text()).not.toContain(sentinel);
+  await expect(page.locator('#game')).toHaveCount(1);
+  await expect(page.locator('#status')).toHaveText('Press Space to launch');
+  expect(await page.locator('h1').evaluate((node) => getComputedStyle(node).color)).toBe('rgb(112, 246, 255)');
+
+  const apiResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/tactical-coach');
+  await page.locator('#tactical-coach-goal').fill('Clear the center safely.');
+  await page.locator('#tactical-coach-button').click();
+  const apiResponse = await apiResponsePromise;
+  expect(apiResponse.status()).toBe(200);
+  expect(await apiResponse.text()).not.toContain(sentinel);
+  await expect(page.locator('#tactical-coach-status')).toHaveText('Tactical plan ready.');
+  await expect(page.locator('.coach-recommendation')).toHaveText(defaultSummary);
+  await expect(page.locator('.coach-evidence li')).toHaveCount(2);
+  await expect(page.locator('#tactical-coach-result')).not.toContainText(sentinel);
+  expect(tacticalRequests).toEqual([`${new URL(previewUrl).origin}/api/tactical-coach`]);
+
+  const invalidResponse = await page.evaluate(async () => {
+    const response = await fetch('/api/tactical-coach', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    return { status: response.status, body: await response.text() };
+  });
+  expect(invalidResponse.status).toBe(400);
+  expect(invalidResponse.body).not.toContain(sentinel);
+  expect(securityEvents.length).toBeGreaterThan(0);
+  expect(JSON.stringify(securityEvents)).not.toContain(sentinel);
+
+  const hostileResult = await submitCoach(page, xssPayload);
+  await expectInertText(page, hostileResult, xssPayload);
+  await expect(hostileResult).not.toContainText(sentinel);
+  expect(pageErrors).toEqual([]);
+  expect(unexpectedViolations).toEqual([]);
 });
 
 test('T04 malicious fake final text stays inert in the real Tactical UI', async ({ page }) => {
