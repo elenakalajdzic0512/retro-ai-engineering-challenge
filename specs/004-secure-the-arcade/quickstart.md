@@ -115,16 +115,54 @@ For T040 the fixture set the **synthetic** `GEMINI_API_KEY=W08_SERVER_SECRET_DO_
 
 The T040 Chromium smoke observed the initialized canvas and ready status, built CSS styling, no unexpected page error or CSP violation for normal assets/API, and a readable fake Tactical result with two evidence rows. Playwright captured the browser request as same-origin `<preview-origin>/api/tactical-coach`; the Vite proxy forwarded it to the loopback fake API. A hostile fake final `<img ... onerror=...>` summary remained literal text with the XSS marker false on the production CSP profile, consistent with T036/T037's earlier `textContent` proof before CSP. The intended T039 `script-src-elem` violation is separate from the normal-page no-violation observation. `TACTICAL_AI_PROVIDER=fake npm test` passed **311/311** (0 failed/skipped/TODO); `npm run typecheck`, `npm run build`, and `npm run build:server` passed. This proves the local production-built Vite preview and deterministic fake paths tested here; it does not test live Gemini, real secrets, deployment hosts, or universal CSP safety. Final combined T00–T17 evidence remains for the Joint phase.
 
-## Planned dependency audit
+## T043 — Elena dependency audit handoff (2026-10-27)
 
-Record `package-lock.json` checkpoint and run a supported read-only audit command, for example:
+Checkpoint: `c8c3a04c63d3f83f186e8ff4bb783fa2ad32ec38`; the T007 Playwright lockfile had settled. The only runtime dependency in `package.json` is `@google/genai` (locked `2.24.0`). Dev dependencies are `@playwright/test` (locked `1.64.1`), `@types/node` (`24.19.0`), `typescript` (`7.0.2`), and `vite` (`7.3.6`). The relevant transitive dev path is root `vite@7.3.6` → `postcss@8.5.28` → `source-map-js@1.2.1`. Installed Vite, PostCSS, and source-map-js versions match the lockfile. No Playwright or Gemini SDK advisory appeared in this audit.
+
+Both exact commands ran against the current lockfile. An initial sandboxed full-audit attempt could not resolve `registry.npmjs.org` (`ENOTFOUND`, exit 1); repeating the same command with approved network access completed and produced the findings below. That initial environment error is not counted as an audit finding.
+
+| Command | Exit | npm vulnerability counts |
+| --- | ---: | --- |
+| `npm audit --package-lock-only --json` | 1, completed with findings | critical 0; high 2; moderate 0; low 0; total 2 package entries (`vite`, `source-map-js`). The `vite` entry aggregates five advisories of mixed severity. |
+| `npm audit --package-lock-only --omit=dev --json` | 0, completed | critical 0; high 0; moderate 0; low 0; total 0. |
+
+The audit JSON reported the GHSA identifiers below; the affected ranges and fixes are those advisory records. The current project is a local, single-user demo on macOS. `vite` runs the development server, build, and local built-UI preview; it is not imported by the Tactical API runtime. `source-map-js` belongs to PostCSS in that dev/build graph. The lockfile's dev markers, `npm explain` paths, and inspection of `dist/` and `dist-server/` found no Vite, `launch-editor`, or `source-map-js` import in the built client/API runtime. This excludes these packages from the inspected shipped code, but does not eliminate developer-machine or CI risks when tooling runs.
+
+| Advisory (severity) | Package/version and path | Actual exposure, disposition, residual risk and minimal available fix |
+| --- | --- | --- |
+| [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) (high; `>=1.0.0 <1.2.2`) | `source-map-js@1.2.1`, transitive dev via `vite → postcss` | Indexed source-map section offsets can block the event loop when an attacker supplies a malicious map. The current trusted-source build/test workflow and built Tactical runtime provide no observed attacker-controlled indexed-map input. **mitigated** by that input boundary, not fixed; developer/CI risk remains if untrusted maps are later processed. Patch: `source-map-js@1.2.2` in a future lockfile update if that workflow becomes relevant. |
+| [GHSA-698v-4r3x-3vcv](https://github.com/advisories/GHSA-698v-4r3x-3vcv) (moderate; Vite `>=7.0.0 <=7.3.6`) | `vite@7.3.6`, direct dev | Windows-only `launch-editor` `%` escaping issue requiring attacker-controlled filename and environment/NTFS conditions. This macOS local profile does not execute that Windows path: **demonstrated not applicable** here. A future Windows developer setup may be exposed; Vite `7.3.7` is patched. |
+| [GHSA-r825-w8mm-5pxw](https://github.com/advisories/GHSA-r825-w8mm-5pxw) (moderate; Vite `>=7.0.0 <=7.3.6`) | `vite@7.3.6`, direct dev | Vite's affected editor-argument route additionally requires WSL, a crafted file entry, and a listed editor. This macOS profile is not WSL and the app does not invoke an editor-launch endpoint: **demonstrated not applicable** here. A future WSL/editor workflow remains a developer risk; Vite `7.3.7` is patched. |
+| [GHSA-587h-7wmj-h5pm](https://github.com/advisories/GHSA-587h-7wmj-h5pm) (high; Vite `>=7.0.0 <=7.3.6`) | `vite@7.3.6`, direct dev | Windows-only `launch-editor` existence-check bypass, potentially combined with the preceding `%` issue. No Windows path runs in this macOS profile: **demonstrated not applicable** here. A future Windows developer setup remains a risk; Vite `7.3.7` is patched. |
+| [GHSA-9jrq-w75r-8gcw](https://github.com/advisories/GHSA-9jrq-w75r-8gcw) (low; Vite `>=7.0.0 <=7.3.6`) | `vite@7.3.6`, direct dev | Requires custom Vite middleware forwarding an unchanged browser URL into `transformIndexHtml`, inline module script, and sensitive in-page state/actions. `vite.config.js` uses stock SPA/preview paths, with no custom middleware or `transformIndexHtml` call: **demonstrated not applicable** to this configuration. Adding such middleware later would reopen risk; Vite `7.3.7` is patched. |
+| [GHSA-rq7h-c2jc-7f22](https://github.com/advisories/GHSA-rq7h-c2jc-7f22) (moderate; Vite `>=7.0.0 <=7.3.6`) | `vite@7.3.6`, direct dev | Requires a network-exposed Vite **dev** server and a root-relative imported project file whose URL collides with an absolute readable host file. This repo has no configured `server.host` or such import. The explicit `--host 127.0.0.1` in W08 uses **built preview**, not the dev server: **demonstrated not applicable** to the reviewed configuration. Future exposed dev serving plus a colliding import would reopen risk; Vite `7.3.7` is patched. |
+
+**T044 — NOT APPLICABLE at checkpoint `c8c3a04c63d3f83f186e8ff4bb783fa2ad32ec38`; conditional task closed without a dependency change.** The runtime-only audit has zero findings. Full-audit findings remain in the dev toolchain, but the reviewed application/runtime path has no demonstrated reachable vulnerable path: this macOS/local-demo profile lacks the Vite Windows/WSL, custom-middleware, and exposed-dev-server-plus-colliding-import prerequisites, and the current build/test workflow does not pass untrusted indexed source maps into `source-map-js`. A package-level high count or available patch alone does not satisfy T044's relevant, remediable exposure gate; upgrading solely to mark this Week 8 checkbox is not justified. This closeout does **not** mean the advisories were fixed or that dependencies are secure. `source-map-js@1.2.1` remains vulnerable in the dev graph, with residual developer/CI risk if untrusted indexed maps are processed. Reassess Vite `7.3.6` if a Windows/WSL, custom-middleware, or exposed development-server profile is adopted. A future dependency update can be handled separately. Preserve these limits for `EVIDENCE_W08.md`. No package or lockfile version was changed, and no `npm audit fix`, `npm audit fix --force`, `npm update`, or install was run. A clean runtime audit is not proof of application security.
+
+## Elena Wave A handoff gate (2026-10-27)
+
+Pre-handoff committed checkpoint: `c8c3a04c63d3f83f186e8ff4bb783fa2ad32ec38`. All Elena/shared-preparation tasks through T044 are checked, including conditional T018 (existing protection verified without source change) and T044 (evaluated and closed not applicable without dependency change). Isidora-owned and Joint tasks remain unchecked; neither wave has started. The actual handoff SHA is established by the subsequent commit and push, not by this pre-commit note.
+
+| Gate run at this checkpoint | Observed result |
+| --- | --- |
+| Focused T01/T02/T03/T15 HTTP/trust suite | 17 passed, 0 failed, 0 skipped, 0 TODO; invalid/oversized/privilege/resource-selector inputs stop before provider work, while forged schema-valid state remains advisory and does not alter canonical game state. |
+| Focused T13/T14 admission/event suite | 5 passed, 0 failed, 0 skipped, 0 TODO. Earlier before-hardening evidence at `9799bbe`: 1 pass, 4 TODO; current after-hardening run: 5 pass, 0 TODO. The earlier result was not rerun at this handoff. |
+| `npm run test:browser:w08` | 10 passed, 0 failed. T008, T038, T04/T05, and T16/T039/T040 passed. The T039 `script-src-elem` block was intentional; the suite reported no other failing page/CSP case. |
+| `TACTICAL_AI_PROVIDER=fake npm test` | 311 passed, 0 failed, 0 skipped, 0 TODO. All test/provider flows were fake-only; no live Gemini request or real API key was used. |
+| `npm run typecheck`; `npm run build`; `npm run build:server` | All passed. |
+| `rg --no-ignore --text --fixed-strings -n 'W08_SERVER_SECRET_DO_NOT_EXPOSE' dist` | Exit 1, no output: 0 occurrences in the fresh client build. |
+| `rg --files --no-ignore dist -g '*.map'` | Exit 1, no paths: source maps not present. |
+| `npm audit --package-lock-only --json` | Exit 1 with findings, not an execution failure: 2 affected dev-graph package entries (`vite`, `source-map-js`); npm severity counts high 2, all other severities 0. Same findings as T043. |
+| `npm audit --package-lock-only --omit=dev --json` | Exit 0; 0 findings at every severity. |
+
+Tracked source/config sanity inspection found no Google API-key-shaped literal or production key assignment; only `.env.example` is tracked among `.env*` files. This pattern check is limited to tracked files and is not a universal secret scan. `git diff -- package.json package-lock.json` was empty: dependency versions and lockfile were unchanged. The full audit's dev advisories and conditional residual risk remain documented in T043/T044 above; no audit fix was run. Generated builds were ignored and were not staged.
+
+Focused commands:
 
 ```sh
-npm audit --package-lock-only --json
-npm audit --package-lock-only --omit=dev --json
+TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='^T(01|02|03|15)' tests/tactical-api.test.js tests/tactical-snapshot.test.js
+TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='T13|T14' tests/tactical-admission.test.js tests/tactical-api.test.js tests/tactical-security-events.test.js
 ```
-
-Classify runtime and dev advisories separately. For each relevant item record package, actual locked/installed version, advisory, project exposure, decision (`fixed`, `mitigated`, `demonstrated not applicable`, or `open risk`), and residual risk. If audit cannot reach registry, record the exact obstacle and unresolved uncertainty. Do not run `npm audit fix --force` as an automatic step. After any approved dependency change, repeat relevant tests/build/browser checks. A zero-advisory result does not prove application logic secure.
 
 ## Evidence and review exit criteria
 
