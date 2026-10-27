@@ -9,6 +9,23 @@
 3. Use deterministic Tactical fake/stub provider and a synthetic sentinel only. Never set a real Gemini key for T00–T17. `TACTICAL_AI_PROVIDER=fake` is the existing offline mode for local API tests/demos.
 4. Run commands from the repository root. If local sandbox policy blocks loopback listeners, use the approved local test environment and record that constraint; do not reinterpret an `EPERM` listener error as an application failure.
 
+### T001 — confirmed W05 before checkpoint
+
+These are **prior baseline observations**, confirmed before the Week 8 specification work. They are recorded here for later transfer to `EVIDENCE_W08.md`; T001 does not rerun the checks or claim any Week 8 after result.
+
+| Baseline item | Confirmed before observation |
+| --- | --- |
+| Repository / Week 8 branch | `retro-ai-engineering-challenge` / `week8/secure-the-arcade` |
+| W05 before/security baseline commit | `e0ef30a1eddc9583a9894b79e10d53424d9f0b2a` |
+| Baseline remote and working tree | `origin/main` matched that SHA when checked; working tree was clean before Week 8 specification work |
+| Node / npm | `v24.21.0` / `11.19.0` |
+| `npm run typecheck` | PASS |
+| `npm test` | PASS — 287 passed, 0 failed, 0 skipped |
+| `npm run build` | PASS — client build |
+| `npm run build:server` | PASS — server build |
+
+The first `npm test` attempt in the Codex sandbox encountered `EPERM` because it could not open a local `127.0.0.1` listener. The same command then passed after approved execution outside that sandbox restriction. This was an environment limitation, not an application test failure. At T001 start, `git branch --show-current` returned `week8/secure-the-arcade`, `git status --short` was empty, and the W05 baseline SHA was verified as an ancestor of the current planning commit. No T00–T17 scenario or Week 8 after check is marked as executed or passing here.
+
 ## Existing baseline commands
 
 ```sh

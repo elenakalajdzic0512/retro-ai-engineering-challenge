@@ -309,22 +309,27 @@ Use the immutable W05 checkpoint `e0ef30a1eddc9583a9894b79e10d53424d9f0b2a` for 
 
 The distribution gives each person at least one protection and one negative test. The final evidence must report actual driver/reviewer work and any reassignment, not copy this plan as if completed.
 
-## Implementation ordering and future quality gates
+## Sequential execution waves and future quality gates
 
-1. Lock/review the accepted W08 spec and requirements checklist.
-2. Complete architecture and threat audit (this plan records current findings and limitations).
-3. Review this plan, research, data model, security contract, and quickstart; stop this phase here.
-4. Generate `tasks.md` only in a later authorized SpecKit tasks phase.
-5. Add focused failing/negative tests for missing W08 controls while preserving existing positive fixtures.
-6. Implement the smallest demonstrated security changes, one boundary at a time.
-7. Run positive W05 Tactical, Week 4 Hint, full Node suite, typecheck, client/server builds, and gameplay regressions.
-8. Run real-browser production profile T04/T05/T16 and inspect headers/CSP/DOM with no live Gemini.
-9. Perform lockfile dependency audit, document findings, and rerun affected regressions after any approved dependency change.
-10. Produce `EVIDENCE_W08.md` with T00–T17, six risks, three comparable pre/post cases, commands, checkpoints, and residual limitations.
-11. Elena and Isidora cross-review implementation, tests, security boundary, and evidence; record actual roles.
-12. Perform final local demo/runbook and signoff only after all gates are observed.
+The accepted specification and planning artifacts precede implementation. T001 has recorded the real W05 before checkpoint; T002–T055 remain future work. Task IDs are coverage identifiers, not an instruction to alternate contributors. The technical halves execute in order: Elena completes and hands off a stable pushed branch, Isidora works from that exact handoff, then both integrate and prepare evidence. This corrects workflow only; the official T00–T17 meanings, I1–I8, budgets, trust model, and security controls above do not change.
 
-**Stop boundary for this request**: Phase 0/1 planning artifacts only. No `tasks.md`, source/test implementation, dependency install, live provider call, commit, or push in this phase.
+### Wave A — Elena technical half
+
+Elena prepares the shared T002 fixture before handoff (its `[Joint]` ownership remains shared), then completes T003, T005, T007, T008, T009–T011, T016, conditional T018, T023–T026, T031–T034, T036–T040, T043, and conditional T044. Her HTTP/browser/admission work uses the existing W05 Tactical fake/stub and provider behavior; it does not wait for Isidora's W08 adapter/orchestrator implementation. Elena's dependency chains are `T005 → T009/T010/T011/T016 → conditional T018`; `T007 → T008 → T036/T037 → T038 → T039 → T040`; and `T005 → T023/T024/T025/T026 → T031/T032 → T033/T034`. Specifically, T031 depends on T023, T032 on T024, T033 on T025 plus T031/T032, and T034 on T026. After T007 settles the lockfile, T043 precedes conditional T044. A non-applicable T044 does not force an upgrade.
+
+**Elena handoff gate — `ELENA HALF COMPLETE — READY FOR ISIDORA HANDOFF`**: Run her relevant security tests, affected regressions, `npm run typecheck`, full `npm test`, `npm run build`, `npm run build:server`, and the browser suite that actually exists. Review `git diff --check` and `git status`; verify fake-only testing, no live Gemini calls, and no real key. Resolve observed failures in her lane, then make a stable non-force commit/push and record its actual SHA for later evidence. Isidora starts only after this gate; no handoff SHA or PASS is asserted now.
+
+### Wave B — Isidora technical half
+
+Starting from Elena's pushed handoff, Isidora reviews/uses T002 and completes T004, T006, T012–T015, conditional T017, T019–T022, T027–T029, conditional T030, T042, and T052. Her chains are `Elena handoff → T004/T006`; `T006 → T012/T013/T014/T015 → conditional T017`; and `T006 → T019/T020/T021/T022 → T027/T028/T029/conditional T030`. T027/T028 follow the relevant T019 normal-envelope/output cases, T029 follows T021/T022, and T030 follows T020–T022 only if a gap appears. Elena's completed handoff is the only cross-lane prerequisite; she need not resume work between these steps. T042 combines her tool/provider controls with Elena's already committed admission/event controls. T052 reviews an actually completed Elena HTTP/browser negative test and leaves a review note for joint evidence.
+
+**Isidora handoff gate — `ISIDORA HALF COMPLETE — READY FOR JOINT INTEGRATION`**: Run her relevant tool/provider/agent/T17 tests, affected regressions, typecheck, full tests, client/server builds, and review `git diff --check` plus `git status`. Confirm fake-only testing and no real key, resolve observed failures in her lane, then make a stable non-force commit/push and record its actual SHA. No gate result or SHA is asserted in this plan.
+
+### Wave C — joint integration and evidence
+
+After both handoffs, execute T035, T041, T045–T051, and T053–T055. T052 is Isidora's Wave B review of Elena's finished work; T051 is Elena's review of Isidora's finished work. T035/T041 first confirm the positive W05/game/browser path and permit only a minimal integration fix if a real regression demands one. Then run the three same-fixture before/after comparisons, complete the official T00–T17 matrix, write `EVIDENCE_W08.md` with both actual handoff SHAs and actual Elena/Isidora/AI contributions, review the final diff/security boundaries, run final quality gates, and rehearse the eight-minute demo. Planned activity is never recorded as observed; affected checks repeat after any integration fix.
+
+**Stop boundary for this workflow correction**: Update only `plan.md` and `tasks.md` to define the sequential handoffs. Do not execute T002–T055, install a dependency, edit source/tests/packages, create a commit, push, or call live Gemini in this correction step.
 
 ## Open risks and unknowns for later proof
 
