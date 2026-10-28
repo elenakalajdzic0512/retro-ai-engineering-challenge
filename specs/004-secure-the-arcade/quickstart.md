@@ -1,6 +1,6 @@
 # Validation Quickstart: Secure the Arcade
 
-**Status**: Living validation guide. Sections labeled planned or tied to an earlier task describe that point in time. Wave A/B and Wave C technical checks are recorded; Elena's T051 review and the T055 two-person rehearsal remain pending. No live Gemini was used.
+**Status (2026-10-28)**: Living validation guide. Earlier planned/open statements describe their dated checkpoints. At the user's express request, T051/T055 are now closed for delegated Codex technical review/demo preparation only; the original personal explanation and joint spoken demonstration are not evidenced. No W08 live Gemini call was used.
 
 ## Prerequisites and checkpoint
 
@@ -266,6 +266,8 @@ The instruction to execute the remaining Secure the Arcade tasks supersedes the 
 
 ### T055 — prepared eight-minute runbook (pair rehearsal still pending)
 
+**2026-10-28 technical-scope amendment:** The original pair-rehearsal criterion and the earlier open status below remain historical. The user approved closing T055 for Codex's verified technical preparation; the five segment durations still total exactly eight minutes, but no new 480-second artificial wait or human speech is claimed. The final fake-only runbook checks and limits are recorded in the final checkpoint below. **Lično razumijevanje oba člana i stvarna demonstracija/individualna provjera iz originalnog nastavnog zadatka nisu potvrđeni ovim automatizovanim radom; obavljaju se pri pripremi i odbrani.**
+
 The following segment durations sum to exactly **8:00** (60+90+150+90+90 seconds). Elena/Isidora roles are suggestions for the future rehearsal, not a record of participation. Use a visible timer, stop each segment at its listed boundary, and record the actual timing/findings after the pair runs it. The technical fixtures have been exercised; no claim of a timed two-person demonstration is made.
 
 Prepare builds, terminal commands, `EVIDENCE_W08.md` and the committed comparison JSON before the timer. For the browser demo, use separate terminals with explicit fake mode; build and start before 0:00:
@@ -281,6 +283,14 @@ npm.cmd run start:api
 npm.cmd run preview -- --host 127.0.0.1 --port 4173 --strictPort
 ```
 
+On macOS/zsh or another POSIX shell, the equivalent fake-only API and preview commands are:
+
+```sh
+AI_PROVIDER=fake TACTICAL_AI_PROVIDER=fake GEMINI_API_KEY= npm run start:api
+# In a separate terminal after npm run build:server and npm run build:
+npm run preview -- --host 127.0.0.1 --port 4173 --strictPort
+```
+
 Open `http://127.0.0.1:4173`; no real key/live provider is needed. Stop both foreground processes after the demonstration. Comparison/test commands manage their own isolated ports and teardown.
 
 | Timer / duration | Suggested driver and action | Visible proof and explanation |
@@ -288,8 +298,8 @@ Open `http://127.0.0.1:4173`; no real key/live provider is needed. Stop both for
 | **0:00–1:00 / 60 s** | Isidora shows Neon Breaker, launches the ball and identifies the advisory Coach. Elena traces the diagram. | Browser state is client-reported/unverified; provider proposal is untrusted; the application owns policy. Name top priorities: aggregate exhaustion, browser script execution, tool authority. |
 | **1:00–2:30 / 90 s** | Isidora submits a normal fake Coach goal and Hint; Elena runs `node --test --test-reporter=tap --test-name-pattern='^T00 ' tests/tactical-api.test.js`. | Readable plan and both evidence sources, measured 3 provider/2 allowed/0 forbidden, one Hint call, complete before/after game equality and continued gameplay. Explain where app values are materialized. |
 | **2:30–5:00 / 150 s** | Elena shows T02 direct HTTP privilege/body rejection and T04/T05/T16 browser output; Isidora shows T07/T09/T17 forbidden fake proposal after malicious goal. Use the focused Node command/report and browser command below. | Separate invalid HTTP cases start 0 work. HTML/Markdown/URLs stay text; a reachable script executes on no-CSP control and is blocked by script-src-elem on preview. Forbidden proposal has 0 execution, unchanged full local game and minimal safe events. Explain this is application policy, not universal real-Gemini immunity. |
-| **5:00–6:30 / 90 s** | Isidora shows T11/T12 counters and late-result tests; Elena shows T13 concurrency, rolling window and exactly-once release. | Effective 8192 provider/tool bytes, 4096 request/final bytes, 240-point goal, 3/2/4/1 run budgets, 5000/22000 ms limits, 2 active and 5 per rolling 60 s. Explain retry does not reset deadline and demonstrate recovery. Show two 332/332 full results and browser 10/10. |
-| **6:30–8:00 / 90 s** | Both compare P1/P2/P3 JSON and delivered headers, show fresh build status and dependency table, then state limits and answer the enforcement question. | Peak 3→2; reachable script allowed→blocked; forbidden tools remain refused before/after. Audit runtime 0/full 2 dev entries, unfixed Windows tooling risks, post-SDK byte check, local per-process scope, no trusted ledger/live-model proof. Each person names a decision, enforcement file, forbidden effect, test and its proof limit. |
+| **5:00–6:30 / 90 s** | Show T11/T12 counters, late-result tests and T13 concurrency/rolling window. | Effective 8192 normalized provider/tool/raw-final bytes, 8192 retained-signature bytes, 16384 total model-facing request bytes, 4096 request/final bytes, 240-point goal, 3/2/4/1 run budgets, 5000/22000 ms, 2 active and 5 per rolling 60 s. Show abort-ignoring work remains counted until actual settlement, retry/deadline behavior and recovery. Final fake-only full suite: 341/341; browser: 10/10. |
+| **6:30–8:00 / 90 s** | Compare retained P1/P2/P3 JSON and delivered headers, show current build/audit status and limits. | Peak 3→2; reachable script allowed→blocked; forbidden tools remain refused before/after. Audit runtime 0/full 2 dev entries, unfixed tooling risks, post-SDK byte checks, local per-process scope, no trusted ledger/live-model proof. The historical human-role suggestions above remain presentation guidance; neither person's speech was observed. |
 
 Focused browser command for the 2:30 segment (the unescaped pipes below are regex alternation):
 
@@ -336,3 +346,31 @@ Focused new cases: **3/3 PASS**; affected admission/provider/orchestrator files:
 If an underlying provider never settles, its capacity remains reserved and valid arrivals can be rejected indefinitely by the local max-2 limit. This prevents uncounted local in-flight jobs but sacrifices availability until settlement or process restart. Abort signaling and local settlement do not establish that remote work or charges stopped. No live Gemini, real key, dependency change, T051 human review or T055 joint demonstration occurred.
 
 **Final permanent-test addition, 2026-10-28:** Two more fake-only HTTP cases in `tests/tactical-admission.test.js` now retain the review's synchronous-throw and late-reject observations. They assert sanitized 503/504 responses, real generate/tool counters, one release invocation per admission, no late success/unhandled rejection, and successful normal requests after capacity recovers. Provider-entry, completion-event and lease-release gates replace arbitrary sleeps. Newly run focused admission suite: **7 passed, 0 failed/skipped/TODO**. Newly run full fake-only Node suite: **337 passed, 0 failed/skipped/TODO**. These supersede the preceding **335/335** Node count for the test-expanded working tree; the preceding **10/10 browser**, typecheck and build results remain historical observations from the source-correction checkpoint and were **not rerun** after this test/documentation-only addition. Production source/package/configuration stayed unchanged during this final addition. T051/T055 remain `[ ]`.
+
+### 2026-10-28 final delegated technical checkpoint — based on `14c05653932b174fa449af2de0c5810bb5d1f2ef`
+
+This checkpoint was measured on the **uncommitted working tree based on** the named HEAD, not on a fictional already-existing code commit. The independent review reproduced an unbounded retained `thoughtSignature` in `server/tactical/gemini-provider.ts`: normalized proposal bytes omitted that metadata, and the adapter replayed it into later `contents`. New production-adapter/orchestrator stub tests failed **0 passed/3 failed** before the source change (one 100,000-byte-class synthetic signature reached success; an over-8192 multibyte signature and combined oversized context also passed). After the change, the focused T06/T027 selection passed **5/5**, including exact 16384/16385 model-facing byte boundaries. The normal model-facing request sizes were **1053, 2003, 4360 bytes**. The accepted 8192-byte UTF-8 signature is preserved exactly; 8194-byte multibyte and larger signatures are rejected. An individually bounded pair whose combined next request exceeds 16384 stops before the third SDK call; application attempt counting remains 3 in that case. A separate HTTP case confirms fixed 502, no raw signature in response or default operational event lines, 1 attempt/0 tools. All checks are **post-SDK/application-side**; they do not limit bytes already allocated by the SDK/network or prove remote cancellation.
+
+The final effective metadata policy is `MAX_RETAINED_THOUGHT_SIGNATURE_BYTES=8192` UTF-8 bytes and `MAX_MODEL_CONTEXT_BYTES=16384` UTF-8 bytes. The latter measures JSON serialization of the model-facing request: model, `contents`, system instruction and generation config with tool declarations or response schema; transport `AbortSignal` and retry options are excluded. Existing 8192 raw final/normalized provider/tool and 4096 final response bounds remain. Browser/model input cannot choose these constants. The earlier abort-ignoring capacity fix remains separate: a local provider promise that never settles can hold one of the two slots indefinitely, while HTTP completes promptly; neither local abort nor settlement proves remote billing stopped.
+
+| Newly executed command/selection | Actual result |
+| --- | --- |
+| T06/T027 focused adapter/orchestrator selection (exact command below) | 5 passed, 0 failed/skipped/TODO. |
+| `TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='^T03/T08 two request contexts stay isolated; a schema-valid foreign context is not a capability$' tests/tactical-tools.test.js` | 1 passed, 0 failed/skipped/TODO; Codex rechecked the Isidora-owned negative and positive context cases for delegated T051. |
+| `TACTICAL_AI_PROVIDER=fake npm test`; `npm run typecheck`; `npm run build`; `npm run build:server` | 341/341 Node passed, 0 failed/skipped/TODO; typecheck and both builds PASS. The test command itself also builds the server. |
+| Full and focused W08 browser commands (below) | 10/10 and focused 8/8 passed. Playwright hooks started/closed local preview, fake API, controlled origin and browser. |
+| Runbook T00, T02/T07/T09/T17 and T11/T12/T13 Node selections (below) | 1/1 normal, 9/9 HTTP/tool and 11/11 budget/admission passed. These exercise the five segments without eight minutes of deliberate waiting. |
+| `rg --no-ignore --text --fixed-strings -n 'W08_SERVER_SECRET_DO_NOT_EXPOSE' dist`; `rg --files --no-ignore dist -g '*.map'` | Both exit 1/no output after fresh build: zero sentinel occurrences and no source maps. |
+| `npm audit --package-lock-only --json`; `npm audit --package-lock-only --omit=dev --json` | Full exit 1: 2 high affected **dev** package entries (`vite`, `source-map-js`); runtime-only exit 0: 0 findings. No dependency update or audit fix. |
+
+Exact focused commands, all run with fake/stub providers:
+
+```sh
+TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='T06 oversized thought|T06 thought signature|T06 individually bounded|T06 total model-facing|T027 normal three-step' tests/tactical-gemini-provider.test.js
+TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='^T00 ' tests/tactical-api.test.js
+TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='^T(?:02|07|09|17)(?: |/)' tests/tactical-api.test.js tests/tactical-orchestrator.test.js tests/tactical-tools.test.js
+TACTICAL_AI_PROVIDER=fake node --test --test-name-pattern='^T(?:11|12|13)(?: |/)' tests/tactical-orchestrator.test.js tests/tactical-admission.test.js
+npm run test:browser:w08 -- --grep 'T04|T05|T16'
+```
+
+The two historical paced dry runs and P1/P2/P3 comparison artifacts remain unchanged. The adapter metadata bound does not execute in their fake-provider comparison path, so the three historical like-for-like comparisons were inspected but not rerun. No additional human explanation or live demonstration was inferred. **Tehnički cross-review izvršio Codex na Elenin zahtjev.** **Tehničku pripremu i provjeru demonstracije izvršio Codex na Elenin zahtjev.** T051/T055 internal checkboxes close only this approved delegated technical scope; the original personal and pair requirements remain for preparation/defense.

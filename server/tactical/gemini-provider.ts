@@ -11,6 +11,13 @@ export const TACTICAL_MAX_OUTPUT_TOKENS = 2048;
 // Apply the same byte ceiling to raw final JSON before parsing. Whitespace or
 // escaping may make raw text larger than its normalized outcome; reject it too.
 const MAX_RAW_FINAL_TEXT_BYTES = MAX_PROVIDER_OUTCOME_BYTES;
+// A tool-call signature must be replayed verbatim to the SDK. Reject it rather
+// than truncating it when its UTF-8 bytes exceed the retained-metadata budget.
+export const MAX_RETAINED_THOUGHT_SIGNATURE_BYTES = 8192;
+// Serialized model-facing request: contents, system instruction, tool declarations
+// or final response schema, and generation config. Transport signal/retry options
+// are excluded. This is checked before each SDK call, not a network receive cap.
+export const MAX_MODEL_CONTEXT_BYTES = 16_384;
 
 const SYSTEM_INSTRUCTION = 'You are Neon Breaker Tactical Coach. Follow the current server-provided tool or JSON-output instruction. Use only validated tool responses as arena evidence. Follow three stages in order: first request the snapshot, then propose one strategy evaluation candidate, and only after a validated evaluation response produce the final plan. Never claim an exact trajectory or future outcome.';
 const SNAPSHOT_INSTRUCTION = 'First call get_tactical_snapshot with exactly {}. Do not provide a plan yet.';
@@ -114,6 +121,7 @@ function toolProposal(response: unknown, expected: TacticalToolName): { proposal
   }
   const signature = part?.thoughtSignature;
   if (signature !== undefined && typeof signature !== 'string') return null;
+  if (signature !== undefined && Buffer.byteLength(signature, 'utf8') > MAX_RETAINED_THOUGHT_SIGNATURE_BYTES) return null;
   const modelPart: Part = {
     functionCall: { name: expected, args, ...(id === undefined ? {} : { id }) },
     ...(signature === undefined ? {} : { thoughtSignature: signature }),
@@ -130,6 +138,9 @@ function finalProposal(response: unknown): TacticalProviderOutcome | null {
   const part = object(parts[0]);
   if (!part || typeof part.text !== 'string' ||
       Reflect.ownKeys(part).some((key) => key !== 'text' && key !== 'thoughtSignature')) return null;
+  if (part.thoughtSignature !== undefined &&
+      (typeof part.thoughtSignature !== 'string' ||
+       Buffer.byteLength(part.thoughtSignature, 'utf8') > MAX_RETAINED_THOUGHT_SIGNATURE_BYTES)) return null;
   if (Buffer.byteLength(part.text, 'utf8') > MAX_RAW_FINAL_TEXT_BYTES) return null;
   let output: unknown;
   try { output = JSON.parse(part.text); }
@@ -230,6 +241,12 @@ export function createTacticalCoachGeminiProvider(options: TacticalGeminiProvide
           responseJsonSchema: PLAN_SCHEMA,
         }),
       };
+      const modelFacingRequest = {
+        model: TACTICAL_GEMINI_MODEL,
+        contents,
+        config: { ...config, abortSignal: undefined, httpOptions: undefined },
+      };
+      if (Buffer.byteLength(JSON.stringify(modelFacingRequest), 'utf8') > MAX_MODEL_CONTEXT_BYTES) return null;
       let response: unknown;
       try { response = await client.models.generateContent({ model: TACTICAL_GEMINI_MODEL, contents, config }); }
       catch (error) { return failureFromError(error, call.signal); }

@@ -4,8 +4,9 @@ import { GoogleGenAI } from '@google/genai';
 import { createGame } from '../src/game.js';
 import { deriveTacticalSnapshot } from '../src/tactical-snapshot.js';
 import { createTacticalToolContext, getTacticalToolDeclarations, invokeTacticalTool } from '../dist-server/tactical/tools.js';
-import { createTacticalCoachGeminiProvider } from '../dist-server/tactical/gemini-provider.js';
+import { createTacticalCoachGeminiProvider, MAX_MODEL_CONTEXT_BYTES, MAX_RETAINED_THOUGHT_SIGNATURE_BYTES } from '../dist-server/tactical/gemini-provider.js';
 import { runTacticalCoach, TacticalCoachError } from '../dist-server/tactical/orchestrator.js';
+import { createApiServer } from '../dist-server/index.js';
 
 const MODEL = 'gemini-3.5-flash-lite';
 const candidate = { targetZone: 'center', style: 'balanced', paddleContact: 'center', route: 'direct' };
@@ -480,12 +481,138 @@ test('T027 normal three-step SDK-stub envelope remains useful with server-owned 
   assert.equal(outcomes.length, 3);
   const bytes = outcomes.map((outcome) => Buffer.byteLength(JSON.stringify(outcome)));
   t.diagnostic(`normalized outcome bytes: ${bytes.join(', ')}; public success bytes: ${Buffer.byteLength(JSON.stringify(result))}`);
+  const modelFacingBytes = sdk.requests.map((request) => Buffer.byteLength(JSON.stringify({
+    model: request.model, contents: request.contents,
+    config: { ...request.config, abortSignal: undefined, httpOptions: undefined },
+  }), 'utf8'));
+  t.diagnostic(`normal model-facing request bytes: ${modelFacingBytes.join(', ')}; cap: ${MAX_MODEL_CONTEXT_BYTES}`);
+  assert.ok(modelFacingBytes.every((size) => size <= MAX_MODEL_CONTEXT_BYTES));
   assert.ok(bytes.every((size) => size <= 8192));
   for (const request of sdk.requests) {
     assert.equal(request.config.maxOutputTokens, 2048);
     assert.deepEqual(request.config.httpOptions.retryOptions, { attempts: 1 });
     assert.equal(request.config.automaticFunctionCalling.disable, true);
   }
+});
+
+test('T06 oversized thought signature stops the real adapter/orchestrator before another SDK call or tool work', async () => {
+  const signature = 'W08_SYNTHETIC_SIGNATURE_' + 'ž'.repeat(50_000);
+  const first = functionReply('get_tactical_snapshot', {});
+  first.candidates[0].content.parts[0].thoughtSignature = signature;
+  const sdk = stub([first, functionReply('evaluate_tactical_strategy', candidate), textReply(JSON.stringify(plan))]);
+  const provider = createTacticalCoachGeminiProvider({ client: sdk.client });
+  let attempts = 0;
+  let tools = 0;
+  await assert.rejects(runTacticalCoach(input(), {
+    provider: { generate(call) { attempts++; return provider.generate(call); } },
+    toolExecutor(name, args, context) { tools++; return invokeTacticalTool(name, args, context); },
+  }), (error) => error instanceof TacticalCoachError && error.code === 'malformed_model_output' &&
+    !error.message.includes(signature));
+  assert.equal(attempts, 1);
+  assert.equal(sdk.requests.length, 1);
+  assert.equal(tools, 0);
+
+  const logs = [];
+  const originalInfo = console.info;
+  console.info = (...parts) => { logs.push(parts.join(' ')); };
+  const httpSdk = stub([first, functionReply('evaluate_tactical_strategy', candidate), textReply(JSON.stringify(plan))]);
+  const server = createApiServer({
+    tacticalProviderFactory: () => createTacticalCoachGeminiProvider({ client: httpSdk.client }),
+    tacticalGeminiProviderFactory() { throw new Error('Live provider must not be selected.'); },
+  });
+  try {
+    await new Promise((resolve, reject) => server.listen(0, '127.0.0.1', resolve).once('error', reject));
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/tactical-coach`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input()),
+    });
+    const body = await response.text();
+    assert.equal(response.status, 502);
+    assert.doesNotMatch(body, /W08_SYNTHETIC_SIGNATURE_|ž{100}/);
+    assert.equal(httpSdk.requests.length, 1);
+    assert.equal(logs.length, 2);
+    const events = logs.map((line) => JSON.parse(line));
+    assert.deepEqual(events.map((event) => event.event), ['agent.run.admitted', 'agent.run.completed']);
+    assert.equal(events.at(-1).providerAttempts, 1);
+    assert.equal(events.at(-1).executedToolCalls, 0);
+    assert.doesNotMatch(logs.join('\n'), /W08_SYNTHETIC_SIGNATURE_|ž{100}/);
+  } finally {
+    console.info = originalInfo;
+    if (server.listening) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test('T06 thought signature preserves exact bounded UTF-8 metadata and normal useful continuation', async () => {
+  assert.equal(MAX_RETAINED_THOUGHT_SIGNATURE_BYTES, 8192);
+  const signature = 'ž'.repeat(4096); // exactly 8192 UTF-8 bytes
+  const first = functionReply('get_tactical_snapshot', {});
+  first.candidates[0].content.parts[0].thoughtSignature = signature;
+  const sdk = stub([first, functionReply('evaluate_tactical_strategy', candidate), textReply(JSON.stringify(plan))]);
+  const result = await runTacticalCoach(input(), {
+    provider: createTacticalCoachGeminiProvider({ client: sdk.client }), toolExecutor: invokeTacticalTool,
+  });
+  assert.deepEqual(result.plan, plan);
+  assert.equal(sdk.requests.length, 3);
+  assert.equal(sdk.requests[1].contents[1].parts[0].thoughtSignature, signature);
+  assert.equal(Buffer.byteLength(signature, 'utf8'), 8192);
+
+  const tooLarge = functionReply('get_tactical_snapshot', {});
+  tooLarge.candidates[0].content.parts[0].thoughtSignature = 'ž'.repeat(4097);
+  const rejected = stub([tooLarge, functionReply('evaluate_tactical_strategy', candidate)]);
+  await assert.rejects(runTacticalCoach(input(), {
+    provider: createTacticalCoachGeminiProvider({ client: rejected.client }), toolExecutor: invokeTacticalTool,
+  }), (error) => error instanceof TacticalCoachError && error.code === 'malformed_model_output');
+  assert.equal(rejected.requests.length, 1);
+});
+
+test('T06 individually bounded signatures cannot combine into an oversized next SDK context', async () => {
+  assert.equal(MAX_MODEL_CONTEXT_BYTES, 16_384);
+  const signature = 'a'.repeat(8192);
+  const first = functionReply('get_tactical_snapshot', {});
+  const second = functionReply('evaluate_tactical_strategy', candidate);
+  first.candidates[0].content.parts[0].thoughtSignature = signature;
+  second.candidates[0].content.parts[0].thoughtSignature = signature;
+  const sdk = stub([first, second, textReply(JSON.stringify(plan))]);
+  const createProvider = createTacticalCoachGeminiProvider({ client: sdk.client });
+  let attempts = 0;
+  let tools = 0;
+  await assert.rejects(runTacticalCoach(input(), {
+    provider: { generate(call) { attempts++; return createProvider.generate(call); } },
+    toolExecutor(name, args, context) { tools++; return invokeTacticalTool(name, args, context); },
+  }), (error) => error instanceof TacticalCoachError && error.code === 'malformed_model_output');
+  assert.equal(attempts, 3, 'The third application attempt is counted even when no SDK call is made.');
+  assert.equal(sdk.requests.length, 2);
+  assert.equal(tools, 2);
+});
+
+test('T06 total model-facing UTF-8 context accepts the exact boundary and rejects one byte more', async () => {
+  const firstSignature = 'a'.repeat(MAX_RETAINED_THOUGHT_SIGNATURE_BYTES);
+  function makeSdk(secondSignature) {
+    const first = functionReply('get_tactical_snapshot', {});
+    const second = functionReply('evaluate_tactical_strategy', candidate);
+    first.candidates[0].content.parts[0].thoughtSignature = firstSignature;
+    second.candidates[0].content.parts[0].thoughtSignature = secondSignature;
+    return stub([first, second, textReply(JSON.stringify(plan))]);
+  }
+  async function run(sdk) {
+    return runTacticalCoach(input(), {
+      provider: createTacticalCoachGeminiProvider({ client: sdk.client }), toolExecutor: invokeTacticalTool,
+    });
+  }
+  const base = makeSdk('');
+  assert.deepEqual((await run(base)).plan, plan);
+  const requestBytes = (request) => Buffer.byteLength(JSON.stringify({
+    model: request.model, contents: request.contents,
+    config: { ...request.config, abortSignal: undefined, httpOptions: undefined },
+  }), 'utf8');
+  const remaining = MAX_MODEL_CONTEXT_BYTES - requestBytes(base.requests[2]);
+  assert.ok(remaining > 0 && remaining < MAX_RETAINED_THOUGHT_SIGNATURE_BYTES);
+  const atLimit = makeSdk('a'.repeat(remaining));
+  assert.deepEqual((await run(atLimit)).plan, plan);
+  assert.equal(requestBytes(atLimit.requests[2]), MAX_MODEL_CONTEXT_BYTES);
+  const overLimit = makeSdk('a'.repeat(remaining + 1));
+  await assert.rejects(run(overLimit),
+    (error) => error instanceof TacticalCoachError && error.code === 'malformed_model_output');
+  assert.equal(overLimit.requests.length, 2);
 });
 
 test('T029 actual installed SDK uses one HTTP fetch per app attempt, including transient retry', async () => {

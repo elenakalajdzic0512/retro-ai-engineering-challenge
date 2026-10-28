@@ -137,6 +137,11 @@ test('T13 concurrency: third valid HTTP arrival does no work while two runs are 
       thirdStatus: 429, totalToolCalls: 6,
     }, 'T13 enforces an active cap of two and zero work for the excess request');
     assert.equal(f.securityEvents.filter((event) => event.event === 'agent.run.rejected' && event.reason === 'ACTIVE_LIMIT').length, 1);
+    const redacted = (event) => ({ ...event, timestamp: '[redacted]', correlationId: '[redacted]' });
+    t.diagnostic(`T13 actual allowlisted events (time/ID redacted): ${JSON.stringify([
+      redacted(f.securityEvents.find((event) => event.event === 'agent.run.admitted')),
+      redacted(f.securityEvents.find((event) => event.event === 'agent.run.rejected' && event.reason === 'ACTIVE_LIMIT')),
+    ])}`);
   });
 });
 

@@ -2,7 +2,13 @@
 
 **Datum:** 2026-10-27, Europe/Budapest. **Grana:** `week8/secure-the-arcade`. Izvještaj prati stvarne Git commitove, njihove fajlove i već zabilježene provjere. Ne predstavlja novi puni test run ili završen ljudski pregled.
 
-**Status:** tehnički rad i automatizovani dokazi su završeni; **53/55 zadataka** je označeno. Otvoreni su **T051 — Elenin pregled** i **T055 — zajednička usmena proba/objašnjenja**. Dvije automatizovane, programatski tempirane probe T055 su uspješne i sačuvane odvojeno.
+**Istorijski status ovog izvještaja (2026-10-27):** tehnički rad i automatizovani dokazi tada su bili završeni, uz **53/55** označena zadatka. T051 i T055 ostali su otvoreni po prvobitnom ljudskom kriterijumu; dvije programatski tempirane tehničke probe sačuvane su odvojeno. Aktuelni delegirani tehnički status je u dodatku ispod.
+
+## Dodatak: 2026-10-28 završni delegirani tehnički paket
+
+Polazni pregledani HEAD/remote bio je `14c05653932b174fa449af2de0c5810bb5d1f2ef`; novi rezultati su izmjereni na **necommitovanom working tree-u zasnovanom na tom SHA-u**, prije novog code commita. Kasniji stvarni commit SHA će biti naveden odvojenom dokumentacionom dopunom. `server/tactical/gemini-provider.ts` sada odbija retained `thoughtSignature` >8192 UTF-8 bajta i model-facing request >16384 serialized UTF-8 bajta prije SDK poziva. Normalni zahtjevi mjere 1053/2003/4360 bajtova. Novi focused testovi bili su **0/3 prije** i **5/5 nakon** popravke; puni fake-only Node **341/341**, browser **10/10**, typecheck i oba builda PASS. Sentinel u svježem `dist/`: 0 nalaza; `.map` nije prisutan. Full lockfile audit i dalje ima **2 high dev-graph package entries**, runtime-only 0 nalaza; ništa nije nadograđeno. P1/P2/P3 istorijski artefakti ostaju sačuvani jer se nova adapter zaštita ne izvršava u njihovoj fake-provider putanji. [Detaljni testovi i granice](../EVIDENCE_W08.md#2026-10-28-final-delegated-technical-checkpoint).
+
+Na izričit zahtjev korisnice, interni T051/T055 zatvoreni su samo za Codexov tehnički cross-review i provjeru runbook-a/komandi. Prvobitni kriterijumi Eleninog ličnog objašnjenja i zajedničke usmene demonstracije ostaju istorijski zabilježeni i nisu dokazani. **Lično razumijevanje oba člana i stvarna demonstracija/individualna provjera iz originalnog nastavnog zadatka nisu potvrđeni ovim automatizovanim radom; obavljaju se pri pripremi i odbrani.**
 
 ## Izvori i istorija
 
@@ -62,7 +68,7 @@ Pokretanje postojećeg API-ja sa `TACTICAL_AI_PROVIDER=fake`, `AI_PROVIDER=fake`
 
 Za lokalnu demonstraciju preview i API moraju oba ostati pokrenuta. Uputstva za eksplicitni fake režim i dva terminala nalaze se u [quickstart-u](../specs/004-secure-the-arcade/quickstart.md). Ovaj zapis ne garantuje da će lokalni proces preživjeti zatvaranje terminala ili restart računara.
 
-## Preostali rad i predaja
+## Preostali rad i predaja — prvobitni ljudski kriterijumi
 
 1. Elena stvarno pregleda najmanje jedan Wave B negativni test i njegovo enforcement mjesto i zabilježi svoj nalaz za **T051**.
 2. Elena i Isidora zajedno usmeno izvedu runbook, izmjere stvarno trajanje i objasne odluku, zabranjeni efekat, kod, test i granicu dokaza za **T055**.

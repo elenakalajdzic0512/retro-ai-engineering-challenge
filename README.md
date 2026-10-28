@@ -33,6 +33,8 @@ Player goal + validated Tactical snapshot
 
 The Coach is advisory: it cannot move the paddle or ball, or change score, lives, bricks, or hazards. It has no arbitrary shell, filesystem, or browser tools. Each run is capped at **3 agent steps, 2 local tool calls, and 4 provider attempts**, with a **5-second per-attempt timeout** and a **22-second total deadline**. The application validates structured final output and supplies the evidence values shown to the player.
 
+The Gemini adapter also checks retained `thoughtSignature` metadata at **8192 UTF-8 bytes** and the complete serialized model-facing request at **16384 UTF-8 bytes** before the next SDK call. Accepted signatures are preserved exactly. These checks and the existing raw-final/normalized-output bounds run after SDK receipt; they do not cap inbound network allocation or prove remote work has stopped.
+
 The Tactical snapshot is **validated client-reported game state**, not an independently authoritative server-side game ledger. A full restart or page leave invalidates a pending Coach request so a stale result cannot appear in the new game.
 
 ## Run locally
@@ -117,7 +119,7 @@ Acceptance evidence includes the deterministic fake browser path, recovery from 
 
 **W05 Neon Tactical Coach — ACCEPTED.** T001–T029 are complete. The feature builds on the completed Neon Breaker: Hazard Arena gameplay baseline.
 
-**W08 Secure the Arcade — technical verification complete; pair acceptance pending.** On `week8/secure-the-arcade`, the recorded final technical gates passed 332 Node tests and 10 browser tests, plus typecheck/client/server builds. Two paced automated T055 rehearsals also passed; Elena's T051 review and the joint spoken T055 rehearsal remain open (53/55 tasks). Runtime audit has 0 findings; the full audit retains 2 development-package findings, with no claimed dependency fix.
+**W08 Secure the Arcade — technical package verified; original human acceptance still pending.** The latest 2026-10-28 fake-only gate on `week8/secure-the-arcade` passed **341 Node tests**, **10 browser tests**, typecheck and client/server builds. It added bounded Gemini metadata/model context and retained earlier admission/raw-final corrections. The internal **T051/T055 checkboxes close only the user-approved Codex technical cross-review and demonstration preparation**; two earlier eight-minute runs were programmatically paced, and the final runbook commands were checked without artificial waiting. **Lično razumijevanje oba člana i stvarna demonstracija/individualna provjera iz originalnog nastavnog zadatka nisu potvrđeni ovim automatizovanim radom; obavljaju se pri pripremi i odbrani.** Runtime-only audit has 0 findings; the full audit retains 2 development-package findings, with no claimed dependency fix. See [W08 evidence](EVIDENCE_W08.md) and the [validation quickstart](specs/004-secure-the-arcade/quickstart.md) for current and historical results, limits and proof scope.
 
 - [Week 8 report based on actual commits](docs/W08_COMMIT_REPORT.md)
 - [Week 8 complete evidence and T00–T17 matrix](EVIDENCE_W08.md)
